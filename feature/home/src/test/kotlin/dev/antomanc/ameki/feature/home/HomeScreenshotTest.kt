@@ -96,4 +96,19 @@ class HomeScreenshotTest {
         }
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/day_page_dark.png")
     }
+
+    @Config(qualifiers = "w411dp-h891dp-night-xxhdpi")
+    @Test fun dayPageLoading() {
+        val state = sampleState()
+        compose.mainClock.autoAdvance = false
+        compose.setContent {
+            AmekiTheme(themeMode = ThemeMode.DARK, dynamicColor = false) {
+                androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.surface)) {
+                    DayPage(state.places.first(), state, DayTarget(5), {}, {}, {})
+                }
+            }
+        }
+        compose.mainClock.advanceTimeBy(500)
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/day_page_loading_dark.png")
+    }
 }

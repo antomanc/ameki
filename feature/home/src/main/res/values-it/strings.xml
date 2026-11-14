@@ -54,7 +54,7 @@
     <string name="day_uv">Indice UV massimo %1$d</string>
     <string name="day_sun">Alba %1$s · tramonto %2$s</string>
     <string name="col_hour">Ora</string>
-    <string name="col_temp">Temperatura</string>
+    <string name="col_temp">Temp.</string>
     <string name="col_rain">Pioggia</string>
     <string name="col_wind">Vento</string>
     <string name="back">Indietro</string>

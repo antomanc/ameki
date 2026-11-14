@@ -38,6 +38,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -149,22 +152,51 @@ private fun DayContent(s: WeatherSnapshot, index: Int, units: Units, fmt: TimeFo
         when {
             hours.isNotEmpty() -> {
                 item { HourHeaderRow() }
-                items(hours, key = { it.time.epochSecond }) { HourRow(it, s, units, fmt, highlighted = it.time.epochSecond == focusHour) }
-            }
-            loading -> item {
-                Row(Modifier.fillMaxWidth().padding(vertical = 24.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                    Spacer(Modifier.width(12.dp))
-                    Text(stringResource(R.string.day_loading_hours), style = MaterialTheme.typography.bodyMedium)
+                items(hours, key = { it.time.epochSecond }) {
+                    // Rows fade in when they replace the skeleton, instead of popping in.
+                    Box(Modifier.animateItem(fadeInSpec = androidx.compose.animation.core.tween(300))) {
+                        HourRow(it, s, units, fmt, highlighted = it.time.epochSecond == focusHour)
+                    }
                 }
+            }
+            // No hours yet and no error: they are on their way (the fetch starts a frame later).
+            !failed || loading -> {
+                item { HourHeaderRow() }
+                items(8) { SkeletonRow() }
             }
             else -> item {
                 Text(
-                    stringResource(if (failed) R.string.day_hours_failed else R.string.day_no_hourly),
+                    stringResource(R.string.day_hours_failed),
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
+    }
+}
+
+/** Placeholder shaped like an hour row, gently pulsing while the hours load. */
+@Composable
+private fun SkeletonRow() {
+    val pulse = androidx.compose.animation.core.rememberInfiniteTransition(label = "skeleton")
+    val alpha by pulse.animateFloat(
+        initialValue = 0.35f, targetValue = 0.7f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            androidx.compose.animation.core.tween(800), androidx.compose.animation.core.RepeatMode.Reverse,
+        ),
+        label = "alpha",
+    )
+    val c = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = alpha)
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+    Row(Modifier.fillMaxWidth().height(52.dp).semantics { contentDescription = "" }, verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.width(48.dp).height(16.dp).background(c, shape))
+        Spacer(Modifier.width(28.dp))
+        Box(Modifier.size(32.dp).background(c, androidx.compose.foundation.shape.CircleShape))
+        Spacer(Modifier.width(8.dp))
+        Box(Modifier.width(40.dp).height(20.dp).background(c, shape))
+        Spacer(Modifier.weight(1f))
+        Box(Modifier.width(48.dp).height(16.dp).background(c, shape))
+        Spacer(Modifier.width(28.dp))
+        Box(Modifier.width(64.dp).height(16.dp).background(c, shape))
     }
 }
 

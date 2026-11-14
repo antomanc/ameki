@@ -54,7 +54,7 @@
     <string name="day_uv">Max UV index %1$d</string>
     <string name="day_sun">Sunrise %1$s · sunset %2$s</string>
     <string name="col_hour">Time</string>
-    <string name="col_temp">Temperature</string>
+    <string name="col_temp">Temp</string>
     <string name="col_rain">Rain</string>
     <string name="col_wind">Wind</string>
     <string name="back">Back</string>

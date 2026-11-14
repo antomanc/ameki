@@ -228,6 +228,9 @@ internal fun Card(title: String?, modifier: Modifier = Modifier, content: @Compo
     }
 }
 
+/** Fixed height for every item in the hourly row (hours and day separators alike). */
+private val HourItemHeight = 140.dp
+
 @Composable
 private fun HourlyCard(hours: List<HourlyForecast>, s: WeatherSnapshot, units: Units, fmt: TimeFormatter, onOpenDay: (DayTarget) -> Unit) {
     val colors = LocalInstrumentColors.current
@@ -252,16 +255,18 @@ private fun HourlyCard(hours: List<HourlyForecast>, s: WeatherSnapshot, units: U
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // Midnight: a thin rule with the new day's name.
                     if (i > 0 && local.hour == 0) {
-                        Column(Modifier.padding(horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        // Same fixed height as an hour: the card never grows when this scrolls in.
+                        Column(Modifier.height(HourItemHeight).padding(horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 if (date == today.plusDays(1)) stringResource(R.string.tomorrow) else fmt.weekdayShort(date),
                                 style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
+                                maxLines = 1,
                             )
-                            Box(Modifier.padding(top = 4.dp).width(1.dp).height(112.dp).background(MaterialTheme.colorScheme.outlineVariant))
+                            Box(Modifier.padding(top = 4.dp).width(1.dp).weight(1f).background(MaterialTheme.colorScheme.outlineVariant))
                         }
                     }
                     Column(
-                        Modifier.width(52.dp).clip(MaterialTheme.shapes.small).clickable {
+                        Modifier.width(52.dp).height(HourItemHeight).clip(MaterialTheme.shapes.small).clickable {
                             val dayIndex = s.daily.indexOfFirst { it.date == date }
                             if (dayIndex >= 0) onOpenDay(DayTarget(dayIndex, h.time.epochSecond))
                         },
