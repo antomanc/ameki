@@ -1,21 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Ameki: 雨木, a rain tree. A cloud canopy on a slender trunk, rain falling from it. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <!-- track -->
-    <path android:pathData="M38.4,69.6 A22,22 0 1,1 69.6,69.6"
-        android:strokeColor="#26000000" android:strokeWidth="7" android:strokeLineCap="round" android:fillColor="#00000000" />
-    <!-- range -->
-    <path android:pathData="M34.9,62 A22,22 0 0,1 72.1,41.6"
-        android:strokeWidth="7" android:strokeLineCap="round" android:fillColor="#00000000">
-        <aapt:attr name="android:strokeColor">
-            <gradient android:type="linear" android:startX="34" android:startY="62" android:endX="72" android:endY="41"
-                android:startColor="#4F86C6" android:endColor="#D9A040" />
-        </aapt:attr>
-    </path>
-    <!-- now marker -->
-    <path android:pathData="M72.1,41.6 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" android:fillColor="#E2501F" />
-    <!-- rain dot -->
-    <path android:pathData="M54,56 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0" android:fillColor="#2F68B5" />
+    <group android:pivotX="54" android:pivotY="54" android:scaleX="1.12" android:scaleY="1.12" android:translateY="1">
+        <!-- trunk and branch -->
+        <path android:pathData="M52.2,56 L51,80 Q54,82 57,80 L55.8,56 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="linear" android:startX="54" android:startY="56" android:endX="54" android:endY="81"
+                    android:startColor="#6B4E38" android:endColor="#8E6A4C" />
+            </aapt:attr>
+        </path>
+        <path android:pathData="M54.5,66 Q58,62 62,58" android:strokeColor="#7A5A41" android:strokeWidth="3"
+            android:strokeLineCap="round" android:fillColor="#00000000" />
+        <!-- canopy: one path, one gradient, no seams -->
+        <path android:pathData="M29,47 a11,11 0 0,1 11,-11 a14,14 0 0,1 26.5,-4 a12,12 0 0,1 11.5,13.5 a9,9 0 0,1 -1,16.5 L37.5,62 a7.5,7.5 0 0,1 -8.5,-15 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="linear" android:startX="54" android:startY="22" android:endX="54" android:endY="62"
+                    android:startColor="#8CC0F5" android:endColor="#3D7CCB" />
+            </aapt:attr>
+        </path>
+        <!-- highlight -->
+        <path android:pathData="M44,33 Q50,26 58,28" android:strokeColor="#FFFFFF" android:strokeAlpha="0.55"
+            android:strokeWidth="3" android:strokeLineCap="round" android:fillColor="#00000000" />
+        <!-- rain -->
+        <path android:pathData="M38,66 L36,72 M44,72 L42,78 M70,66 L68,72" android:strokeColor="#3D7CCB"
+            android:strokeWidth="3.4" android:strokeLineCap="round" android:fillColor="#00000000" />
+    </group>
 </vector>

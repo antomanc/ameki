@@ -24,4 +24,5 @@
     <string name="config_save">Salva</string>
     <string name="widget_rain_name">Pioggia</string>
     <string name="widget_rain_desc">Piove nelle prossime due ore?</string>
+    <string name="widget_stale">Dati delle %1$s</string>
 </resources>

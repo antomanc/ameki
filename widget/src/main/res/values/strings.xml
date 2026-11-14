@@ -24,4 +24,5 @@
     <string name="config_save">Save</string>
     <string name="widget_rain_name">Rain</string>
     <string name="widget_rain_desc">Will it rain in the next two hours?</string>
+    <string name="widget_stale">Data from %1$s</string>
 </resources>

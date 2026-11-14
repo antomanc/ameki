@@ -14,6 +14,7 @@ import dev.antomanc.ameki.widget.widgetModule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.get
 import org.koin.android.ext.koin.androidContext
@@ -31,6 +32,10 @@ class AmekiApp : Application() {
         }
         WorkManager.initialize(this, Configuration.Builder().setWorkerFactory(KoinWorkerFactory()).build())
         appScope.launch {
+            // Units, theme, time format... change what widgets draw: redraw them on every change.
+            launch {
+                get<SettingsRepository>().settings.drop(1).collect { get<WidgetUpdater>().onWeatherUpdated() }
+            }
             val settings = get<SettingsRepository>().current()
             get<RefreshScheduler>().schedule(settings.refreshIntervalMinutes)
             // Widget picker previews (Android 15+). Rate-limited by the system, so once per version.

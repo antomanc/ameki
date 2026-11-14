@@ -9,6 +9,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SecondaryTabRow
@@ -114,19 +119,21 @@ internal fun DetailGrid(s: WeatherSnapshot, units: Units, fmt: TimeFormatter, ca
         if (Capability.SUN_EVENTS in caps) today?.let { d -> if (d.sunrise != null && d.sunset != null) add { m -> SunTile(d.sunrise!!, d.sunset!!, s, fmt, m) } }
         if (Capability.MOON_PHASE in caps) today?.let { d -> add { m -> MoonTile(d.moonPhase ?: Astronomy.moonPhase(d.date), Astronomy.illumination(d.date), m) } }
     }
+    // Two per row, both tiles stretched to the taller one, so rows line up.
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         tiles.chunked(2).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                row.forEach { it(Modifier.weight(1f)) }
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                row.forEach { it(Modifier.weight(1f).fillMaxHeight()) }
                 if (row.size == 1) Spacer(Modifier.weight(1f))
             }
         }
     }
 }
 
+/** Fixed minimum height keeps every tile the same size across rows. */
 @Composable
 private fun Tile(title: String, modifier: Modifier, content: @Composable () -> Unit) {
-    Box(modifier.aspectRatio(1f)) { Card(title, Modifier) { content() } }
+    Card(title, modifier.heightIn(min = 150.dp)) { content() }
 }
 
 @Composable
@@ -142,28 +149,26 @@ private fun WindTile(speed: Double, gust: Double?, dir: Int?, units: Units, modi
     val colors = LocalInstrumentColors.current
     val outline = MaterialTheme.colorScheme.outlineVariant
     val labels = stringResource(R.string.compass_points).split(",")
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(verticalAlignment = Alignment.Top) {
         Column(Modifier.weight(1f)) {
-            Text(units.wind(speed), style = MaterialTheme.typography.titleLarge)
-            gust?.let { Text(stringResource(R.string.gusts, units.wind(it)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            dir?.let { Text(labels.getOrElse(compassPoint(it)) { "" }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            Text(units.wind(speed), style = MaterialTheme.typography.headlineMedium)
+            val sub = listOfNotNull(dir?.let { labels.getOrElse(compassPoint(it)) { "" } }, gust?.let { stringResource(R.string.gusts, units.wind(it)) })
+            sub.forEach { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
         if (dir != null) {
-            Canvas(Modifier.weight(1f).aspectRatio(1f)) {
-                val r = size.minDimension / 2 - 4
+            Canvas(Modifier.size(56.dp)) {
+                val r = size.minDimension / 2 - 2
                 val c = Offset(size.width / 2, size.height / 2)
                 drawCircle(outline, r, c, style = Stroke(2f))
                 for (i in 0 until 16) {
                     val a = i * PI / 8
-                    val len = if (i % 4 == 0) 8f else 4f
+                    val len = if (i % 4 == 0) 7f else 3f
                     drawLine(outline, Offset(c.x + (r - len) * sin(a).toFloat(), c.y - (r - len) * cos(a).toFloat()), Offset(c.x + r * sin(a).toFloat(), c.y - r * cos(a).toFloat()), 2f)
                 }
-                // Arrow points where the wind blows to.
+                // The arrow points where the wind blows to.
                 rotate(dir + 180f, c) {
-                    val p = Path().apply {
-                        moveTo(c.x, c.y - r + 6); lineTo(c.x - 7, c.y - r + 22); lineTo(c.x + 7, c.y - r + 22); close()
-                    }
-                    drawLine(colors.now, Offset(c.x, c.y + r - 10), Offset(c.x, c.y - r + 16), 4f, StrokeCap.Round)
+                    val p = Path().apply { moveTo(c.x, c.y - r + 4); lineTo(c.x - 6, c.y - r + 18); lineTo(c.x + 6, c.y - r + 18); close() }
+                    drawLine(colors.now, Offset(c.x, c.y + r - 8), Offset(c.x, c.y - r + 12), 4f, StrokeCap.Round)
                     drawPath(p, colors.now)
                 }
             }
@@ -213,29 +218,25 @@ private fun SunTile(rise: Instant, set: Instant, s: WeatherSnapshot, fmt: TimeFo
 
 @Composable
 private fun MoonTile(phase: MoonPhase, illumination: Double, modifier: Modifier) = Tile(stringResource(R.string.moon), modifier) {
-    val lit = MaterialTheme.colorScheme.onSurface
+    val lit = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
     val dark = MaterialTheme.colorScheme.surfaceContainerHighest
     val waxing = phase.ordinal in 1..3
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Canvas(Modifier.height(56.dp).aspectRatio(1f)) {
+        Canvas(Modifier.size(52.dp)) {
             val r = size.minDimension / 2
             val c = Offset(size.width / 2, size.height / 2)
             drawCircle(dark, r, c)
-            // Terminator as an ellipse: lit half plus/minus an elliptical bulge.
-            val k = (1 - 2 * illumination).toFloat()
-            val path = Path().apply {
-                val sign = if (waxing) 1f else -1f
-                moveTo(c.x, c.y - r)
-                // lit limb
-                arcTo(androidx.compose.ui.geometry.Rect(c.x - r, c.y - r, c.x + r, c.y + r), -90f, 180f * sign, false)
-                // terminator back to top
-                arcTo(androidx.compose.ui.geometry.Rect(c.x - r * kotlin.math.abs(k), c.y - r, c.x + r * kotlin.math.abs(k), c.y + r), 90f, 180f * sign * (if (k > 0) 1 else -1), false)
-                close()
-            }
-            drawPath(path, lit)
+            // Lit half on the side the sun is: right while waxing, left while waning.
+            drawArc(lit, if (waxing) -90f else 90f, 180f, true, Offset(c.x - r, c.y - r), Size(2 * r, 2 * r))
+            // Terminator: an ellipse that adds light past half, or takes it away before half.
+            val w = (r * kotlin.math.abs(1 - 2 * illumination)).toFloat()
+            drawOval(if (illumination > 0.5) lit else dark, Offset(c.x - w, c.y - r), Size(2 * w, 2 * r))
         }
-        Spacer(Modifier.padding(6.dp))
-        Text(stringResource(moonLabel(phase)), style = MaterialTheme.typography.bodyMedium)
+        Spacer(Modifier.width(12.dp))
+        Column {
+            Text(stringResource(moonLabel(phase)), style = MaterialTheme.typography.titleMedium)
+            Text("${(illumination * 100).roundToInt()}%", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 

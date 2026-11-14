@@ -48,4 +48,13 @@
     <string name="moon_waning_gibbous">Gibbosa calante</string>
     <string name="moon_last_quarter">Ultimo quarto</string>
     <string name="moon_waning_crescent">Luna calante</string>
+    <string name="day_no_hourly">Il dettaglio ora per ora non è ancora disponibile per questo giorno.</string>
+    <string name="day_rain">Pioggia: %1$d%% %2$s</string>
+    <string name="day_wind">Vento fino a %1$s</string>
+    <string name="day_uv">Indice UV massimo %1$d</string>
+    <string name="day_sun">Alba %1$s · tramonto %2$s</string>
+    <string name="col_hour">Ora</string>
+    <string name="col_temp">Temperatura</string>
+    <string name="col_rain">Pioggia</string>
+    <string name="col_wind">Vento</string>
 </resources>

@@ -48,4 +48,13 @@
     <string name="moon_waning_gibbous">Waning gibbous</string>
     <string name="moon_last_quarter">Last quarter</string>
     <string name="moon_waning_crescent">Waning crescent</string>
+    <string name="day_no_hourly">Hour-by-hour detail isn\'t available for this day yet.</string>
+    <string name="day_rain">Rain: %1$d%% %2$s</string>
+    <string name="day_wind">Wind up to %1$s</string>
+    <string name="day_uv">Max UV index %1$d</string>
+    <string name="day_sun">Sunrise %1$s · sunset %2$s</string>
+    <string name="col_hour">Time</string>
+    <string name="col_temp">Temperature</string>
+    <string name="col_rain">Rain</string>
+    <string name="col_wind">Wind</string>
 </resources>

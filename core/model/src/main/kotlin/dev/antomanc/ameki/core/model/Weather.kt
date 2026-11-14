@@ -126,8 +126,11 @@ data class WeatherSnapshot(
     /** When each part was fetched. A part missing here was never fetched or has expired. */
     val fetchedAt: Map<DataPart, @Serializable(InstantSerializer::class) Instant> = emptyMap(),
 ) {
-    /** Oldest fetch time among the parts we have: what "updated at" should honestly show. */
-    val updatedAt: Instant? get() = fetchedAt.values.minOrNull()
+    /**
+     * When the conditions on screen were fetched. Parts refresh on different schedules (daily
+     * data less often), so the oldest part would make fresh weather look stale.
+     */
+    val updatedAt: Instant? get() = fetchedAt[DataPart.CURRENT] ?: fetchedAt[DataPart.HOURLY] ?: fetchedAt.values.maxOrNull()
 
     val today: DailyForecast? get() = daily.firstOrNull()
 

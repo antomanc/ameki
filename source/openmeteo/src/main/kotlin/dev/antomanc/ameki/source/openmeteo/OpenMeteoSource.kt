@@ -54,7 +54,8 @@ class OpenMeteoSource(
                 parameter("timezone", "auto")
                 parameter("timeformat", "unixtime")
                 parameter("forecast_days", 10)
-                parameter("forecast_hours", 48)
+                // All ten days hour by hour, so any day can be opened in detail.
+                parameter("forecast_hours", 240)
                 parameter("minutely_15", "precipitation")
                 parameter("forecast_minutely_15", 12)
             }

@@ -27,6 +27,17 @@ data class WidgetConfig(val placeId: Long?, val style: WidgetStyle, val opacity:
 data class WidgetData(val config: WidgetConfig, val weather: PlaceWeather?, val settings: AppSettings)
 
 internal object WidgetRepository : KoinComponent {
+    /** Live data for one widget: Room emits whenever the cache, places, settings or config change. */
+    fun observe(appWidgetId: Int): kotlinx.coroutines.flow.Flow<WidgetData> = kotlinx.coroutines.flow.combine(
+        get<WidgetDao>().observe(appWidgetId),
+        get<WeatherRepository>().all,
+        get<SettingsRepository>().settings,
+    ) { entity, all, settings ->
+        val config = WidgetConfig.from(entity)
+        val weather = config.placeId?.let { id -> all.firstOrNull { it.place.id == id } } ?: all.firstOrNull()
+        WidgetData(config, weather, settings)
+    }
+
     suspend fun load(appWidgetId: Int): WidgetData {
         val config = WidgetConfig.from(get<WidgetDao>().get(appWidgetId))
         val weatherRepo = get<WeatherRepository>()

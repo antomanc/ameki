@@ -25,6 +25,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,6 +74,12 @@ internal fun PlaceWeatherPane(
     val units = state.settings.units
     val now = Instant.now()
 
+    var openDay by androidx.compose.runtime.saveable.rememberSaveable(pw.place.id) { androidx.compose.runtime.mutableStateOf<Int?>(null) }
+    openDay?.let { day ->
+        if (snapshot != null && snapshot.daily.isNotEmpty()) {
+            DayDetailSheet(snapshot, day.coerceIn(0, snapshot.daily.lastIndex), units, fmt, onSelect = { openDay = it }, onDismiss = { openDay = null })
+        }
+    }
     PullToRefreshBox(isRefreshing = refreshing, onRefresh = onRefresh, modifier = modifier.fillMaxSize()) {
         if (snapshot == null || !pw.hasData) {
             NoData(pw, refreshing, onFixProblem)
@@ -83,9 +91,9 @@ internal fun PlaceWeatherPane(
             if (snapshot.hourly.isNotEmpty()) add { HourlyCharts(snapshot.hoursFrom(now).take(24), snapshot, units, fmt) }
         }
         val secondary: List<@Composable () -> Unit> = buildList {
-            if (snapshot.daily.isNotEmpty()) add { DailyCard(snapshot.daily, snapshot, units, fmt) }
+            if (snapshot.daily.isNotEmpty()) add { DailyCard(snapshot.daily, snapshot, units, fmt) { openDay = it } }
             add { DetailGrid(snapshot, units, fmt, state.capabilities) }
-            add { Attribution(snapshot.source) }
+            add { Attribution(snapshot, fmt) }
         }
         if (twoColumns) {
             Row(Modifier.fillMaxSize().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -160,20 +168,27 @@ private fun Hero(pw: PlaceWeather, s: WeatherSnapshot, units: Units, fmt: TimeFo
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                         )
+                        // The stamp sits under the reading, in the gauge's open bottom.
+                        Spacer(Modifier.height(10.dp))
+                        stamp()
                     }
                 }
-                // The stamp sits in the dial's open bottom, where a gauge has its label.
-                Box(Modifier.align(Alignment.BottomCenter)) { stamp() }
             }
         }
     }
 }
 
-/** "Updated at" stamp. Old data stays visible, stamped with its age, never hidden (ticket-wallet raise). */
+internal fun isStale(updated: Instant, intervalMin: Int): Boolean =
+    Duration.between(updated, Instant.now()) > Duration.ofMinutes(maxOf(120L, intervalMin * 3L))
+
+/** Shown under the dial only for stale data or a problem to fix. Old data stays visible, stamped with its age. */
 @Composable
 private fun Freshness(pw: PlaceWeather, s: WeatherSnapshot, fmt: TimeFormatter, intervalMin: Int, onFixProblem: (SyncError) -> Unit) {
     val updated = s.updatedAt ?: return
-    val stale = Duration.between(updated, Instant.now()) > Duration.ofMinutes(intervalMin * 2L + 10)
+    val stale = isStale(updated, intervalMin)
+    val problem = pw.error?.takeIf { it.needsUserAction }
+    // Fresh data needs no stamp here: the time lives in the footer. Speak up only when it matters.
+    if (!stale && problem == null) return
     val colors = LocalInstrumentColors.current
     Row(verticalAlignment = Alignment.CenterVertically) {
         Row(
@@ -244,13 +259,16 @@ private fun HourlyCard(hours: List<HourlyForecast>, s: WeatherSnapshot, units: U
 }
 
 @Composable
-private fun DailyCard(days: List<DailyForecast>, s: WeatherSnapshot, units: Units, fmt: TimeFormatter) {
+private fun DailyCard(days: List<DailyForecast>, s: WeatherSnapshot, units: Units, fmt: TimeFormatter, onDay: (Int) -> Unit) {
     val min = days.minOf { it.temperatureMin }
     val max = days.maxOf { it.temperatureMax }
     val current = s.current?.temperature
     Card(stringResource(R.string.ten_days)) {
         days.forEachIndexed { i, d ->
-            Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.fillMaxWidth().height(48.dp).clip(MaterialTheme.shapes.small).clickable { onDay(i) },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text(
                     if (i == 0) stringResource(UiR.string.today) else fmt.weekdayShort(d.date),
                     style = MaterialTheme.typography.bodyLarge,
@@ -276,9 +294,11 @@ private fun DailyCard(days: List<DailyForecast>, s: WeatherSnapshot, units: Unit
 }
 
 @Composable
-private fun Attribution(source: SourceId) {
+private fun Attribution(s: WeatherSnapshot, fmt: TimeFormatter) {
+    val source = stringResource(if (s.source == SourceId.GOOGLE) UiR.string.attribution_google else UiR.string.attribution_open_meteo)
+    val updated = s.updatedAt?.let { stringResource(UiR.string.updated_at, fmt.time(it, s.timeZone)) }
     Text(
-        stringResource(if (source == SourceId.GOOGLE) UiR.string.attribution_google else UiR.string.attribution_open_meteo),
+        listOfNotNull(updated, source).joinToString("\n"),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.fillMaxWidth().padding(8.dp),

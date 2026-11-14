@@ -128,12 +128,19 @@ internal fun textStyle(color: ColorProvider, size: TextUnit, weight: FontWeight 
 
 @Composable
 internal fun ConditionIcon(condition: WeatherCondition, isDay: Boolean, size: Dp, palette: WidgetPalette) {
-    Image(
-        ImageProvider(WeatherIcons.mono(condition, isDay)),
-        contentDescription = null,
-        modifier = GlanceModifier.size(size),
-        colorFilter = ColorFilter.tint(palette.onSurface),
-    )
+    // Full-colour Meteocons on dark grounds; on light ones the white clouds would vanish,
+    // so the monochrome set tinted with the theme takes over.
+    val dark = palette.dark ?: LocalContext.current.isNight()
+    if (dark) {
+        Image(ImageProvider(WeatherIcons.color(condition, isDay)), contentDescription = null, modifier = GlanceModifier.size(size))
+    } else {
+        Image(
+            ImageProvider(WeatherIcons.mono(condition, isDay)),
+            contentDescription = null,
+            modifier = GlanceModifier.size(size),
+            colorFilter = ColorFilter.tint(palette.onSurface),
+        )
+    }
 }
 
 /** Rain probability dot on the same diameter ramp as the app. */
@@ -146,20 +153,21 @@ internal fun RainDot(probability: Int?, max: Dp, palette: WidgetPalette) {
     }
 }
 
-/** "09:10" with a dot: grey when fresh, orange when stale. Tapping it asks for a refresh. */
+/**
+ * Widgets are expected to be current, so normally they show no time at all. Only data older
+ * than two hours (offline, refresh failing) gets a quiet "data from 09:10", so nobody trusts old weather.
+ */
 @Composable
 internal fun Freshness(data: WidgetData, palette: WidgetPalette, fmt: TimeFormatter) {
     val s = data.weather?.snapshot ?: return
     val updated = s.updatedAt ?: return
-    val stale = Duration.between(updated, Instant.now()) > Duration.ofMinutes(data.settings.refreshIntervalMinutes * 2L + 10)
-    Row(
-        GlanceModifier.clickable(actionRunCallback<RefreshAction>()),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(GlanceModifier.size(6.dp).cornerRadius(3.dp).background(if (stale) palette.now else palette.onSurfaceVariant)) {}
-        Spacer(GlanceModifier.width(4.dp))
-        Text(fmt.time(updated, s.timeZone), style = textStyle(palette.onSurfaceVariant, 11.sp))
-    }
+    val limit = Duration.ofMinutes(maxOf(120L, data.settings.refreshIntervalMinutes * 3L))
+    if (Duration.between(updated, Instant.now()) <= limit) return
+    Text(
+        LocalContext.current.getString(R.string.widget_stale, fmt.time(updated, s.timeZone)),
+        style = textStyle(palette.onSurfaceVariant, 11.sp),
+        modifier = GlanceModifier.clickable(actionRunCallback<RefreshAction>()),
+    )
 }
 
 /** The non-weather states: no place yet, first load, a problem only the user can fix. */

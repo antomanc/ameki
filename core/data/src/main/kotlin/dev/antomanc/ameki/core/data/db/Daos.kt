@@ -76,6 +76,9 @@ interface WidgetDao {
     @Query("SELECT * FROM widgets WHERE appWidgetId = :id")
     suspend fun get(id: Int): WidgetConfigEntity?
 
+    @Query("SELECT * FROM widgets WHERE appWidgetId = :id")
+    fun observe(id: Int): Flow<WidgetConfigEntity?>
+
     @Upsert
     suspend fun upsert(config: WidgetConfigEntity)
 

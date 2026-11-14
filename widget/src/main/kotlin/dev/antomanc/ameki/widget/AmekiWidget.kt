@@ -2,6 +2,8 @@ package dev.antomanc.ameki.widget
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.unit.DpSize
 import androidx.glance.GlanceId
 import androidx.glance.GlanceTheme
@@ -20,8 +22,12 @@ abstract class AmekiWidget(sizes: Set<DpSize>) : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
-        val data = WidgetRepository.load(appWidgetId)
+        val initial = WidgetRepository.load(appWidgetId)
+        val updates = WidgetRepository.observe(appWidgetId)
         provideContent {
+            // Glance keeps a session alive between updates: observe the cache instead of
+            // rendering a one-off snapshot, or a refresh landing mid-session draws old data.
+            val data by updates.collectAsState(initial)
             GlanceTheme {
                 Render(context, data)
             }

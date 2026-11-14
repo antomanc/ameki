@@ -40,7 +40,7 @@ class ModelTest {
         assertThat(merged.current!!.temperature).isEqualTo(12.0)
         assertThat(merged.daily).hasSize(1)
         assertThat(merged.fetchedAt[DataPart.DAILY]).isEqualTo(t0)
-        assertThat(merged.updatedAt).isEqualTo(t0)
+        assertThat(merged.updatedAt).isEqualTo(t0.plusSeconds(1800)) // current was refreshed
     }
 
     @Test
