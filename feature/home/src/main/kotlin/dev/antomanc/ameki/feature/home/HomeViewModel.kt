@@ -22,6 +22,9 @@ data class HomeUiState(
     val settings: AppSettings = AppSettings(),
     val capabilities: Set<Capability> = emptySet(),
     val refreshing: Set<Long> = emptySet(),
+    /** Places whose extra hours are being fetched for a day page. */
+    val loadingHours: Set<Long> = emptySet(),
+    val hoursError: dev.antomanc.ameki.core.data.sync.SyncError? = null,
 )
 
 class HomeViewModel(
@@ -31,14 +34,18 @@ class HomeViewModel(
     private val sources: SourceRegistry,
 ) : ViewModel() {
     private val refreshing = MutableStateFlow<Set<Long>>(emptySet())
+    private val loadingHours = MutableStateFlow<Set<Long>>(emptySet())
+    private val hoursError = MutableStateFlow<dev.antomanc.ameki.core.data.sync.SyncError?>(null)
 
-    val state: StateFlow<HomeUiState> = combine(weather.all, settings.settings, refreshing) { list, s, r ->
+    val state: StateFlow<HomeUiState> = combine(weather.all, settings.settings, refreshing, loadingHours, hoursError) { list, s, r, lh, he ->
         HomeUiState(
             loading = false,
             places = list,
             settings = s,
             capabilities = sources[s.source].capabilities,
             refreshing = r,
+            loadingHours = lh,
+            hoursError = he,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
@@ -47,6 +54,19 @@ class HomeViewModel(
         places.markOpened(id)
         settings.setSelectedPlace(id)
         refresh(id, force = false)
+    }
+
+    /** A day page needs hours up to [until]: fetch the missing ones (Google only; Open-Meteo has them). */
+    fun ensureHours(id: Long, until: java.time.Instant) {
+        if (id in loadingHours.value) return
+        viewModelScope.launch {
+            loadingHours.value += id
+            try {
+                hoursError.value = weather.ensureHourlyUntil(id, until)
+            } finally {
+                loadingHours.value -= id
+            }
+        }
     }
 
     fun refresh(id: Long, force: Boolean = true) {

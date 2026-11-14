@@ -27,6 +27,13 @@ interface WeatherSource {
         language: String,
         parts: Set<DataPart> = DataPart.entries.toSet(),
     ): WeatherSnapshot
+
+    /**
+     * Hourly forecast for the next [hours] hours, for sources whose regular refresh returns
+     * fewer (Google pages by 24 and each page is a billed call). Null when the source has
+     * nothing more than [fetch] already gives.
+     */
+    suspend fun fetchHours(location: GeoPoint, language: String, hours: Int): WeatherSnapshot? = null
 }
 
 /** Why a fetch failed, in terms the UI can act on. */

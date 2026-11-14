@@ -141,6 +141,30 @@ class WeatherRepository(
         return error
     }
 
+    /**
+     * Make sure hourly data reaches [until] (the end of a day the user opened). Free for
+     * sources that already return every hour; for Google it fetches only the extra pages.
+     * Returns the error, or null when the hours are there.
+     */
+    suspend fun ensureHourlyUntil(placeId: Long, until: Instant): SyncError? = mutex.withLock {
+        val s = settings.current()
+        val source = sources[s.source]
+        val existing = snapshotDao.get(placeId)?.let(::decode)?.let { valid(it, s.source) }
+        val lastHour = existing?.hourly?.lastOrNull()?.time
+        if (lastHour != null && !lastHour.isBefore(until.minusSeconds(3600))) return@withLock null
+        val place = placeDao.byId(placeId) ?: return@withLock null
+        val hours = (Duration.between(clock(), until).toHours() + 2).toInt()
+        try {
+            val extra = source.fetchHours(place.toModel().point.coarse(), language(s), hours) ?: return@withLock null
+            val merged = existing?.mergedWith(extra) ?: extra
+            record(placeId, s, merged, null)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            SyncError.from(e)
+        }
+    }
+
     /** Physically delete expired data (required by Google's caching terms, tidy for the rest). */
     suspend fun purgeExpired() {
         val source = settings.current().source

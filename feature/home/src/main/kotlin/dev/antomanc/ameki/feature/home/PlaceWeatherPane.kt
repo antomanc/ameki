@@ -66,6 +66,7 @@ internal fun PlaceWeatherPane(
     onRefresh: () -> Unit,
     onFixProblem: (SyncError) -> Unit,
     twoColumns: Boolean,
+    onOpenDay: (DayTarget) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -74,12 +75,6 @@ internal fun PlaceWeatherPane(
     val units = state.settings.units
     val now = Instant.now()
 
-    var openDay by androidx.compose.runtime.saveable.rememberSaveable(pw.place.id) { androidx.compose.runtime.mutableStateOf<Int?>(null) }
-    openDay?.let { day ->
-        if (snapshot != null && snapshot.daily.isNotEmpty()) {
-            DayDetailSheet(snapshot, day.coerceIn(0, snapshot.daily.lastIndex), units, fmt, onSelect = { openDay = it }, onDismiss = { openDay = null })
-        }
-    }
     PullToRefreshBox(isRefreshing = refreshing, onRefresh = onRefresh, modifier = modifier.fillMaxSize()) {
         if (snapshot == null || !pw.hasData) {
             NoData(pw, refreshing, onFixProblem)
@@ -87,11 +82,12 @@ internal fun PlaceWeatherPane(
         }
         val primary: List<@Composable () -> Unit> = buildList {
             add { Hero(pw, snapshot, units, fmt) { Freshness(pw, snapshot, fmt, state.settings.refreshIntervalMinutes, onFixProblem) } }
-            if (snapshot.hourly.isNotEmpty()) add { HourlyCard(snapshot.hoursFrom(now).take(24), snapshot, units, fmt) }
+            // 48 hours: Open-Meteo has them already; Google refreshes 24 (each extra page is a call).
+            if (snapshot.hourly.isNotEmpty()) add { HourlyCard(snapshot.hoursFrom(now).take(48), snapshot, units, fmt, onOpenDay) }
             if (snapshot.hourly.isNotEmpty()) add { HourlyCharts(snapshot.hoursFrom(now).take(24), snapshot, units, fmt) }
         }
         val secondary: List<@Composable () -> Unit> = buildList {
-            if (snapshot.daily.isNotEmpty()) add { DailyCard(snapshot.daily, snapshot, units, fmt) { openDay = it } }
+            if (snapshot.daily.isNotEmpty()) add { DailyCard(snapshot.daily, snapshot, units, fmt) { onOpenDay(DayTarget(it)) } }
             add { DetailGrid(snapshot, units, fmt, state.capabilities) }
             add { Attribution(snapshot, fmt) }
         }
@@ -233,25 +229,55 @@ internal fun Card(title: String?, modifier: Modifier = Modifier, content: @Compo
 }
 
 @Composable
-private fun HourlyCard(hours: List<HourlyForecast>, s: WeatherSnapshot, units: Units, fmt: TimeFormatter) {
-    Card(stringResource(R.string.next_hours)) {
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            items(hours, key = { it.time.epochSecond }) { h ->
-                Column(Modifier.width(52.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    val isNow = h === hours.first()
-                    Text(
-                        if (isNow) stringResource(UiR.string.now) else fmt.hour(h.time, s.timeZone),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = if (isNow) LocalInstrumentColors.current.now else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    WeatherIcon(h.condition, h.isDaytime, Modifier.padding(vertical = 4.dp), size = 34.dp)
-                    Text(units.temp(h.temperature), style = MaterialTheme.typography.titleMedium)
-                    Box(Modifier.height(30.dp), contentAlignment = Alignment.Center) { RainDot(h.precipitationProbability, max = 22.dp) }
-                    Text(
-                        h.precipitationProbability?.let { "$it%" } ?: "",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = LocalInstrumentColors.current.rain,
-                    )
+private fun HourlyCard(hours: List<HourlyForecast>, s: WeatherSnapshot, units: Units, fmt: TimeFormatter, onOpenDay: (DayTarget) -> Unit) {
+    val colors = LocalInstrumentColors.current
+    val rowState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val today = s.daily.firstOrNull()?.date ?: java.time.LocalDate.now(s.timeZone)
+    // The title names the day under the first visible hour, so you always know where you are.
+    val firstVisible by androidx.compose.runtime.remember {
+        androidx.compose.runtime.derivedStateOf { rowState.firstVisibleItemIndex }
+    }
+    val visibleDate = hours.getOrNull(firstVisible)?.time?.atZone(s.timeZone)?.toLocalDate() ?: today
+    val dayName = when (visibleDate) {
+        today -> stringResource(UiR.string.today)
+        today.plusDays(1) -> stringResource(R.string.tomorrow)
+        else -> fmt.weekdayShort(visibleDate)
+    }
+    Card("${stringResource(R.string.next_hours)} · $dayName") {
+        LazyRow(state = rowState, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            items(hours.size, key = { hours[it].time.epochSecond }) { i ->
+                val h = hours[i]
+                val local = h.time.atZone(s.timeZone)
+                val date = local.toLocalDate()
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Midnight: a thin rule with the new day's name.
+                    if (i > 0 && local.hour == 0) {
+                        Column(Modifier.padding(horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                if (date == today.plusDays(1)) stringResource(R.string.tomorrow) else fmt.weekdayShort(date),
+                                style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
+                            )
+                            Box(Modifier.padding(top = 4.dp).width(1.dp).height(112.dp).background(MaterialTheme.colorScheme.outlineVariant))
+                        }
+                    }
+                    Column(
+                        Modifier.width(52.dp).clip(MaterialTheme.shapes.small).clickable {
+                            val dayIndex = s.daily.indexOfFirst { it.date == date }
+                            if (dayIndex >= 0) onOpenDay(DayTarget(dayIndex, h.time.epochSecond))
+                        },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        val isNow = i == 0
+                        Text(
+                            if (isNow) stringResource(UiR.string.now) else fmt.hour(h.time, s.timeZone),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (isNow) colors.now else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        WeatherIcon(h.condition, h.isDaytime, Modifier.padding(vertical = 4.dp), size = 34.dp)
+                        Text(units.temp(h.temperature), style = MaterialTheme.typography.titleMedium)
+                        Box(Modifier.height(30.dp), contentAlignment = Alignment.Center) { RainDot(h.precipitationProbability, max = 22.dp) }
+                        Text(h.precipitationProbability?.let { "$it%" } ?: "", style = MaterialTheme.typography.labelMedium, color = colors.rain)
+                    }
                 }
             }
         }

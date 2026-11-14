@@ -33,6 +33,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -65,6 +66,7 @@ fun HomeRoute(
         onOpenPlaces = onOpenPlaces,
         onOpenSettings = onOpenSettings,
         onFixProblem = onFixProblem,
+        onNeedHours = viewModel::ensureHours,
     )
 }
 
@@ -78,10 +80,15 @@ fun HomeScreen(
     onOpenPlaces: () -> Unit,
     onOpenSettings: () -> Unit,
     onFixProblem: (dev.antomanc.ameki.core.data.sync.SyncError) -> Unit,
+    onNeedHours: (Long, java.time.Instant) -> Unit = { _, _ -> },
 ) {
     val places = state.places
     val initialPage = places.indexOfFirst { it.place.id == initialPlaceId }.coerceAtLeast(0)
     val pager = rememberPagerState(initialPage = initialPage) { places.size }
+    // An open day page, saved across rotation and folding as [day, hour or -1].
+    var openDay by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf<List<Long>?>(null) }
+    val dayTarget = openDay?.let { DayTarget(it[0].toInt(), it[1].takeIf { h -> h >= 0 }) }
+    val open: (DayTarget) -> Unit = { openDay = listOf(it.day.toLong(), it.hour ?: -1L) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(pager, places.size) {
@@ -94,21 +101,35 @@ fun HomeScreen(
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {},
-                navigationIcon = {
-                    IconButton(onClick = onOpenPlaces) { Icon(Icons.AutoMirrored.Outlined.List, stringResource(R.string.places)) }
-                },
-                actions = {
-                    IconButton(onClick = onOpenSettings) { Icon(Icons.Outlined.Settings, stringResource(R.string.settings)) }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
-            )
+            if (dayTarget == null) {
+                CenterAlignedTopAppBar(
+                    title = {},
+                    navigationIcon = {
+                        IconButton(onClick = onOpenPlaces) { Icon(Icons.AutoMirrored.Outlined.List, stringResource(R.string.places)) }
+                    },
+                    actions = {
+                        IconButton(onClick = onOpenSettings) { Icon(Icons.Outlined.Settings, stringResource(R.string.settings)) }
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+                )
+            }
         },
     ) { padding ->
         if (places.isEmpty()) {
             EmptyPlaces(Modifier.padding(padding), onOpenPlaces)
             return@Scaffold
+        }
+        val current = places.getOrNull(pager.currentPage.coerceIn(0, places.lastIndex))
+        val dayPage: @Composable (Modifier) -> Unit = { m ->
+            if (current != null && dayTarget != null) {
+                DayPage(
+                    current, state, dayTarget,
+                    onDayChange = { d -> openDay = listOf(d.toLong(), if (d == dayTarget.day) dayTarget.hour ?: -1L else -1L) },
+                    onNeedHours = { until -> onNeedHours(current.place.id, until) },
+                    onBack = { openDay = null },
+                    modifier = m,
+                )
+            }
         }
         BoxWithConstraints(Modifier.fillMaxSize().padding(padding)) {
             val width = maxWidth
@@ -124,13 +145,19 @@ fun HomeScreen(
                         modifier = Modifier.width(320.dp).fillMaxHeight(),
                     )
                     val pw = places[pager.currentPage.coerceIn(0, places.lastIndex)]
-                    PlaceWeatherPane(
-                        pw = pw, state = state, refreshing = pw.place.id in state.refreshing,
-                        onRefresh = { onRefresh(pw.place.id) }, onFixProblem = onFixProblem,
-                        twoColumns = width - 320.dp >= 600.dp,
-                        modifier = Modifier.weight(1f),
-                    )
+                    if (dayTarget != null) {
+                        dayPage(Modifier.weight(1f))
+                    } else {
+                        PlaceWeatherPane(
+                            pw = pw, state = state, refreshing = pw.place.id in state.refreshing,
+                            onRefresh = { onRefresh(pw.place.id) }, onFixProblem = onFixProblem,
+                            twoColumns = width - 320.dp >= 600.dp, onOpenDay = open,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
+            } else if (dayTarget != null) {
+                dayPage(Modifier.fillMaxSize())
             } else {
                 Column(Modifier.fillMaxSize()) {
                     HorizontalPager(pager, Modifier.weight(1f), key = { places[it].place.id }) { page ->
@@ -138,7 +165,7 @@ fun HomeScreen(
                         PlaceWeatherPane(
                             pw = pw, state = state, refreshing = pw.place.id in state.refreshing,
                             onRefresh = { onRefresh(pw.place.id) }, onFixProblem = onFixProblem,
-                            twoColumns = width >= 600.dp,
+                            twoColumns = width >= 600.dp, onOpenDay = open,
                         )
                     }
                     if (places.size > 1) PageDots(places.size, pager.currentPage)

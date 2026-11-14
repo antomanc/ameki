@@ -117,21 +117,36 @@ class GoogleWeatherSource(
     private suspend fun currentConditions(key: String, p: GeoPoint, lang: String) =
         get("currentConditions:lookup", key, p, lang, CurrentConditionsResponse.serializer())
 
-    private suspend fun hours(key: String, p: GeoPoint, lang: String): HoursResponse {
+    /** On demand, e.g. opening a day three days out: only the pages needed, up to 240 hours. */
+    override suspend fun fetchHours(location: GeoPoint, language: String, hours: Int): WeatherSnapshot {
+        val key = apiKey()?.takeIf { it.isNotBlank() } ?: throw SourceException.InvalidApiKey("No API key")
+        val now = clock()
+        val h = hours(key, location, language, hours.coerceIn(HOURS, 240))
+        val zone = h.timeZone?.id?.let { runCatching { ZoneId.of(it) }.getOrNull() } ?: ZoneOffset.UTC
+        return WeatherSnapshot(
+            source = SourceId.GOOGLE,
+            timeZone = zone,
+            current = null,
+            hourly = h.forecastHours.mapNotNull(::mapHour),
+            fetchedAt = mapOf(DataPart.HOURLY to now),
+        )
+    }
+
+    private suspend fun hours(key: String, p: GeoPoint, lang: String, count: Int = HOURS): HoursResponse {
         val all = mutableListOf<ForecastHourDto>()
         var token: String? = null
         var page: HoursResponse
         do {
             val t = token
             page = get("forecast/hours:lookup", key, p, lang, HoursResponse.serializer()) {
-                parameter("hours", HOURS)
+                parameter("hours", count)
                 parameter("pageSize", 24)
                 if (t != null) parameter("pageToken", t)
             }
             all += page.forecastHours
             token = page.nextPageToken?.takeIf { it.isNotEmpty() }
-        } while (token != null && all.size < HOURS)
-        return page.copy(forecastHours = all.take(HOURS), nextPageToken = null)
+        } while (token != null && all.size < count)
+        return page.copy(forecastHours = all.take(count), nextPageToken = null)
     }
 
     private suspend fun days(key: String, p: GeoPoint, lang: String): DaysResponse {

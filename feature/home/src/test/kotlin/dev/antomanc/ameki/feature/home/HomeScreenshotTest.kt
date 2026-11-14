@@ -18,6 +18,8 @@ import dev.antomanc.ameki.core.model.ThemeMode
 import dev.antomanc.ameki.core.model.WeatherCondition
 import dev.antomanc.ameki.core.model.WeatherSnapshot
 import dev.antomanc.ameki.core.ui.theme.AmekiTheme
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -35,9 +37,9 @@ private fun sampleState(): HomeUiState {
     val zone = ZoneId.of("Europe/Rome")
     val temps = listOf(15.0, 16.0, 17.0, 17.0, 16.0, 15.0, 13.0, 12.0, 11.0, 11.0, 10.0, 10.0, 9.0, 9.0, 9.0, 8.0, 8.0, 9.0, 10.0, 12.0, 14.0, 15.0, 16.0, 16.0)
     val rain = listOf(5, 10, 20, 60, 80, 40, 10, 0, 0, 0, 5, 10, 10, 5, 0, 0, 0, 0, 0, 5, 10, 10, 5, 0)
-    val hourly = temps.indices.map { i ->
-        HourlyForecast(now.plusSeconds(3600L * i), temps[i], null, if (rain[i] > 50) WeatherCondition.RAIN else WeatherCondition.PARTLY_CLOUDY, i < 7,
-            rain[i], rain[i] / 30.0, 10.0 + i % 7, 18.0, 180 + i * 5, 60 + i % 30, 8.0, 2.0)
+    val hourly = (0 until 48).map { it % 24 }.mapIndexed { i, k -> i to k }.map { (i, k) ->
+        HourlyForecast(now.plusSeconds(3600L * i), temps[k], null, if (rain[k] > 50) WeatherCondition.RAIN else WeatherCondition.PARTLY_CLOUDY, k < 7,
+            rain[k], rain[k] / 30.0, 10.0 + k % 7, 18.0, 180 + k * 5, 60 + k % 30, 8.0, 2.0)
     }
     val today = LocalDate.now(zone)
     val daily = (0 until 10).map { i ->
@@ -81,4 +83,17 @@ class HomeScreenshotTest {
 
     @Config(qualifiers = "w900dp-h800dp-xhdpi")
     @Test fun unfolded() = shoot("home_unfolded_light", ThemeMode.LIGHT)
+
+    @Config(qualifiers = "w411dp-h891dp-night-xxhdpi")
+    @Test fun dayPage() {
+        val state = sampleState()
+        compose.setContent {
+            AmekiTheme(themeMode = ThemeMode.DARK, dynamicColor = false) {
+                androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.surface)) {
+                    DayPage(state.places.first(), state, DayTarget(1), {}, {}, {})
+                }
+            }
+        }
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/day_page_dark.png")
+    }
 }
