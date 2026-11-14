@@ -74,3 +74,11 @@ dependencies {
     implementation(libs.koin.androidx.workmanager)
     implementation(libs.work.runtime.ktx)
 }
+
+dependencies {
+    testImplementation(libs.junit)
+    testImplementation(libs.koin.test.junit4)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.work.testing)
+}

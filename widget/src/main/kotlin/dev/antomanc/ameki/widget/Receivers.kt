@@ -74,6 +74,7 @@ class WidgetUpdater(private val context: Context) : WeatherUpdateListener {
 
     /** Generated previews for the widget picker (Android 15+); the system rate-limits these calls. */
     suspend fun publishPreviews() {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.VANILLA_ICE_CREAM) return
         val manager = GlanceAppWidgetManager(context)
         allWidgets.forEach { (receiver, _) -> runCatching { manager.setWidgetPreviews(receiver) } }
     }

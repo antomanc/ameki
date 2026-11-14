@@ -22,7 +22,6 @@ import dev.antomanc.ameki.feature.onboarding.OnboardingRoute
 import dev.antomanc.ameki.feature.settings.SettingsRoute
 import dev.antomanc.ameki.widget.WidgetPins
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 
@@ -40,7 +39,7 @@ class MainActivity : ComponentActivity() {
         splash.setKeepOnScreenCondition { !ready }
 
         setContent {
-            val settings by settingsRepo.settings.map<AppSettings, AppSettings?> { it }.collectAsStateWithLifecycle(null)
+            val settings by settingsRepo.settings.collectAsStateWithLifecycle<AppSettings?>(null)
             val s = settings ?: return@setContent
             ready = true
             AmekiTheme(themeMode = s.theme, dynamicColor = s.dynamicColor) {
