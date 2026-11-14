@@ -10,6 +10,8 @@ android {
 dependencies {
     implementation(projects.core.data)
     implementation(projects.core.ui)
+    implementation(projects.feature.locations)
+    implementation(projects.feature.settings)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
@@ -18,6 +20,7 @@ dependencies {
     implementation(libs.compose.material3.adaptive)
     implementation(libs.compose.material3.adaptive.layout)
     implementation(libs.compose.material3.windowsize)
+    implementation(libs.compose.material.icons.core)
 
     testImplementation(libs.robolectric)
     testImplementation(libs.roborazzi)

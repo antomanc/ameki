@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ob_welcome_body">Il meteo dove guardi più spesso: sulla schermata Home. Widget belli, previsioni oneste, niente da configurare.</string>
+    <string name="ob_start">Iniziamo</string>
+    <string name="ob_continue">Continua</string>
+    <string name="ob_source_title">Da dove prendiamo le previsioni?</string>
+    <string name="ob_source_body">Puoi cambiare quando vuoi nelle impostazioni.</string>
+    <string name="ob_source_om">Open-Meteo</string>
+    <string name="ob_source_om_body">Gratis, niente da configurare. Pronto subito.</string>
+    <string name="ob_source_google">Google</string>
+    <string name="ob_source_google_body">Le previsioni di Google. Serve una tua API key gratuita: ti guidiamo noi.</string>
+    <string name="ob_location_title">Dove ti trovi?</string>
+    <string name="ob_location_body">Usa la tua posizione per il meteo locale, oppure scegli una città.</string>
+    <string name="ob_use_location">Usa la mia posizione</string>
+    <string name="ob_location_privacy">Basta la posizione approssimativa. Resta sul telefono e viene inviata, arrotondata, solo alla fonte meteo.</string>
+    <string name="ob_or_search">Oppure cerca una città</string>
+    <string name="ob_widget_title">Mettilo sulla Home</string>
+    <string name="ob_widget_body">I widget sono la parte migliore di Ameki. Aggiungine uno ora; ce ne sono altri quattro nell\'elenco dei widget del launcher.</string>
+    <string name="ob_widget_place">La tua località</string>
+    <string name="ob_add_widget">Aggiungi widget</string>
+    <string name="ob_later">Più tardi</string>
+    <string name="ob_widget_manual">Tieni premuto sulla Home, tocca Widget e cerca Ameki.</string>
+    <string name="ob_finish">Fatto</string>
+</resources>

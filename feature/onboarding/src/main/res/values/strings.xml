@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ob_welcome_body">The weather where you look most: on your home screen. Beautiful widgets, honest forecasts, nothing to configure.</string>
+    <string name="ob_start">Let\'s start</string>
+    <string name="ob_continue">Continue</string>
+    <string name="ob_source_title">Where should the forecast come from?</string>
+    <string name="ob_source_body">You can change this any time in settings.</string>
+    <string name="ob_source_om">Open-Meteo</string>
+    <string name="ob_source_om_body">Free, nothing to set up. Ready now.</string>
+    <string name="ob_source_google">Google</string>
+    <string name="ob_source_google_body">Google\'s forecasts. Needs your own free API key; we\'ll walk you through it.</string>
+    <string name="ob_location_title">Where are you?</string>
+    <string name="ob_location_body">Use your location for local weather, or pick a city.</string>
+    <string name="ob_use_location">Use my location</string>
+    <string name="ob_location_privacy">Approximate location is enough. It stays on your phone and is only sent, rounded, to the weather source.</string>
+    <string name="ob_or_search">Or search for a city</string>
+    <string name="ob_widget_title">Put it on your home screen</string>
+    <string name="ob_widget_body">Widgets are the best part of Ameki. Add one now; there are four more in your launcher\'s widget list.</string>
+    <string name="ob_widget_place">Your place</string>
+    <string name="ob_add_widget">Add widget</string>
+    <string name="ob_later">Maybe later</string>
+    <string name="ob_widget_manual">Long-press your home screen, tap Widgets and look for Ameki.</string>
+    <string name="ob_finish">Done</string>
+</resources>

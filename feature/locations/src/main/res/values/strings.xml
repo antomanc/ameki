@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="places_title">Places</string>
+    <string name="back">Back</string>
+    <string name="search_city">Search for a city</string>
+    <string name="search_failed">Search isn\'t working right now. Check your connection.</string>
+    <string name="search_empty">No places found.</string>
+    <string name="use_my_location">Use my location</string>
+    <string name="move_up">Move up</string>
+    <string name="move_down">Move down</string>
+    <string name="remove">Remove</string>
+</resources>

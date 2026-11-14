@@ -3,6 +3,7 @@ package dev.antomanc.ameki.core.data.di
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
 import dev.antomanc.ameki.core.data.AppIdentity
+import dev.antomanc.ameki.core.data.GoogleKeyCheck
 import dev.antomanc.ameki.core.data.BuildConfig
 import dev.antomanc.ameki.core.data.PlaceRepository
 import dev.antomanc.ameki.core.data.SourceRegistry
@@ -76,5 +77,11 @@ val dataModule = module {
         )
     }
     single { RefreshScheduler(androidContext()) }
+    single {
+        GoogleKeyCheck(
+            source = if (BuildConfig.GOOGLE_SOURCE_ENABLED) get<GoogleWeatherSource>() else null,
+            appIdentity = AppIdentity.of(androidContext()),
+        )
+    }
     worker { RefreshWorker(get(), get()) }
 }

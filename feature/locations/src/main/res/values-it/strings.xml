@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="places_title">Località</string>
+    <string name="back">Indietro</string>
+    <string name="search_city">Cerca una città</string>
+    <string name="search_failed">La ricerca non funziona ora. Controlla la connessione.</string>
+    <string name="search_empty">Nessuna località trovata.</string>
+    <string name="use_my_location">Usa la mia posizione</string>
+    <string name="move_up">Sposta su</string>
+    <string name="move_down">Sposta giù</string>
+    <string name="remove">Rimuovi</string>
+</resources>

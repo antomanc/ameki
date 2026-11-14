@@ -18,6 +18,7 @@ dependencies {
     implementation(libs.compose.material3.adaptive)
     implementation(libs.compose.material3.adaptive.layout)
     implementation(libs.compose.material3.windowsize)
+    implementation(libs.compose.material.icons.core)
 
     testImplementation(libs.robolectric)
     testImplementation(libs.roborazzi)

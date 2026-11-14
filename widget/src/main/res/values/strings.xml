@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_compact_name">Compact</string>
+    <string name="widget_compact_desc">Temperature on the dial, at a glance</string>
+    <string name="widget_hourly_name">Hourly</string>
+    <string name="widget_hourly_desc">Now and the next hours, with rain</string>
+    <string name="widget_daily_name">Daily</string>
+    <string name="widget_daily_desc">The coming days with their range</string>
+    <string name="widget_complete_name">Complete</string>
+    <string name="widget_complete_desc">Now, the next hours and the coming days</string>
+    <string name="widget_no_place">Open Ameki to choose a place</string>
+    <string name="widget_loading">Getting the forecast…</string>
+    <string name="widget_offline">Offline. Tap to open Ameki.</string>
+    <string name="widget_key_problem">Check your Google key in Ameki</string>
+    <string name="widget_no_location">Location unavailable. Tap to fix.</string>
+    <string name="config_title">Widget</string>
+    <string name="config_place">Place</string>
+    <string name="config_place_first">First place in the app</string>
+    <string name="config_style">Style</string>
+    <string name="style_dynamic">Wallpaper colours</string>
+    <string name="style_dark">Dark</string>
+    <string name="style_transparent">Transparent</string>
+    <string name="config_opacity">Background %1$d%%</string>
+    <string name="config_save">Save</string>
+</resources>
