@@ -1,0 +1,1147 @@
+{
+ "forecastDays": [
+  {
+   "interval": {
+    "startTime": "2026-11-14T06:00:00Z",
+    "endTime": "2026-11-15T06:00:00Z"
+   },
+   "displayDate": {
+    "year": 2026,
+    "month": 11,
+    "day": 14
+   },
+   "daytimeForecast": {
+    "interval": {},
+    "weatherCondition": {
+     "type": "PARTLY_CLOUDY",
+     "description": {
+      "text": "x",
+      "languageCode": "it"
+     }
+    },
+    "relativeHumidity": 65,
+    "uvIndex": 3,
+    "precipitation": {
+     "probability": {
+      "percent": 10,
+      "type": "RAIN"
+     },
+     "qpf": {
+      "quantity": 0,
+      "unit": "MILLIMETERS"
+     }
+    },
+    "wind": {
+     "direction": {
+      "degrees": 180,
+      "cardinal": "SOUTH"
+     },
+     "speed": {
+      "value": 14,
+      "unit": "KILOMETERS_PER_HOUR"
+     },
+     "gust": {
+      "value": 30,
+      "unit": "KILOMETERS_PER_HOUR"
+     }
+    },
+    "cloudCover": 40
+   },
+   "nighttimeForecast": {
+    "interval": {},
+    "weatherCondition": {
+     "type": "MOSTLY_CLEAR",
+     "description": {
+      "text": "y",
+      "languageCode": "it"
+     }
+    },
+    "relativeHumidity": 80,
+    "uvIndex": 0,
+    "precipitation": {
+     "probability": {
+      "percent": 15,
+      "type": "RAIN"
+     },
+     "qpf": {
+      "quantity": 0.3,
+      "unit": "MILLIMETERS"
+     }
+    },
+    "wind": {
+     "direction": {
+      "degrees": 0,
+      "cardinal": "NORTH"
+     },
+     "speed": {
+      "value": 8,
+      "unit": "KILOMETERS_PER_HOUR"
+     }
+    },
+    "cloudCover": 20
+   },
+   "maxTemperature": {
+    "degrees": 18.0,
+    "unit": "CELSIUS"
+   },
+   "minTemperature": {
+    "degrees": 8.0,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeMaxTemperature": {
+    "degrees": 17.0,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeMinTemperature": {
+    "degrees": 7.0,
+    "unit": "CELSIUS"
+   },
+   "sunEvents": {
+    "sunriseTime": "2026-11-14T06:05:00Z",
+    "sunsetTime": "2026-11-14T15:52:00Z"
+   },
+   "moonEvents": {
+    "moonPhase": "WAXING_GIBBOUS",
+    "moonriseTimes": [
+     "2026-11-14T13:20:00Z"
+    ],
+    "moonsetTimes": [
+     "2026-11-14T02:10:00Z"
+    ]
+   },
+   "maxHeatIndex": {
+    "degrees": 18.0,
+    "unit": "CELSIUS"
+   }
+  },
+  {
+   "interval": {
+    "startTime": "2026-11-15T06:00:00Z",
+    "endTime": "2026-11-16T06:00:00Z"
+   },
+   "displayDate": {
+    "year": 2026,
+    "month": 11,
+    "day": 15
+   },
+   "daytimeForecast": {
+    "interval": {},
+    "weatherCondition": {
+     "type": "RAIN",
+     "description": {
+      "text": "x",
+      "languageCode": "it"
+     }
+    },
+    "relativeHumidity": 65,
+    "uvIndex": 3,
+    "precipitation": {
+     "probability": {
+      "percent": 70,
+      "type": "RAIN"
+     },
+     "qpf": {
+      "quantity": 4.2,
+      "unit": "MILLIMETERS"
+     }
+    },
+    "wind": {
+     "direction": {
+      "degrees": 180,
+      "cardinal": "SOUTH"
+     },
+     "speed": {
+      "value": 14,
+      "unit": "KILOMETERS_PER_HOUR"
+     },
+     "gust": {
+      "value": 30,
+      "unit": "KILOMETERS_PER_HOUR"
+     }
+    },
+    "cloudCover": 40
+   },
+   "nighttimeForecast": {
+    "interval": {},
+    "weatherCondition": {
+     "type": "MOSTLY_CLEAR",
+     "description": {
+      "text": "y",
+      "languageCode": "it"
+     }
+    },
+    "relativeHumidity": 80,
+    "uvIndex": 0,
+    "precipitation": {
+     "probability": {
+      "percent": 15,
+      "type": "RAIN"
+     },
+     "qpf": {
+      "quantity": 0.3,
+      "unit": "MILLIMETERS"
+     }
+    },
+    "wind": {
+     "direction": {
+      "degrees": 0,
+      "cardinal": "NORTH"
+     },
+     "speed": {
+      "value": 8,
+      "unit": "KILOMETERS_PER_HOUR"
+     }
+    },
+    "cloudCover": 20
+   },
+   "maxTemperature": {
+    "degrees": 17.6,
+    "unit": "CELSIUS"
+   },
+   "minTemperature": {
+    "degrees": 7.8,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeMaxTemperature": {
+    "degrees": 17.0,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeMinTemperature": {
+    "degrees": 7.0,
+    "unit": "CELSIUS"
+   },
+   "sunEvents": {
+    "sunriseTime": "2026-11-15T06:05:00Z",
+    "sunsetTime": "2026-11-15T15:52:00Z"
+   },
+   "moonEvents": {
+    "moonPhase": "WAXING_GIBBOUS",
+    "moonriseTimes": [
+     "2026-11-15T13:20:00Z"
+    ],
+    "moonsetTimes": [
+     "2026-11-15T02:10:00Z"
+    ]
+   },
+   "maxHeatIndex": {
+    "degrees": 18.0,
+    "unit": "CELSIUS"
+   }
+  },
+  {
+   "interval": {
+    "startTime": "2026-11-16T06:00:00Z",
+    "endTime": "2026-11-17T06:00:00Z"
+   },
+   "displayDate": {
+    "year": 2026,
+    "month": 11,
+    "day": 16
+   },
+   "daytimeForecast": {
+    "interval": {},
+    "weatherCondition": {
+     "type": "CLEAR",
+     "description": {
+      "text": "x",
+      "languageCode": "it"
+     }
+    },
+    "relativeHumidity": 65,
+    "uvIndex": 3,
+    "precipitation": {
+     "probability": {
+      "percent": 0,
+      "type": "RAIN"
+     },
+     "qpf": {
+      "quantity": 0,
+      "unit": "MILLIMETERS"
+     }
+    },
+    "wind": {
+     "direction": {
+      "degrees": 180,
+      "cardinal": "SOUTH"
+     },
+     "speed": {
+      "value": 14,
+      "unit": "KILOMETERS_PER_HOUR"
+     },
+     "gust": {
+      "value": 30,
+      "unit": "KILOMETERS_PER_HOUR"
+     }
+    },
+    "cloudCover": 40
+   },
+   "nighttimeForecast": {
+    "interval": {},
+    "weatherCondition": {
+     "type": "MOSTLY_CLEAR",
+     "description": {
+      "text": "y",
+      "languageCode": "it"
+     }
+    },
+    "relativeHumidity": 80,
+    "uvIndex": 0,
+    "precipitation": {
+     "probability": {
+      "percent": 15,
+      "type": "RAIN"
+     },
+     "qpf": {
+      "quantity": 0.3,
+      "unit": "MILLIMETERS"
+     }
+    },
+    "wind": {
+     "direction": {
+      "degrees": 0,
+      "cardinal": "NORTH"
+     },
+     "speed": {
+      "value": 8,
+      "unit": "KILOMETERS_PER_HOUR"
+     }
+    },
+    "cloudCover": 20
+   },
+   "maxTemperature": {
+    "degrees": 17.2,
+    "unit": "CELSIUS"
+   },
+   "minTemperature": {
+    "degrees": 7.6,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeMaxTemperature": {
+    "degrees": 17.0,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeMinTemperature": {
+    "degrees": 7.0,
+    "unit": "CELSIUS"
+   },
+   "sunEvents": {
+    "sunriseTime": "2026-11-16T06:05:00Z",
+    "sunsetTime": "2026-11-16T15:52:00Z"
+   },
+   "moonEvents": {
+    "moonPhase": "FULL_MOON",
+    "moonriseTimes": [
+     "2026-11-16T13:20:00Z"
+    ],
+    "moonsetTimes": [
+     "2026-11-16T02:10:00Z"
+    ]
+   },
+   "maxHeatIndex": {
+    "degrees": 18.0,
+    "unit": "CELSIUS"
+   }
+  },
+  {
+   "interval": {
+    "startTime": "2026-11-17T06:00:00Z",
+    "endTime": "2026-11-18T06:00:00Z"
+   },
+   "displayDate": {
+    "year": 2026,
+    "month": 11,
+    "day": 17
+   },
+   "daytimeForecast": {
+    "interval": {},
+    "weatherCondition": {
+     "type": "THUNDERSTORM",
+     "description": {
+      "text": "x",
+      "languageCode": "it"
+     }
+    },
+    "relativeHumidity": 65,
+    "uvIndex": 3,
+    "precipitation": {
+     "probability": {
+      "percent": 55,
+      "type": "RAIN"
+     },
+     "qpf": {
+      "quantity": 6.1,
+      "unit": "MILLIMETERS"
+     }
+    },
+    "wind": {
+     "direction": {
+      "degrees": 180,
+      "cardinal": "SOUTH"
+     },
+     "speed": {
+      "value": 14,
+      "unit": "KILOMETERS_PER_HOUR"
+     },
+     "gust": {
+      "value": 30,
+      "unit": "KILOMETERS_PER_HOUR"
+     }
+    },
+    "cloudCover": 40
+   },
+   "nighttimeForecast": {
+    "interval": {},
+    "weatherCondition": {
+     "type": "MOSTLY_CLEAR",
+     "description": {
+      "text": "y",
+      "languageCode": "it"
+     }
+    },
+    "relativeHumidity": 80,
+    "uvIndex": 0,
+    "precipitation": {
+     "probability": {
+      "percent": 15,
+      "type": "RAIN"
+     },
+     "qpf": {
+      "quantity": 0.3,
+      "unit": "MILLIMETERS"
+     }
+    },
+    "wind": {
+     "direction": {
+      "degrees": 0,
+      "cardinal": "NORTH"
+     },
+     "speed": {
+      "value": 8,
+      "unit": "KILOMETERS_PER_HOUR"
+     }
+    },
+    "cloudCover": 20
+   },
+   "maxTemperature": {
+    "degrees": 16.8,
+    "unit": "CELSIUS"
+   },
+   "minTemperature": {
+    "degrees": 7.4,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeMaxTemperature": {
+    "degrees": 17.0,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeMinTemperature": {
+    "degrees": 7.0,
+    "unit": "CELSIUS"
+   },
+   "sunEvents": {
+    "sunriseTime": "2026-11-17T06:05:00Z",
+    "sunsetTime": "2026-11-17T15:52:00Z"
+   },
+   "moonEvents": {
+    "moonPhase": "FULL_MOON",
+    "moonriseTimes": [
+     "2026-11-17T13:20:00Z"
+    ],
+    "moonsetTimes": [
+     "2026-11-17T02:10:00Z"
+    ]
+   },
+   "maxHeatIndex": {
+    "degrees": 18.0,
+    "unit": "CELSIUS"
+   }
+  },
+  {
+   "interval": {
+    "startTime": "2026-11-18T06:00:00Z",
+    "endTime": "2026-11-19T06:00:00Z"
+   },
+   "displayDate": {
+    "year": 2026,
+    "month": 11,
+    "day": 18
+   },
+   "daytimeForecast": {
+    "interval": {},
+    "weatherCondition": {
+     "type": "MOSTLY_CLOUDY",
+     "description": {
+      "text": "x",
+      "languageCode": "it"
+     }
+    },
+    "relativeHumidity": 65,
+    "uvIndex": 3,
+    "precipitation": {
+     "probability": {
+      "percent": 20,
+      "type": "RAIN"
+     },
+     "qpf": {
+      "quantity": 0.2,
+      "unit": "MILLIMETERS"
+     }
+    },
+    "wind": {
+     "direction": {
+      "degrees": 180,
+      "cardinal": "SOUTH"
+     },
+     "speed": {
+      "value": 14,
+      "unit": "KILOMETERS_PER_HOUR"
+     },
+     "gust": {
+      "value": 30,
+      "unit": "KILOMETERS_PER_HOUR"
+     }
+    },
+    "cloudCover": 40
+   },
+   "nighttimeForecast": {
+    "interval": {},
+    "weatherCondition": {
+     "type": "MOSTLY_CLEAR",
+     "description": {
+      "text": "y",
+      "languageCode": "it"
+     }
+    },
+    "relativeHumidity": 80,
+    "uvIndex": 0,
+    "precipitation": {
+     "probability": {
+      "percent": 15,
+      "type": "RAIN"
+     },
+     "qpf": {
+      "quantity": 0.3,
+      "unit": "MILLIMETERS"
+     }
+    },
+    "wind": {
+     "direction": {
+      "degrees": 0,
+      "cardinal": "NORTH"
+     },
+     "speed": {
+      "value": 8,
+      "unit": "KILOMETERS_PER_HOUR"
+     }
+    },
+    "cloudCover": 20
+   },
+   "maxTemperature": {
+    "degrees": 16.4,
+    "unit": "CELSIUS"
+   },
+   "minTemperature": {
+    "degrees": 7.2,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeMaxTemperature": {
+    "degrees": 17.0,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeMinTemperature": {
+    "degrees": 7.0,
+    "unit": "CELSIUS"
+   },
+   "sunEvents": {
+    "sunriseTime": "2026-11-18T06:05:00Z",
+    "sunsetTime": "2026-11-18T15:52:00Z"
+   },
+   "moonEvents": {
+    "moonPhase": "WANING_GIBBOUS",
+    "moonriseTimes": [
+     "2026-11-18T13:20:00Z"
+    ],
+    "moonsetTimes": [
+     "2026-11-18T02:10:00Z"
+    ]
+   },
+   "maxHeatIndex": {
+    "degrees": 18.0,
+    "unit": "CELSIUS"
+   }
+  },
+  {
+   "interval": {
+    "startTime": "2026-11-19T06:00:00Z",
+    "endTime": "2026-11-20T06:00:00Z"
+   },
+   "displayDate": {
+    "year": 2026,
+    "month": 11,
+    "day": 19
+   },
+   "daytimeForecast": {
+    "interval": {},
+    "weatherCondition": {
+     "type": "PARTLY_CLOUDY",
+     "description": {
+      "text": "x",
+      "languageCode": "it"
+     }
+    },
+    "relativeHumidity": 65,
+    "uvIndex": 3,
+    "precipitation": {
+     "probability": {
+      "percent": 10,
+      "type": "RAIN"
+     },
+     "qpf": {
+      "quantity": 0,
+      "unit": "MILLIMETERS"
+     }
+    },
+    "wind": {
+     "direction": {
+      "degrees": 180,
+      "cardinal": "SOUTH"
+     },
+     "speed": {
+      "value": 14,
+      "unit": "KILOMETERS_PER_HOUR"
+     },
+     "gust": {
+      "value": 30,
+      "unit": "KILOMETERS_PER_HOUR"
+     }
+    },
+    "cloudCover": 40
+   },
+   "nighttimeForecast": {
+    "interval": {},
+    "weatherCondition": {
+     "type": "MOSTLY_CLEAR",
+     "description": {
+      "text": "y",
+      "languageCode": "it"
+     }
+    },
+    "relativeHumidity": 80,
+    "uvIndex": 0,
+    "precipitation": {
+     "probability": {
+      "percent": 15,
+      "type": "RAIN"
+     },
+     "qpf": {
+      "quantity": 0.3,
+      "unit": "MILLIMETERS"
+     }
+    },
+    "wind": {
+     "direction": {
+      "degrees": 0,
+      "cardinal": "NORTH"
+     },
+     "speed": {
+      "value": 8,
+      "unit": "KILOMETERS_PER_HOUR"
+     }
+    },
+    "cloudCover": 20
+   },
+   "maxTemperature": {
+    "degrees": 16.0,
+    "unit": "CELSIUS"
+   },
+   "minTemperature": {
+    "degrees": 7.0,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeMaxTemperature": {
+    "degrees": 17.0,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeMinTemperature": {
+    "degrees": 7.0,
+    "unit": "CELSIUS"
+   },
+   "sunEvents": {
+    "sunriseTime": "2026-11-19T06:05:00Z",
+    "sunsetTime": "2026-11-19T15:52:00Z"
+   },
+   "moonEvents": {
+    "moonPhase": "WANING_GIBBOUS",
+    "moonriseTimes": [
+     "2026-11-19T13:20:00Z"
+    ],
+    "moonsetTimes": [
+     "2026-11-19T02:10:00Z"
+    ]
+   },
+   "maxHeatIndex": {
+    "degrees": 18.0,
+    "unit": "CELSIUS"
+   }
+  },
+  {
+   "interval": {
+    "startTime": "2026-11-20T06:00:00Z",
+    "endTime": "2026-11-21T06:00:00Z"
+   },
+   "displayDate": {
+    "year": 2026,
+    "month": 11,
+    "day": 20
+   },
+   "daytimeForecast": {
+    "interval": {},
+    "weatherCondition": {
+     "type": "RAIN",
+     "description": {
+      "text": "x",
+      "languageCode": "it"
+     }
+    },
+    "relativeHumidity": 65,
+    "uvIndex": 3,
+    "precipitation": {
+     "probability": {
+      "percent": 70,
+      "type": "RAIN"
+     },
+     "qpf": {
+      "quantity": 4.2,
+      "unit": "MILLIMETERS"
+     }
+    },
+    "wind": {
+     "direction": {
+      "degrees": 180,
+      "cardinal": "SOUTH"
+     },
+     "speed": {
+      "value": 14,
+      "unit": "KILOMETERS_PER_HOUR"
+     },
+     "gust": {
+      "value": 30,
+      "unit": "KILOMETERS_PER_HOUR"
+     }
+    },
+    "cloudCover": 40
+   },
+   "nighttimeForecast": {
+    "interval": {},
+    "weatherCondition": {
+     "type": "MOSTLY_CLEAR",
+     "description": {
+      "text": "y",
+      "languageCode": "it"
+     }
+    },
+    "relativeHumidity": 80,
+    "uvIndex": 0,
+    "precipitation": {
+     "probability": {
+      "percent": 15,
+      "type": "RAIN"
+     },
+     "qpf": {
+      "quantity": 0.3,
+      "unit": "MILLIMETERS"
+     }
+    },
+    "wind": {
+     "direction": {
+      "degrees": 0,
+      "cardinal": "NORTH"
+     },
+     "speed": {
+      "value": 8,
+      "unit": "KILOMETERS_PER_HOUR"
+     }
+    },
+    "cloudCover": 20
+   },
+   "maxTemperature": {
+    "degrees": 15.6,
+    "unit": "CELSIUS"
+   },
+   "minTemperature": {
+    "degrees": 6.8,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeMaxTemperature": {
+    "degrees": 17.0,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeMinTemperature": {
+    "degrees": 7.0,
+    "unit": "CELSIUS"
+   },
+   "sunEvents": {
+    "sunriseTime": "2026-11-20T06:05:00Z",
+    "sunsetTime": "2026-11-20T15:52:00Z"
+   },
+   "moonEvents": {
+    "moonPhase": "WANING_GIBBOUS",
+    "moonriseTimes": [
+     "2026-11-20T13:20:00Z"
+    ],
+    "moonsetTimes": [
+     "2026-11-20T02:10:00Z"
+    ]
+   },
+   "maxHeatIndex": {
+    "degrees": 18.0,
+    "unit": "CELSIUS"
+   }
+  },
+  {
+   "interval": {
+    "startTime": "2026-11-21T06:00:00Z",
+    "endTime": "2026-11-22T06:00:00Z"
+   },
+   "displayDate": {
+    "year": 2026,
+    "month": 11,
+    "day": 21
+   },
+   "daytimeForecast": {
+    "interval": {},
+    "weatherCondition": {
+     "type": "CLEAR",
+     "description": {
+      "text": "x",
+      "languageCode": "it"
+     }
+    },
+    "relativeHumidity": 65,
+    "uvIndex": 3,
+    "precipitation": {
+     "probability": {
+      "percent": 0,
+      "type": "RAIN"
+     },
+     "qpf": {
+      "quantity": 0,
+      "unit": "MILLIMETERS"
+     }
+    },
+    "wind": {
+     "direction": {
+      "degrees": 180,
+      "cardinal": "SOUTH"
+     },
+     "speed": {
+      "value": 14,
+      "unit": "KILOMETERS_PER_HOUR"
+     },
+     "gust": {
+      "value": 30,
+      "unit": "KILOMETERS_PER_HOUR"
+     }
+    },
+    "cloudCover": 40
+   },
+   "nighttimeForecast": {
+    "interval": {},
+    "weatherCondition": {
+     "type": "MOSTLY_CLEAR",
+     "description": {
+      "text": "y",
+      "languageCode": "it"
+     }
+    },
+    "relativeHumidity": 80,
+    "uvIndex": 0,
+    "precipitation": {
+     "probability": {
+      "percent": 15,
+      "type": "RAIN"
+     },
+     "qpf": {
+      "quantity": 0.3,
+      "unit": "MILLIMETERS"
+     }
+    },
+    "wind": {
+     "direction": {
+      "degrees": 0,
+      "cardinal": "NORTH"
+     },
+     "speed": {
+      "value": 8,
+      "unit": "KILOMETERS_PER_HOUR"
+     }
+    },
+    "cloudCover": 20
+   },
+   "maxTemperature": {
+    "degrees": 15.2,
+    "unit": "CELSIUS"
+   },
+   "minTemperature": {
+    "degrees": 6.6,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeMaxTemperature": {
+    "degrees": 17.0,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeMinTemperature": {
+    "degrees": 7.0,
+    "unit": "CELSIUS"
+   },
+   "sunEvents": {
+    "sunriseTime": "2026-11-21T06:05:00Z",
+    "sunsetTime": "2026-11-21T15:52:00Z"
+   },
+   "moonEvents": {
+    "moonPhase": "LAST_QUARTER",
+    "moonriseTimes": [
+     "2026-11-21T13:20:00Z"
+    ],
+    "moonsetTimes": [
+     "2026-11-21T02:10:00Z"
+    ]
+   },
+   "maxHeatIndex": {
+    "degrees": 18.0,
+    "unit": "CELSIUS"
+   }
+  },
+  {
+   "interval": {
+    "startTime": "2026-11-22T06:00:00Z",
+    "endTime": "2026-11-23T06:00:00Z"
+   },
+   "displayDate": {
+    "year": 2026,
+    "month": 11,
+    "day": 22
+   },
+   "daytimeForecast": {
+    "interval": {},
+    "weatherCondition": {
+     "type": "THUNDERSTORM",
+     "description": {
+      "text": "x",
+      "languageCode": "it"
+     }
+    },
+    "relativeHumidity": 65,
+    "uvIndex": 3,
+    "precipitation": {
+     "probability": {
+      "percent": 55,
+      "type": "RAIN"
+     },
+     "qpf": {
+      "quantity": 6.1,
+      "unit": "MILLIMETERS"
+     }
+    },
+    "wind": {
+     "direction": {
+      "degrees": 180,
+      "cardinal": "SOUTH"
+     },
+     "speed": {
+      "value": 14,
+      "unit": "KILOMETERS_PER_HOUR"
+     },
+     "gust": {
+      "value": 30,
+      "unit": "KILOMETERS_PER_HOUR"
+     }
+    },
+    "cloudCover": 40
+   },
+   "nighttimeForecast": {
+    "interval": {},
+    "weatherCondition": {
+     "type": "MOSTLY_CLEAR",
+     "description": {
+      "text": "y",
+      "languageCode": "it"
+     }
+    },
+    "relativeHumidity": 80,
+    "uvIndex": 0,
+    "precipitation": {
+     "probability": {
+      "percent": 15,
+      "type": "RAIN"
+     },
+     "qpf": {
+      "quantity": 0.3,
+      "unit": "MILLIMETERS"
+     }
+    },
+    "wind": {
+     "direction": {
+      "degrees": 0,
+      "cardinal": "NORTH"
+     },
+     "speed": {
+      "value": 8,
+      "unit": "KILOMETERS_PER_HOUR"
+     }
+    },
+    "cloudCover": 20
+   },
+   "maxTemperature": {
+    "degrees": 14.8,
+    "unit": "CELSIUS"
+   },
+   "minTemperature": {
+    "degrees": 6.4,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeMaxTemperature": {
+    "degrees": 17.0,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeMinTemperature": {
+    "degrees": 7.0,
+    "unit": "CELSIUS"
+   },
+   "sunEvents": {
+    "sunriseTime": "2026-11-22T06:05:00Z",
+    "sunsetTime": "2026-11-22T15:52:00Z"
+   },
+   "moonEvents": {
+    "moonPhase": "WANING_CRESCENT",
+    "moonriseTimes": [
+     "2026-11-22T13:20:00Z"
+    ],
+    "moonsetTimes": [
+     "2026-11-22T02:10:00Z"
+    ]
+   },
+   "maxHeatIndex": {
+    "degrees": 18.0,
+    "unit": "CELSIUS"
+   }
+  },
+  {
+   "interval": {
+    "startTime": "2026-11-23T06:00:00Z",
+    "endTime": "2026-11-24T06:00:00Z"
+   },
+   "displayDate": {
+    "year": 2026,
+    "month": 11,
+    "day": 23
+   },
+   "daytimeForecast": {
+    "interval": {},
+    "weatherCondition": {
+     "type": "MOSTLY_CLOUDY",
+     "description": {
+      "text": "x",
+      "languageCode": "it"
+     }
+    },
+    "relativeHumidity": 65,
+    "uvIndex": 3,
+    "precipitation": {
+     "probability": {
+      "percent": 20,
+      "type": "RAIN"
+     },
+     "qpf": {
+      "quantity": 0.2,
+      "unit": "MILLIMETERS"
+     }
+    },
+    "wind": {
+     "direction": {
+      "degrees": 180,
+      "cardinal": "SOUTH"
+     },
+     "speed": {
+      "value": 14,
+      "unit": "KILOMETERS_PER_HOUR"
+     },
+     "gust": {
+      "value": 30,
+      "unit": "KILOMETERS_PER_HOUR"
+     }
+    },
+    "cloudCover": 40
+   },
+   "nighttimeForecast": {
+    "interval": {},
+    "weatherCondition": {
+     "type": "MOSTLY_CLEAR",
+     "description": {
+      "text": "y",
+      "languageCode": "it"
+     }
+    },
+    "relativeHumidity": 80,
+    "uvIndex": 0,
+    "precipitation": {
+     "probability": {
+      "percent": 15,
+      "type": "RAIN"
+     },
+     "qpf": {
+      "quantity": 0.3,
+      "unit": "MILLIMETERS"
+     }
+    },
+    "wind": {
+     "direction": {
+      "degrees": 0,
+      "cardinal": "NORTH"
+     },
+     "speed": {
+      "value": 8,
+      "unit": "KILOMETERS_PER_HOUR"
+     }
+    },
+    "cloudCover": 20
+   },
+   "maxTemperature": {
+    "degrees": 14.4,
+    "unit": "CELSIUS"
+   },
+   "minTemperature": {
+    "degrees": 6.2,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeMaxTemperature": {
+    "degrees": 17.0,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeMinTemperature": {
+    "degrees": 7.0,
+    "unit": "CELSIUS"
+   },
+   "sunEvents": {
+    "sunriseTime": "2026-11-23T06:05:00Z",
+    "sunsetTime": "2026-11-23T15:52:00Z"
+   },
+   "moonEvents": {
+    "moonPhase": "WANING_CRESCENT",
+    "moonriseTimes": [
+     "2026-11-23T13:20:00Z"
+    ],
+    "moonsetTimes": [
+     "2026-11-23T02:10:00Z"
+    ]
+   },
+   "maxHeatIndex": {
+    "degrees": 18.0,
+    "unit": "CELSIUS"
+   }
+  }
+ ],
+ "timeZone": {
+  "id": "Europe/Rome"
+ }
+}

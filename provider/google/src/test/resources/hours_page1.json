@@ -1,0 +1,836 @@
+{
+ "forecastHours": [
+  {
+   "interval": {
+    "startTime": "2026-11-14T10:00:00Z",
+    "endTime": "2026-11-14T11:00:00Z"
+   },
+   "displayDateTime": {
+    "year": 2026,
+    "month": 11,
+    "day": 14,
+    "hours": 11,
+    "utcOffset": "3600s"
+   },
+   "weatherCondition": {
+    "iconBaseUri": "https://maps.gstatic.com/weather/v1/x",
+    "description": {
+     "text": "Partly Cloudy",
+     "languageCode": "en"
+    },
+    "type": "PARTLY_CLOUDY"
+   },
+   "temperature": {
+    "degrees": 15.8,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeTemperature": {
+    "degrees": 15.0,
+    "unit": "CELSIUS"
+   },
+   "dewPoint": {
+    "degrees": 9.5,
+    "unit": "CELSIUS"
+   },
+   "precipitation": {
+    "probability": {
+     "percent": 5,
+     "type": "RAIN"
+    },
+    "qpf": {
+     "quantity": 0,
+     "unit": "MILLIMETERS"
+    }
+   },
+   "airPressure": {
+    "meanSeaLevelMillibars": 1017.0
+   },
+   "wind": {
+    "direction": {
+     "degrees": 200,
+     "cardinal": "SOUTH_SOUTHWEST"
+    },
+    "speed": {
+     "value": 12,
+     "unit": "KILOMETERS_PER_HOUR"
+    },
+    "gust": {
+     "value": 25,
+     "unit": "KILOMETERS_PER_HOUR"
+    }
+   },
+   "visibility": {
+    "distance": 14,
+    "unit": "KILOMETERS"
+   },
+   "isDaytime": true,
+   "relativeHumidity": 70,
+   "uvIndex": 2,
+   "thunderstormProbability": 0,
+   "cloudCover": 60
+  },
+  {
+   "interval": {
+    "startTime": "2026-11-14T11:00:00Z",
+    "endTime": "2026-11-14T12:00:00Z"
+   },
+   "displayDateTime": {
+    "year": 2026,
+    "month": 11,
+    "day": 14,
+    "hours": 12,
+    "utcOffset": "3600s"
+   },
+   "weatherCondition": {
+    "iconBaseUri": "https://maps.gstatic.com/weather/v1/x",
+    "description": {
+     "text": "Partly Cloudy",
+     "languageCode": "en"
+    },
+    "type": "PARTLY_CLOUDY"
+   },
+   "temperature": {
+    "degrees": 15.5,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeTemperature": {
+    "degrees": 14.7,
+    "unit": "CELSIUS"
+   },
+   "dewPoint": {
+    "degrees": 9.5,
+    "unit": "CELSIUS"
+   },
+   "precipitation": {
+    "probability": {
+     "percent": 10,
+     "type": "RAIN"
+    },
+    "qpf": {
+     "quantity": 0,
+     "unit": "MILLIMETERS"
+    }
+   },
+   "airPressure": {
+    "meanSeaLevelMillibars": 1017.0
+   },
+   "wind": {
+    "direction": {
+     "degrees": 200,
+     "cardinal": "SOUTH_SOUTHWEST"
+    },
+    "speed": {
+     "value": 12,
+     "unit": "KILOMETERS_PER_HOUR"
+    },
+    "gust": {
+     "value": 25,
+     "unit": "KILOMETERS_PER_HOUR"
+    }
+   },
+   "visibility": {
+    "distance": 14,
+    "unit": "KILOMETERS"
+   },
+   "isDaytime": true,
+   "relativeHumidity": 71,
+   "uvIndex": 2,
+   "thunderstormProbability": 0,
+   "cloudCover": 60
+  },
+  {
+   "interval": {
+    "startTime": "2026-11-14T12:00:00Z",
+    "endTime": "2026-11-14T13:00:00Z"
+   },
+   "displayDateTime": {
+    "year": 2026,
+    "month": 11,
+    "day": 14,
+    "hours": 13,
+    "utcOffset": "3600s"
+   },
+   "weatherCondition": {
+    "iconBaseUri": "https://maps.gstatic.com/weather/v1/x",
+    "description": {
+     "text": "Mostly Cloudy",
+     "languageCode": "en"
+    },
+    "type": "MOSTLY_CLOUDY"
+   },
+   "temperature": {
+    "degrees": 15.2,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeTemperature": {
+    "degrees": 14.4,
+    "unit": "CELSIUS"
+   },
+   "dewPoint": {
+    "degrees": 9.5,
+    "unit": "CELSIUS"
+   },
+   "precipitation": {
+    "probability": {
+     "percent": 20,
+     "type": "RAIN"
+    },
+    "qpf": {
+     "quantity": 0,
+     "unit": "MILLIMETERS"
+    }
+   },
+   "airPressure": {
+    "meanSeaLevelMillibars": 1017.0
+   },
+   "wind": {
+    "direction": {
+     "degrees": 200,
+     "cardinal": "SOUTH_SOUTHWEST"
+    },
+    "speed": {
+     "value": 12,
+     "unit": "KILOMETERS_PER_HOUR"
+    },
+    "gust": {
+     "value": 25,
+     "unit": "KILOMETERS_PER_HOUR"
+    }
+   },
+   "visibility": {
+    "distance": 14,
+    "unit": "KILOMETERS"
+   },
+   "isDaytime": true,
+   "relativeHumidity": 72,
+   "uvIndex": 2,
+   "thunderstormProbability": 0,
+   "cloudCover": 60
+  },
+  {
+   "interval": {
+    "startTime": "2026-11-14T13:00:00Z",
+    "endTime": "2026-11-14T14:00:00Z"
+   },
+   "displayDateTime": {
+    "year": 2026,
+    "month": 11,
+    "day": 14,
+    "hours": 14,
+    "utcOffset": "3600s"
+   },
+   "weatherCondition": {
+    "iconBaseUri": "https://maps.gstatic.com/weather/v1/x",
+    "description": {
+     "text": "Cloudy",
+     "languageCode": "en"
+    },
+    "type": "CLOUDY"
+   },
+   "temperature": {
+    "degrees": 14.9,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeTemperature": {
+    "degrees": 14.1,
+    "unit": "CELSIUS"
+   },
+   "dewPoint": {
+    "degrees": 9.5,
+    "unit": "CELSIUS"
+   },
+   "precipitation": {
+    "probability": {
+     "percent": 35,
+     "type": "RAIN"
+    },
+    "qpf": {
+     "quantity": 0.1,
+     "unit": "MILLIMETERS"
+    }
+   },
+   "airPressure": {
+    "meanSeaLevelMillibars": 1017.0
+   },
+   "wind": {
+    "direction": {
+     "degrees": 200,
+     "cardinal": "SOUTH_SOUTHWEST"
+    },
+    "speed": {
+     "value": 12,
+     "unit": "KILOMETERS_PER_HOUR"
+    },
+    "gust": {
+     "value": 25,
+     "unit": "KILOMETERS_PER_HOUR"
+    }
+   },
+   "visibility": {
+    "distance": 14,
+    "unit": "KILOMETERS"
+   },
+   "isDaytime": true,
+   "relativeHumidity": 73,
+   "uvIndex": 2,
+   "thunderstormProbability": 0,
+   "cloudCover": 60
+  },
+  {
+   "interval": {
+    "startTime": "2026-11-14T14:00:00Z",
+    "endTime": "2026-11-14T15:00:00Z"
+   },
+   "displayDateTime": {
+    "year": 2026,
+    "month": 11,
+    "day": 14,
+    "hours": 15,
+    "utcOffset": "3600s"
+   },
+   "weatherCondition": {
+    "iconBaseUri": "https://maps.gstatic.com/weather/v1/x",
+    "description": {
+     "text": "Light Rain",
+     "languageCode": "en"
+    },
+    "type": "LIGHT_RAIN"
+   },
+   "temperature": {
+    "degrees": 14.6,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeTemperature": {
+    "degrees": 13.8,
+    "unit": "CELSIUS"
+   },
+   "dewPoint": {
+    "degrees": 9.5,
+    "unit": "CELSIUS"
+   },
+   "precipitation": {
+    "probability": {
+     "percent": 60,
+     "type": "RAIN"
+    },
+    "qpf": {
+     "quantity": 0.6,
+     "unit": "MILLIMETERS"
+    }
+   },
+   "airPressure": {
+    "meanSeaLevelMillibars": 1017.0
+   },
+   "wind": {
+    "direction": {
+     "degrees": 200,
+     "cardinal": "SOUTH_SOUTHWEST"
+    },
+    "speed": {
+     "value": 12,
+     "unit": "KILOMETERS_PER_HOUR"
+    },
+    "gust": {
+     "value": 25,
+     "unit": "KILOMETERS_PER_HOUR"
+    }
+   },
+   "visibility": {
+    "distance": 14,
+    "unit": "KILOMETERS"
+   },
+   "isDaytime": true,
+   "relativeHumidity": 74,
+   "uvIndex": 0,
+   "thunderstormProbability": 0,
+   "cloudCover": 60
+  },
+  {
+   "interval": {
+    "startTime": "2026-11-14T15:00:00Z",
+    "endTime": "2026-11-14T16:00:00Z"
+   },
+   "displayDateTime": {
+    "year": 2026,
+    "month": 11,
+    "day": 14,
+    "hours": 16,
+    "utcOffset": "3600s"
+   },
+   "weatherCondition": {
+    "iconBaseUri": "https://maps.gstatic.com/weather/v1/x",
+    "description": {
+     "text": "Rain",
+     "languageCode": "en"
+    },
+    "type": "RAIN"
+   },
+   "temperature": {
+    "degrees": 14.3,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeTemperature": {
+    "degrees": 13.5,
+    "unit": "CELSIUS"
+   },
+   "dewPoint": {
+    "degrees": 9.5,
+    "unit": "CELSIUS"
+   },
+   "precipitation": {
+    "probability": {
+     "percent": 80,
+     "type": "RAIN"
+    },
+    "qpf": {
+     "quantity": 1.8,
+     "unit": "MILLIMETERS"
+    }
+   },
+   "airPressure": {
+    "meanSeaLevelMillibars": 1017.0
+   },
+   "wind": {
+    "direction": {
+     "degrees": 200,
+     "cardinal": "SOUTH_SOUTHWEST"
+    },
+    "speed": {
+     "value": 12,
+     "unit": "KILOMETERS_PER_HOUR"
+    },
+    "gust": {
+     "value": 25,
+     "unit": "KILOMETERS_PER_HOUR"
+    }
+   },
+   "visibility": {
+    "distance": 14,
+    "unit": "KILOMETERS"
+   },
+   "isDaytime": true,
+   "relativeHumidity": 75,
+   "uvIndex": 0,
+   "thunderstormProbability": 0,
+   "cloudCover": 60
+  },
+  {
+   "interval": {
+    "startTime": "2026-11-14T16:00:00Z",
+    "endTime": "2026-11-14T17:00:00Z"
+   },
+   "displayDateTime": {
+    "year": 2026,
+    "month": 11,
+    "day": 14,
+    "hours": 17,
+    "utcOffset": "3600s"
+   },
+   "weatherCondition": {
+    "iconBaseUri": "https://maps.gstatic.com/weather/v1/x",
+    "description": {
+     "text": "Rain Showers",
+     "languageCode": "en"
+    },
+    "type": "RAIN_SHOWERS"
+   },
+   "temperature": {
+    "degrees": 14.0,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeTemperature": {
+    "degrees": 13.2,
+    "unit": "CELSIUS"
+   },
+   "dewPoint": {
+    "degrees": 9.5,
+    "unit": "CELSIUS"
+   },
+   "precipitation": {
+    "probability": {
+     "percent": 70,
+     "type": "RAIN"
+    },
+    "qpf": {
+     "quantity": 1.2,
+     "unit": "MILLIMETERS"
+    }
+   },
+   "airPressure": {
+    "meanSeaLevelMillibars": 1017.0
+   },
+   "wind": {
+    "direction": {
+     "degrees": 200,
+     "cardinal": "SOUTH_SOUTHWEST"
+    },
+    "speed": {
+     "value": 12,
+     "unit": "KILOMETERS_PER_HOUR"
+    },
+    "gust": {
+     "value": 25,
+     "unit": "KILOMETERS_PER_HOUR"
+    }
+   },
+   "visibility": {
+    "distance": 14,
+    "unit": "KILOMETERS"
+   },
+   "isDaytime": false,
+   "relativeHumidity": 76,
+   "uvIndex": 0,
+   "thunderstormProbability": 0,
+   "cloudCover": 60
+  },
+  {
+   "interval": {
+    "startTime": "2026-11-14T17:00:00Z",
+    "endTime": "2026-11-14T18:00:00Z"
+   },
+   "displayDateTime": {
+    "year": 2026,
+    "month": 11,
+    "day": 14,
+    "hours": 18,
+    "utcOffset": "3600s"
+   },
+   "weatherCondition": {
+    "iconBaseUri": "https://maps.gstatic.com/weather/v1/x",
+    "description": {
+     "text": "Scattered Showers",
+     "languageCode": "en"
+    },
+    "type": "SCATTERED_SHOWERS"
+   },
+   "temperature": {
+    "degrees": 13.7,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeTemperature": {
+    "degrees": 12.9,
+    "unit": "CELSIUS"
+   },
+   "dewPoint": {
+    "degrees": 9.5,
+    "unit": "CELSIUS"
+   },
+   "precipitation": {
+    "probability": {
+     "percent": 45,
+     "type": "RAIN"
+    },
+    "qpf": {
+     "quantity": 0.4,
+     "unit": "MILLIMETERS"
+    }
+   },
+   "airPressure": {
+    "meanSeaLevelMillibars": 1017.0
+   },
+   "wind": {
+    "direction": {
+     "degrees": 200,
+     "cardinal": "SOUTH_SOUTHWEST"
+    },
+    "speed": {
+     "value": 12,
+     "unit": "KILOMETERS_PER_HOUR"
+    },
+    "gust": {
+     "value": 25,
+     "unit": "KILOMETERS_PER_HOUR"
+    }
+   },
+   "visibility": {
+    "distance": 14,
+    "unit": "KILOMETERS"
+   },
+   "isDaytime": false,
+   "relativeHumidity": 77,
+   "uvIndex": 0,
+   "thunderstormProbability": 0,
+   "cloudCover": 60
+  },
+  {
+   "interval": {
+    "startTime": "2026-11-14T18:00:00Z",
+    "endTime": "2026-11-14T19:00:00Z"
+   },
+   "displayDateTime": {
+    "year": 2026,
+    "month": 11,
+    "day": 14,
+    "hours": 19,
+    "utcOffset": "3600s"
+   },
+   "weatherCondition": {
+    "iconBaseUri": "https://maps.gstatic.com/weather/v1/x",
+    "description": {
+     "text": "Cloudy",
+     "languageCode": "en"
+    },
+    "type": "CLOUDY"
+   },
+   "temperature": {
+    "degrees": 13.4,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeTemperature": {
+    "degrees": 12.6,
+    "unit": "CELSIUS"
+   },
+   "dewPoint": {
+    "degrees": 9.5,
+    "unit": "CELSIUS"
+   },
+   "precipitation": {
+    "probability": {
+     "percent": 20,
+     "type": "RAIN"
+    },
+    "qpf": {
+     "quantity": 0,
+     "unit": "MILLIMETERS"
+    }
+   },
+   "airPressure": {
+    "meanSeaLevelMillibars": 1017.0
+   },
+   "wind": {
+    "direction": {
+     "degrees": 200,
+     "cardinal": "SOUTH_SOUTHWEST"
+    },
+    "speed": {
+     "value": 12,
+     "unit": "KILOMETERS_PER_HOUR"
+    },
+    "gust": {
+     "value": 25,
+     "unit": "KILOMETERS_PER_HOUR"
+    }
+   },
+   "visibility": {
+    "distance": 14,
+    "unit": "KILOMETERS"
+   },
+   "isDaytime": false,
+   "relativeHumidity": 78,
+   "uvIndex": 0,
+   "thunderstormProbability": 0,
+   "cloudCover": 60
+  },
+  {
+   "interval": {
+    "startTime": "2026-11-14T19:00:00Z",
+    "endTime": "2026-11-14T20:00:00Z"
+   },
+   "displayDateTime": {
+    "year": 2026,
+    "month": 11,
+    "day": 14,
+    "hours": 20,
+    "utcOffset": "3600s"
+   },
+   "weatherCondition": {
+    "iconBaseUri": "https://maps.gstatic.com/weather/v1/x",
+    "description": {
+     "text": "Mostly Cloudy",
+     "languageCode": "en"
+    },
+    "type": "MOSTLY_CLOUDY"
+   },
+   "temperature": {
+    "degrees": 13.1,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeTemperature": {
+    "degrees": 12.3,
+    "unit": "CELSIUS"
+   },
+   "dewPoint": {
+    "degrees": 9.5,
+    "unit": "CELSIUS"
+   },
+   "precipitation": {
+    "probability": {
+     "percent": 10,
+     "type": "RAIN"
+    },
+    "qpf": {
+     "quantity": 0,
+     "unit": "MILLIMETERS"
+    }
+   },
+   "airPressure": {
+    "meanSeaLevelMillibars": 1017.0
+   },
+   "wind": {
+    "direction": {
+     "degrees": 200,
+     "cardinal": "SOUTH_SOUTHWEST"
+    },
+    "speed": {
+     "value": 12,
+     "unit": "KILOMETERS_PER_HOUR"
+    },
+    "gust": {
+     "value": 25,
+     "unit": "KILOMETERS_PER_HOUR"
+    }
+   },
+   "visibility": {
+    "distance": 14,
+    "unit": "KILOMETERS"
+   },
+   "isDaytime": false,
+   "relativeHumidity": 79,
+   "uvIndex": 0,
+   "thunderstormProbability": 0,
+   "cloudCover": 60
+  },
+  {
+   "interval": {
+    "startTime": "2026-11-14T20:00:00Z",
+    "endTime": "2026-11-14T21:00:00Z"
+   },
+   "displayDateTime": {
+    "year": 2026,
+    "month": 11,
+    "day": 14,
+    "hours": 21,
+    "utcOffset": "3600s"
+   },
+   "weatherCondition": {
+    "iconBaseUri": "https://maps.gstatic.com/weather/v1/x",
+    "description": {
+     "text": "Partly Cloudy",
+     "languageCode": "en"
+    },
+    "type": "PARTLY_CLOUDY"
+   },
+   "temperature": {
+    "degrees": 12.8,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeTemperature": {
+    "degrees": 12.0,
+    "unit": "CELSIUS"
+   },
+   "dewPoint": {
+    "degrees": 9.5,
+    "unit": "CELSIUS"
+   },
+   "precipitation": {
+    "probability": {
+     "percent": 5,
+     "type": "RAIN"
+    },
+    "qpf": {
+     "quantity": 0,
+     "unit": "MILLIMETERS"
+    }
+   },
+   "airPressure": {
+    "meanSeaLevelMillibars": 1017.0
+   },
+   "wind": {
+    "direction": {
+     "degrees": 200,
+     "cardinal": "SOUTH_SOUTHWEST"
+    },
+    "speed": {
+     "value": 12,
+     "unit": "KILOMETERS_PER_HOUR"
+    },
+    "gust": {
+     "value": 25,
+     "unit": "KILOMETERS_PER_HOUR"
+    }
+   },
+   "visibility": {
+    "distance": 14,
+    "unit": "KILOMETERS"
+   },
+   "isDaytime": false,
+   "relativeHumidity": 70,
+   "uvIndex": 0,
+   "thunderstormProbability": 0,
+   "cloudCover": 60
+  },
+  {
+   "interval": {
+    "startTime": "2026-11-14T21:00:00Z",
+    "endTime": "2026-11-14T22:00:00Z"
+   },
+   "displayDateTime": {
+    "year": 2026,
+    "month": 11,
+    "day": 14,
+    "hours": 22,
+    "utcOffset": "3600s"
+   },
+   "weatherCondition": {
+    "iconBaseUri": "https://maps.gstatic.com/weather/v1/x",
+    "description": {
+     "text": "Mostly Clear",
+     "languageCode": "en"
+    },
+    "type": "MOSTLY_CLEAR"
+   },
+   "temperature": {
+    "degrees": 12.5,
+    "unit": "CELSIUS"
+   },
+   "feelsLikeTemperature": {
+    "degrees": 11.7,
+    "unit": "CELSIUS"
+   },
+   "dewPoint": {
+    "degrees": 9.5,
+    "unit": "CELSIUS"
+   },
+   "precipitation": {
+    "probability": {
+     "percent": 0,
+     "type": "RAIN"
+    },
+    "qpf": {
+     "quantity": 0,
+     "unit": "MILLIMETERS"
+    }
+   },
+   "airPressure": {
+    "meanSeaLevelMillibars": 1017.0
+   },
+   "wind": {
+    "direction": {
+     "degrees": 200,
+     "cardinal": "SOUTH_SOUTHWEST"
+    },
+    "speed": {
+     "value": 12,
+     "unit": "KILOMETERS_PER_HOUR"
+    },
+    "gust": {
+     "value": 25,
+     "unit": "KILOMETERS_PER_HOUR"
+    }
+   },
+   "visibility": {
+    "distance": 14,
+    "unit": "KILOMETERS"
+   },
+   "isDaytime": false,
+   "relativeHumidity": 71,
+   "uvIndex": 0,
+   "thunderstormProbability": 0,
+   "cloudCover": 60
+  }
+ ],
+ "timeZone": {
+  "id": "Europe/Rome"
+ },
+ "nextPageToken": "page2token"
+}
