@@ -21,8 +21,9 @@ Forecasts come from Open-Meteo, with no account or API key required. The codebas
 The app uses Material You colours and adapts to phones, tablets and foldable screens.
 
 <p align="center">
-  <img src="docs/screenshots/home-light.png" width="260" alt="Ameki in light theme, showing the temperature dial and hourly forecast">
-  <img src="docs/screenshots/home-dark.png" width="260" alt="Ameki in dark theme, showing the temperature dial and hourly forecast">
+  <img src="docs/screenshots/home-light.png" width="230" alt="Ameki in light theme, showing the temperature dial and hourly forecast">
+  <img src="docs/screenshots/home-dark.png" width="230" alt="Ameki in dark theme, showing the temperature dial and hourly forecast">
+  <img src="docs/screenshots/day-detail.png" width="230" alt="A day forecast with hourly temperatures, rain probability and wind">
 </p>
 
 ## Features
@@ -47,7 +48,7 @@ Each widget adapts to its size. Choose a place, wallpaper colours, a dark or tra
 | Complete | Current weather with hourly and daily forecasts |
 | Rain | Precipitation for the next two hours in 15-minute steps, where available |
 
-<p align="center"><img src="docs/screenshots/widgets-fold.png" width="540" alt="Hourly and Complete widgets on a foldable home screen"></p>
+<p align="center"><img src="docs/screenshots/widget-compact.png" width="320" alt="The Compact widget showing current conditions and the daily temperature range"></p>
 
 Widgets read from a shared local cache. One WorkManager job refreshes the data for the app and widgets, with a default interval of 30 minutes. Open-Meteo builds let you choose from 15 to 180 minutes. Android may defer background work to save battery.
 
