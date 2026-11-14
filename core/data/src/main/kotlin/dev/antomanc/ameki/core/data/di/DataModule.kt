@@ -54,10 +54,12 @@ val dataModule = module {
     single { PlaceRepository(get(), get(), get()) }
     single { OpenMeteoSource(get()) }
     single {
-        val settings = get<SettingsRepository>()
+        // Resolve settings lazily: SettingsRepository depends on the source registry, which
+        // contains this source, so an eager get() here loops forever.
+        val koin = getKoin()
         GoogleWeatherSource(
             http = get(),
-            apiKey = { settings.googleApiKey() },
+            apiKey = { koin.get<SettingsRepository>().googleApiKey() },
             appIdentity = AppIdentity.of(androidContext()),
         )
     }
