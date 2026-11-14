@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Ameki</string>
+
+    <!-- Conditions -->
+    <string name="cond_clear">Clear</string>
+    <string name="cond_clear_day">Sunny</string>
+    <string name="cond_mostly_clear">Mostly clear</string>
+    <string name="cond_partly_cloudy">Partly cloudy</string>
+    <string name="cond_mostly_cloudy">Mostly cloudy</string>
+    <string name="cond_cloudy">Cloudy</string>
+    <string name="cond_fog">Fog</string>
+    <string name="cond_windy">Windy</string>
+    <string name="cond_drizzle">Drizzle</string>
+    <string name="cond_light_rain">Light rain</string>
+    <string name="cond_rain">Rain</string>
+    <string name="cond_heavy_rain">Heavy rain</string>
+    <string name="cond_showers">Showers</string>
+    <string name="cond_freezing_rain">Freezing rain</string>
+    <string name="cond_sleet">Sleet</string>
+    <string name="cond_light_snow">Light snow</string>
+    <string name="cond_snow">Snow</string>
+    <string name="cond_heavy_snow">Heavy snow</string>
+    <string name="cond_snow_showers">Snow showers</string>
+    <string name="cond_hail">Hail</string>
+    <string name="cond_thunderstorm">Thunderstorm</string>
+    <string name="cond_unknown">No data</string>
+
+    <!-- Shared labels -->
+    <string name="now">Now</string>
+    <string name="today">Today</string>
+    <string name="feels_like">Feels like %1$s</string>
+    <string name="high_low">%1$s / %2$s</string>
+    <string name="updated_at">Updated %1$s</string>
+    <string name="updated_stale">Last data %1$s</string>
+    <string name="current_location">Current location</string>
+    <string name="rain_chance">%1$d%% chance of rain</string>
+    <string name="cd_temperature_dial">Now %1$s, today between %2$s and %3$s</string>
+    <string name="attribution_open_meteo">Weather data by Open-Meteo.com (CC BY 4.0)</string>
+    <string name="attribution_google">Source: Includes weather data from Google</string>
+
+    <!-- Rain nowcast -->
+    <string name="rain_none_2h">No rain in the next 2 hours</string>
+    <string name="rain_now">Raining now</string>
+    <string name="rain_stops_in">Rain stops in %1$d min</string>
+    <string name="rain_in">Rain in %1$d min</string>
+    <string name="rain_in_hours">Rain around %1$s</string>
+</resources>

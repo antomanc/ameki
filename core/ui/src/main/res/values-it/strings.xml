@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cond_clear">Sereno</string>
+    <string name="cond_clear_day">Soleggiato</string>
+    <string name="cond_mostly_clear">Prevalentemente sereno</string>
+    <string name="cond_partly_cloudy">Parzialmente nuvoloso</string>
+    <string name="cond_mostly_cloudy">Prevalentemente nuvoloso</string>
+    <string name="cond_cloudy">Nuvoloso</string>
+    <string name="cond_fog">Nebbia</string>
+    <string name="cond_windy">Ventoso</string>
+    <string name="cond_drizzle">Pioviggine</string>
+    <string name="cond_light_rain">Pioggia debole</string>
+    <string name="cond_rain">Pioggia</string>
+    <string name="cond_heavy_rain">Pioggia forte</string>
+    <string name="cond_showers">Rovesci</string>
+    <string name="cond_freezing_rain">Pioggia gelata</string>
+    <string name="cond_sleet">Nevischio</string>
+    <string name="cond_light_snow">Neve debole</string>
+    <string name="cond_snow">Neve</string>
+    <string name="cond_heavy_snow">Neve forte</string>
+    <string name="cond_snow_showers">Rovesci di neve</string>
+    <string name="cond_hail">Grandine</string>
+    <string name="cond_thunderstorm">Temporale</string>
+    <string name="cond_unknown">Nessun dato</string>
+
+    <string name="now">Ora</string>
+    <string name="today">Oggi</string>
+    <string name="feels_like">Percepita %1$s</string>
+    <string name="high_low">%1$s / %2$s</string>
+    <string name="updated_at">Aggiornato alle %1$s</string>
+    <string name="updated_stale">Ultimi dati %1$s</string>
+    <string name="current_location">Posizione attuale</string>
+    <string name="rain_chance">%1$d%% di probabilità di pioggia</string>
+    <string name="cd_temperature_dial">Ora %1$s, oggi tra %2$s e %3$s</string>
+    <string name="attribution_open_meteo">Dati meteo di Open-Meteo.com (CC BY 4.0)</string>
+    <string name="attribution_google">Source: Includes weather data from Google</string>
+
+    <string name="rain_none_2h">Niente pioggia nelle prossime 2 ore</string>
+    <string name="rain_now">Sta piovendo</string>
+    <string name="rain_stops_in">Smette tra %1$d min</string>
+    <string name="rain_in">Pioggia tra %1$d min</string>
+    <string name="rain_in_hours">Pioggia verso le %1$s</string>
+</resources>
