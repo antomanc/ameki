@@ -21,3 +21,6 @@ dist/
 !.env.example
 !.env.*.example
 /dist
+
+# Local release signing credentials and artifacts
+/.release/

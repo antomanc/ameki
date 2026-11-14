@@ -16,7 +16,9 @@ Weather for your home screen.
 
 Ameki is an open source Android weather app built around home-screen widgets. Check the temperature and the next few hours without opening the app. Open it for a ten-day forecast, a closer look at a day, or another place.
 
-Forecasts come from Open-Meteo, with no account or API key required. The app uses Material You colours and adapts to phones, tablets and foldable screens.
+Forecasts come from Open-Meteo, with no account or API key required. The codebase also includes an optional Google Weather API source, giving local builds access to Google's forecasts, now powered in part by WeatherNext 3. See [Google Weather and WeatherNext 3](#google-weather-and-weathernext-3) for availability and build instructions.
+
+The app uses Material You colours and adapts to phones, tablets and foldable screens.
 
 <p align="center">
   <img src="docs/screenshots/home-light.png" width="260" alt="Ameki in light theme, showing the temperature dial and hourly forecast">
@@ -53,7 +55,7 @@ Offline, cached forecasts remain available with their update time, within the so
 
 ## Installation
 
-Ameki requires Android 12 (API 31) or later. There is no published release yet; build from source using the instructions below. F-Droid distribution is planned, and the app does not require Google Play Services.
+Ameki requires Android 12 (API 31) or later. Download the signed APK from [GitHub Releases](https://github.com/antomanc/ameki/releases/latest), or build from source using the instructions below. GitHub also provides the source archive for each release. F-Droid distribution is planned, and the app does not require Google Play Services.
 
 On first launch, search for a city or allow approximate location. Add widgets through your launcher's widget picker and configure each one for the place you want to follow.
 
@@ -66,7 +68,9 @@ On first launch, search for a city or allow approximate location. Add widgets th
 
 Open-Meteo's [terms and privacy policy](https://open-meteo.com/en/terms) apply to API requests. Default builds do not provide official weather alerts.
 
-### Google Weather API (personal builds only)
+### Google Weather and WeatherNext 3
+
+Ameki integrates the Google Maps Platform Weather API. Google [announced WeatherNext 3 integration into this API](https://blog.google/innovation-and-ai/models-and-research/google-deepmind/introducing-weathernext-3/) in September 2026. The API combines forecasting systems; Ameki uses the processed forecasts it returns and does not run WeatherNext 3 on your phone or select a model version.
 
 The Google source includes hourly pagination, public alerts, cache retention rules and an API key check. It is turned off in default builds because of the Weather API usage restrictions in section 21.1 of the [Google Maps Platform Service Specific Terms](https://cloud.google.com/maps-platform/terms/maps-service-terms). See [ADR 0002](docs/adr/0002-google-source-off-in-public-builds.md) for the project's decision.
 

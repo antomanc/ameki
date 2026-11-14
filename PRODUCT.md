@@ -17,7 +17,7 @@ next ten days, or an alert.
 ## Product Purpose
 
 Ameki (あめき · 雨木, "rain tree") is an open source Android weather app whose widgets are the
-main product. Default builds use Open-Meteo without an API key. A Google Weather API source is available
+main product. Default builds use Open-Meteo without an API key. A Google Weather API source, whose upstream forecasts include WeatherNext 3, is available
 behind a build flag for local experimentation; see ADR 0002 for the distribution policy.
 Success: widgets people keep on their home screen because they are beautiful, readable on
 any wallpaper, and always up to date.
