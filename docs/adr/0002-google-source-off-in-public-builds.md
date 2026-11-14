@@ -5,8 +5,8 @@ content in "a weather app ... whose primary purpose is to provide weather inform
 each user's own API key does not change that. Public builds (GitHub Releases, F-Droid) ship with
 Open-Meteo only, and Open-Meteo is the default Source. The Google source stays in the codebase,
 fully working and tested. It is compiled in only with `-Pameki.googleSource=true` (BuildConfig
-`GOOGLE_SOURCE_ENABLED`), and the README explains how to build it for personal use. We will ask
-Google for a written clarification and revisit this decision when the answer arrives.
+`GOOGLE_SOURCE_ENABLED`), and the README explains how to build it for personal use. We will not ask
+Google for a clarification. The flag stays off in public builds unless Google's terms change.
 
 ## Considered options
 
