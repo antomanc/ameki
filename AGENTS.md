@@ -1,4 +1,4 @@
-# nembo
+# ameki
 
 AI-first generic project configured with `aginit` (Native mobile, kotlin).
 

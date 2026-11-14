@@ -17,7 +17,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "nembo"
+rootProject.name = "ameki"
 
 include(
     ":app",

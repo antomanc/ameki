@@ -1,10 +1,10 @@
 plugins {
-    id("nembo.android.library")
-    id("nembo.android.compose")
+    id("ameki.android.library")
+    id("ameki.android.compose")
 }
 
 android {
-    namespace = "dev.antomanc.nembo.feature.settings"
+    namespace = "dev.antomanc.ameki.feature.settings"
 }
 
 dependencies {

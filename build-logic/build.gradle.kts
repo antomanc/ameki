@@ -11,19 +11,19 @@ dependencies {
 gradlePlugin {
     plugins {
         register("jvmLibrary") {
-            id = "nembo.jvm.library"
+            id = "ameki.jvm.library"
             implementationClass = "JvmLibraryConventionPlugin"
         }
         register("androidLibrary") {
-            id = "nembo.android.library"
+            id = "ameki.android.library"
             implementationClass = "AndroidLibraryConventionPlugin"
         }
         register("androidCompose") {
-            id = "nembo.android.compose"
+            id = "ameki.android.compose"
             implementationClass = "AndroidComposeConventionPlugin"
         }
         register("androidApplication") {
-            id = "nembo.android.application"
+            id = "ameki.android.application"
             implementationClass = "AndroidApplicationConventionPlugin"
         }
     }

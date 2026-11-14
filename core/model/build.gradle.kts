@@ -1,5 +1,5 @@
 plugins {
-    id("nembo.jvm.library")
+    id("ameki.jvm.library")
     alias(libs.plugins.kotlin.serialization)
 }
 

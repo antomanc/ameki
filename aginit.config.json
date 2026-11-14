@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "name": "nembo",
+  "name": "ameki",
   "preset": "generic",
   "platform": "mobile-native",
   "stack": "kotlin",

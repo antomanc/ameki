@@ -1,11 +1,11 @@
 plugins {
-    id("nembo.android.library")
+    id("ameki.android.library")
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
 }
 
 android {
-    namespace = "dev.antomanc.nembo.core.data"
+    namespace = "dev.antomanc.ameki.core.data"
 }
 
 ksp {

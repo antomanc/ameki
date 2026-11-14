@@ -1,13 +1,13 @@
 plugins {
-    id("nembo.android.application")
-    id("nembo.android.compose")
+    id("ameki.android.application")
+    id("ameki.android.compose")
 }
 
 android {
-    namespace = "dev.antomanc.nembo"
+    namespace = "dev.antomanc.ameki"
 
     defaultConfig {
-        applicationId = "dev.antomanc.nembo"
+        applicationId = "dev.antomanc.ameki"
         versionCode = 1
         versionName = "0.1.0"
     }
@@ -19,12 +19,12 @@ android {
     signingConfigs {
         create("release") {
             // CI injects these; local release builds fall back to the debug key.
-            val storeFile = System.getenv("NEMBO_KEYSTORE")
+            val storeFile = System.getenv("AMEKI_KEYSTORE")
             if (storeFile != null) {
                 this.storeFile = file(storeFile)
-                storePassword = System.getenv("NEMBO_KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("NEMBO_KEY_ALIAS")
-                keyPassword = System.getenv("NEMBO_KEY_PASSWORD")
+                storePassword = System.getenv("AMEKI_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("AMEKI_KEY_ALIAS")
+                keyPassword = System.getenv("AMEKI_KEY_PASSWORD")
             }
         }
     }
@@ -34,7 +34,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = if (System.getenv("NEMBO_KEYSTORE") != null) {
+            signingConfig = if (System.getenv("AMEKI_KEYSTORE") != null) {
                 signingConfigs.getByName("release")
             } else {
                 signingConfigs.getByName("debug")
