@@ -9,7 +9,7 @@ enum class TimeFormat { SYSTEM, H24, H12 }
  * SettingsRepository, and a row in the settings screen.
  */
 data class AppSettings(
-    val provider: ProviderId = ProviderId.OPEN_METEO,
+    val source: SourceId = SourceId.OPEN_METEO,
     val hasGoogleApiKey: Boolean = false,
     val units: Units = Units(),
     val theme: ThemeMode = ThemeMode.SYSTEM,

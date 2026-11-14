@@ -1,6 +1,6 @@
 # 1. Record Architecture Decisions
 
-Date: 2026-10-04
+Date: 2026-11-14
 
 ## Status
 Accepted

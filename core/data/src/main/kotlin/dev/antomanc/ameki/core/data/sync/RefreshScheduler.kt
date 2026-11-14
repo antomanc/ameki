@@ -33,7 +33,7 @@ class RefreshScheduler(private val context: Context) {
         )
     }
 
-    /** Refresh now, e.g. after adding a widget or changing provider. */
+    /** Refresh now, e.g. after adding a widget or changing source. */
     fun refreshNow(force: Boolean = false) {
         val request = OneTimeWorkRequestBuilder<RefreshWorker>()
             .setConstraints(constraints)

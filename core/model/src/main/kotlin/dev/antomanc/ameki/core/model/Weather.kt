@@ -17,7 +17,7 @@ data class CurrentWeather(
     val temperature: Double,
     val feelsLike: Double?,
     val condition: WeatherCondition,
-    /** Localized text from the provider, when it has one; the UI falls back to its own label. */
+    /** Localized text from the source, when it has one; the UI falls back to its own label. */
     val conditionText: String? = null,
     val isDaytime: Boolean,
     val humidity: Int?,
@@ -91,17 +91,17 @@ data class WeatherAlert(
     val instructions: List<String> = emptyList(),
 )
 
-/** The parts a provider can be asked for. Each part is refreshed and expired independently. */
+/** The parts a source can be asked for. Each part is refreshed and expired independently. */
 @Serializable
 enum class DataPart { CURRENT, HOURLY, DAILY, ALERTS }
 
 /**
- * Everything we know about one place from one provider. Sections the provider does not
+ * Everything we know about one place from one source. Sections the source does not
  * support (see [Capability]) stay empty and the UI hides them.
  */
 @Serializable
 data class WeatherSnapshot(
-    val provider: ProviderId,
+    val source: SourceId,
     @Serializable(ZoneIdSerializer::class) val timeZone: ZoneId,
     val current: CurrentWeather?,
     val hourly: List<HourlyForecast> = emptyList(),
@@ -130,10 +130,10 @@ data class WeatherSnapshot(
 
     /** Overlay the parts present in [newer] on top of this snapshot. */
     fun mergedWith(newer: WeatherSnapshot): WeatherSnapshot {
-        if (newer.provider != provider) return newer
+        if (newer.source != source) return newer
         val parts = newer.fetchedAt.keys
         return WeatherSnapshot(
-            provider = provider,
+            source = source,
             timeZone = newer.timeZone,
             current = if (DataPart.CURRENT in parts) newer.current else current,
             hourly = if (DataPart.HOURLY in parts) newer.hourly else hourly,

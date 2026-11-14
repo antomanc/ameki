@@ -6,7 +6,7 @@ import dev.antomanc.ameki.core.data.location.DeviceLocation
 import dev.antomanc.ameki.core.model.GeoPoint
 import dev.antomanc.ameki.core.model.Place
 import dev.antomanc.ameki.core.model.PlaceSearchResult
-import dev.antomanc.ameki.provider.api.PlaceSearch
+import dev.antomanc.ameki.source.api.PlaceSearch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Instant

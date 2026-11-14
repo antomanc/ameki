@@ -35,7 +35,7 @@ data class PlaceEntity(
 )
 data class SnapshotEntity(
     @PrimaryKey val placeId: Long,
-    val providerId: String,
+    val sourceId: String,
     val json: String,
     /** Epoch seconds of the last attempt, successful or not. */
     val lastAttemptAt: Long?,

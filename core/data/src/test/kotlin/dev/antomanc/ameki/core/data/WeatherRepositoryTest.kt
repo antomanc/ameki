@@ -15,12 +15,12 @@ import dev.antomanc.ameki.core.model.CurrentWeather
 import dev.antomanc.ameki.core.model.DataPart
 import dev.antomanc.ameki.core.model.GeoPoint
 import dev.antomanc.ameki.core.model.PlaceSearchResult
-import dev.antomanc.ameki.core.model.ProviderId
+import dev.antomanc.ameki.core.model.SourceId
 import dev.antomanc.ameki.core.model.WeatherCondition
 import dev.antomanc.ameki.core.model.WeatherSnapshot
-import dev.antomanc.ameki.provider.api.PlaceSearch
-import dev.antomanc.ameki.provider.api.ProviderException
-import dev.antomanc.ameki.provider.api.WeatherProvider
+import dev.antomanc.ameki.source.api.PlaceSearch
+import dev.antomanc.ameki.source.api.SourceException
+import dev.antomanc.ameki.source.api.WeatherSource
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -33,8 +33,8 @@ import org.robolectric.RobolectricTestRunner
 import java.time.Instant
 import java.time.ZoneId
 
-private class FakeProvider(override val id: ProviderId, private val clock: () -> Instant) : WeatherProvider {
-    override val capabilities = if (id == ProviderId.GOOGLE) Capability.entries.toSet() else Capability.entries.toSet() - Capability.ALERTS
+private class FakeSource(override val id: SourceId, private val clock: () -> Instant) : WeatherSource {
+    override val capabilities = if (id == SourceId.GOOGLE) Capability.entries.toSet() else Capability.entries.toSet() - Capability.ALERTS
     val calls = mutableListOf<Set<DataPart>>()
     var failWith: Exception? = null
     var temperature = 20.0
@@ -44,7 +44,7 @@ private class FakeProvider(override val id: ProviderId, private val clock: () ->
         failWith?.let { throw it }
         val now = clock()
         return WeatherSnapshot(
-            provider = id,
+            source = id,
             timeZone = ZoneId.of("Europe/Rome"),
             current = if (DataPart.CURRENT in parts) CurrentWeather(
                 now, temperature, null, WeatherCondition.CLEAR, null, true,
@@ -69,8 +69,8 @@ class WeatherRepositoryTest {
     private lateinit var settings: SettingsRepository
     private lateinit var places: PlaceRepository
     private lateinit var repo: WeatherRepository
-    private val google = FakeProvider(ProviderId.GOOGLE) { now }
-    private val openMeteo = FakeProvider(ProviderId.OPEN_METEO) { now }
+    private val google = FakeSource(SourceId.GOOGLE) { now }
+    private val openMeteo = FakeSource(SourceId.OPEN_METEO) { now }
 
     @Before
     fun setUp() {
@@ -85,7 +85,7 @@ class WeatherRepositoryTest {
         }
         places = PlaceRepository(db.places(), search, DeviceLocation(context)) { now }
         repo = WeatherRepository(
-            db.places(), db.snapshots(), settings, ProviderRegistry(listOf(google, openMeteo)), places,
+            db.places(), db.snapshots(), settings, SourceRegistry(listOf(google, openMeteo)), places,
         ) { now }
     }
 
@@ -96,7 +96,7 @@ class WeatherRepositoryTest {
 
     @Test
     fun `refresh stores data and only due parts are refetched`() = runTest {
-        settings.setProvider(ProviderId.GOOGLE)
+        settings.setSource(SourceId.GOOGLE)
         val id = addRome()
 
         assertThat(repo.refresh(id)).isNull()
@@ -114,7 +114,7 @@ class WeatherRepositoryTest {
 
     @Test
     fun `google current data disappears after one hour, daily survives`() = runTest {
-        settings.setProvider(ProviderId.GOOGLE)
+        settings.setSource(SourceId.GOOGLE)
         val id = addRome()
         repo.refresh(id)
 
@@ -134,7 +134,7 @@ class WeatherRepositoryTest {
         assertThat(openMeteo.calls.single()).doesNotContain(DataPart.ALERTS)
 
         now = now.plusSeconds(6 * 3600)
-        openMeteo.failWith = ProviderException.Network(java.io.IOException("offline"))
+        openMeteo.failWith = SourceException.Network(java.io.IOException("offline"))
         assertThat(repo.refresh(id)).isEqualTo(SyncError.NETWORK)
 
         val w = repo.get(id)!!
@@ -144,20 +144,20 @@ class WeatherRepositoryTest {
     }
 
     @Test
-    fun `switching provider hides the other provider's data`() = runTest {
+    fun `switching source hides the other source's data`() = runTest {
         val id = addRome()
         repo.refresh(id)
-        settings.setProvider(ProviderId.GOOGLE)
+        settings.setSource(SourceId.GOOGLE)
         assertThat(repo.get(id)!!.snapshot).isNull()
 
         repo.refresh(id)
-        assertThat(repo.get(id)!!.snapshot!!.provider).isEqualTo(ProviderId.GOOGLE)
+        assertThat(repo.get(id)!!.snapshot!!.source).isEqualTo(SourceId.GOOGLE)
     }
 
     @Test
     fun `missing key is reported as needing user action`() = runTest {
-        settings.setProvider(ProviderId.GOOGLE)
-        google.failWith = ProviderException.InvalidApiKey("No API key")
+        settings.setSource(SourceId.GOOGLE)
+        google.failWith = SourceException.InvalidApiKey("No API key")
         val id = addRome()
         val error = repo.refresh(id)
         assertThat(error).isEqualTo(SyncError.MISSING_KEY)
@@ -196,10 +196,21 @@ class WeatherRepositoryTest {
     }
 
     @Test
-    fun `google provider clamps refresh interval`() = runTest {
+    fun `a source missing from this build falls back to the default`() = runTest {
+        val openOnly = SettingsRepository(
+            PreferenceDataStoreFactory.create { tmp.newFile("o.preferences_pb") },
+            PlainCipher,
+            availableSources = setOf(SourceId.OPEN_METEO),
+        )
+        openOnly.setSource(SourceId.GOOGLE)
+        assertThat(openOnly.current().source).isEqualTo(SourceId.OPEN_METEO)
+    }
+
+    @Test
+    fun `google source clamps refresh interval`() = runTest {
         settings.setRefreshInterval(180)
         assertThat(settings.current().refreshIntervalMinutes).isEqualTo(180)
-        settings.setProvider(ProviderId.GOOGLE)
+        settings.setSource(SourceId.GOOGLE)
         assertThat(settings.current().refreshIntervalMinutes).isEqualTo(60)
     }
 }

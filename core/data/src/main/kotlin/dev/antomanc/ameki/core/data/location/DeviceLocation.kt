@@ -30,9 +30,9 @@ class DeviceLocation(private val context: Context) {
     suspend fun locate(timeoutMs: Long = 10_000): GeoPoint? {
         if (!hasPermission()) return null
         val lm = context.getSystemService(LocationManager::class.java) ?: return null
-        val provider = listOf(LocationManager.NETWORK_PROVIDER, LocationManager.FUSED_PROVIDER, LocationManager.GPS_PROVIDER)
+        val source = listOf(LocationManager.NETWORK_PROVIDER, LocationManager.FUSED_PROVIDER, LocationManager.GPS_PROVIDER)
             .firstOrNull { runCatching { lm.isProviderEnabled(it) }.getOrDefault(false) }
-        val fresh = provider?.let { p ->
+        val fresh = source?.let { p ->
             withTimeoutOrNull(timeoutMs) {
                 suspendCancellableCoroutine { cont ->
                     val signal = CancellationSignal()

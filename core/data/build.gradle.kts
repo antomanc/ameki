@@ -6,6 +6,15 @@ plugins {
 
 android {
     namespace = "dev.antomanc.ameki.core.data"
+
+    buildFeatures { buildConfig = true }
+
+    defaultConfig {
+        // The Google source is off in public builds until Google confirms its terms allow it
+        // (docs/adr/0002). Personal builds: ./gradlew assembleRelease -Pameki.googleSource=true
+        val google = providers.gradleProperty("ameki.googleSource").orNull?.toBoolean() ?: false
+        buildConfigField("boolean", "GOOGLE_SOURCE_ENABLED", google.toString())
+    }
 }
 
 ksp {
@@ -14,9 +23,9 @@ ksp {
 
 dependencies {
     api(projects.core.model)
-    api(projects.provider.api)
-    implementation(projects.provider.google)
-    implementation(projects.provider.openmeteo)
+    api(projects.source.api)
+    implementation(projects.source.google)
+    implementation(projects.source.openmeteo)
     implementation(libs.androidx.core.ktx)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)

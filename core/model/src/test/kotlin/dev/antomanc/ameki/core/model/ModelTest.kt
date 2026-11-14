@@ -27,11 +27,11 @@ class ModelTest {
     @Test
     fun `merge keeps parts that were not refetched`() {
         val old = WeatherSnapshot(
-            ProviderId.GOOGLE, rome, current(10.0), daily = listOf(daily(LocalDate.of(2026, 11, 14))),
+            SourceId.GOOGLE, rome, current(10.0), daily = listOf(daily(LocalDate.of(2026, 11, 14))),
             fetchedAt = mapOf(DataPart.CURRENT to t0, DataPart.DAILY to t0),
         )
         val newer = WeatherSnapshot(
-            ProviderId.GOOGLE, rome, current(12.0),
+            SourceId.GOOGLE, rome, current(12.0),
             fetchedAt = mapOf(DataPart.CURRENT to t0.plusSeconds(1800)),
         )
         val merged = old.mergedWith(newer)
@@ -42,16 +42,16 @@ class ModelTest {
     }
 
     @Test
-    fun `merge with another provider replaces everything`() {
-        val old = WeatherSnapshot(ProviderId.GOOGLE, rome, current(10.0), fetchedAt = mapOf(DataPart.CURRENT to t0))
-        val newer = WeatherSnapshot(ProviderId.OPEN_METEO, rome, null, fetchedAt = mapOf(DataPart.DAILY to t0))
+    fun `merge with another source replaces everything`() {
+        val old = WeatherSnapshot(SourceId.GOOGLE, rome, current(10.0), fetchedAt = mapOf(DataPart.CURRENT to t0))
+        val newer = WeatherSnapshot(SourceId.OPEN_METEO, rome, null, fetchedAt = mapOf(DataPart.DAILY to t0))
         assertThat(old.mergedWith(newer)).isEqualTo(newer)
     }
 
     @Test
     fun `snapshot round-trips through json`() {
         val s = WeatherSnapshot(
-            ProviderId.OPEN_METEO, rome, current(10.0), daily = listOf(daily(LocalDate.of(2026, 11, 14))),
+            SourceId.OPEN_METEO, rome, current(10.0), daily = listOf(daily(LocalDate.of(2026, 11, 14))),
             alerts = listOf(
                 WeatherAlert("a", "Allerta", null, AlertSeverity.SEVERE, "Lazio", "DPC", start = t0, end = null),
             ),
@@ -64,22 +64,22 @@ class ModelTest {
     @Test
     fun `due parts for google refresh alerts and daily less often`() {
         val s = WeatherSnapshot(
-            ProviderId.GOOGLE, rome, current(10.0),
+            SourceId.GOOGLE, rome, current(10.0),
             fetchedAt = DataPart.entries.associateWith { t0 },
         )
-        val after30 = RefreshPolicy.dueParts(ProviderId.GOOGLE, s, 30, t0.plusSeconds(30 * 60))
+        val after30 = RefreshPolicy.dueParts(SourceId.GOOGLE, s, 30, t0.plusSeconds(30 * 60))
         assertThat(after30).containsExactly(DataPart.CURRENT, DataPart.HOURLY)
-        val after60 = RefreshPolicy.dueParts(ProviderId.GOOGLE, s, 30, t0.plusSeconds(60 * 60))
+        val after60 = RefreshPolicy.dueParts(SourceId.GOOGLE, s, 30, t0.plusSeconds(60 * 60))
         assertThat(after60).containsExactly(DataPart.CURRENT, DataPart.HOURLY, DataPart.ALERTS)
-        val after3h = RefreshPolicy.dueParts(ProviderId.GOOGLE, s, 30, t0.plusSeconds(180 * 60))
+        val after3h = RefreshPolicy.dueParts(SourceId.GOOGLE, s, 30, t0.plusSeconds(180 * 60))
         assertThat(after3h).containsExactlyElementsIn(DataPart.entries)
     }
 
     @Test
-    fun `everything is due without a snapshot or with another provider`() {
-        assertThat(RefreshPolicy.dueParts(ProviderId.GOOGLE, null, 30, t0)).hasSize(4)
-        val om = WeatherSnapshot(ProviderId.OPEN_METEO, rome, null, fetchedAt = DataPart.entries.associateWith { t0 })
-        assertThat(RefreshPolicy.dueParts(ProviderId.GOOGLE, om, 30, t0)).hasSize(4)
+    fun `everything is due without a snapshot or with another source`() {
+        assertThat(RefreshPolicy.dueParts(SourceId.GOOGLE, null, 30, t0)).hasSize(4)
+        val om = WeatherSnapshot(SourceId.OPEN_METEO, rome, null, fetchedAt = DataPart.entries.associateWith { t0 })
+        assertThat(RefreshPolicy.dueParts(SourceId.GOOGLE, om, 30, t0)).hasSize(4)
     }
 
     @Test
@@ -91,9 +91,9 @@ class ModelTest {
 
     @Test
     fun `google intervals are capped at one hour`() {
-        assertThat(RefreshPolicy.clampInterval(ProviderId.GOOGLE, 180)).isEqualTo(60)
-        assertThat(RefreshPolicy.clampInterval(ProviderId.OPEN_METEO, 180)).isEqualTo(180)
-        assertThat(RefreshPolicy.clampInterval(ProviderId.OPEN_METEO, 5)).isEqualTo(15)
+        assertThat(RefreshPolicy.clampInterval(SourceId.GOOGLE, 180)).isEqualTo(60)
+        assertThat(RefreshPolicy.clampInterval(SourceId.OPEN_METEO, 180)).isEqualTo(180)
+        assertThat(RefreshPolicy.clampInterval(SourceId.OPEN_METEO, 5)).isEqualTo(15)
     }
 
     @Test

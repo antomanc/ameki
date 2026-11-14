@@ -1,7 +1,7 @@
 package dev.antomanc.ameki.core.model
 
 /**
- * Provider-independent condition. Every provider maps its own codes onto this set, and the
+ * Source-independent condition. Every source maps its own codes onto this set, and the
  * icon set in :core:ui draws exactly these, so app and widgets look the same whatever the source.
  */
 enum class WeatherCondition {

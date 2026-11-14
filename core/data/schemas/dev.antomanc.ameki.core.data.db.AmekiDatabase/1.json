@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "869d960886451cc8cee0e10bb44231f4",
+    "identityHash": "3f3d6a6fbfa3207608dbeed5d8e13cfb",
     "entities": [
       {
         "tableName": "places",
@@ -74,7 +74,7 @@
       },
       {
         "tableName": "snapshots",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`placeId` INTEGER NOT NULL, `providerId` TEXT NOT NULL, `json` TEXT NOT NULL, `lastAttemptAt` INTEGER, `lastError` TEXT, PRIMARY KEY(`placeId`), FOREIGN KEY(`placeId`) REFERENCES `places`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`placeId` INTEGER NOT NULL, `sourceId` TEXT NOT NULL, `json` TEXT NOT NULL, `lastAttemptAt` INTEGER, `lastError` TEXT, PRIMARY KEY(`placeId`), FOREIGN KEY(`placeId`) REFERENCES `places`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "placeId",
@@ -83,8 +83,8 @@
             "notNull": true
           },
           {
-            "fieldPath": "providerId",
-            "columnName": "providerId",
+            "fieldPath": "sourceId",
+            "columnName": "sourceId",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -174,7 +174,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '869d960886451cc8cee0e10bb44231f4')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '3f3d6a6fbfa3207608dbeed5d8e13cfb')"
     ]
   }
 }

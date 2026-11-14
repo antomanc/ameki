@@ -2,7 +2,7 @@ package dev.antomanc.ameki.core.data.sync
 
 import dev.antomanc.ameki.core.model.Place
 import dev.antomanc.ameki.core.model.WeatherSnapshot
-import dev.antomanc.ameki.provider.api.ProviderException
+import dev.antomanc.ameki.source.api.SourceException
 import java.time.Instant
 
 enum class SyncError {
@@ -21,11 +21,11 @@ enum class SyncError {
 
     companion object {
         fun from(e: Throwable): SyncError = when (e) {
-            is ProviderException.Network -> NETWORK
-            is ProviderException.InvalidApiKey -> if (e.message == "No API key") MISSING_KEY else INVALID_KEY
-            is ProviderException.AccessDenied -> ACCESS_DENIED
-            is ProviderException.QuotaExceeded -> QUOTA
-            is ProviderException.Unsupported -> UNSUPPORTED
+            is SourceException.Network -> NETWORK
+            is SourceException.InvalidApiKey -> if (e.message == "No API key") MISSING_KEY else INVALID_KEY
+            is SourceException.AccessDenied -> ACCESS_DENIED
+            is SourceException.QuotaExceeded -> QUOTA
+            is SourceException.Unsupported -> UNSUPPORTED
             else -> UNKNOWN
         }
     }
@@ -34,7 +34,7 @@ enum class SyncError {
 /** What the UI and widgets render for one place. */
 data class PlaceWeather(
     val place: Place,
-    /** Already filtered: expired parts and data from another provider are gone. */
+    /** Already filtered: expired parts and data from another source are gone. */
     val snapshot: WeatherSnapshot?,
     val lastAttemptAt: Instant?,
     val error: SyncError?,

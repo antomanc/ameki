@@ -9,7 +9,7 @@ import dev.antomanc.ameki.core.data.sync.SyncError
 import dev.antomanc.ameki.core.data.sync.WeatherUpdateListener
 import dev.antomanc.ameki.core.model.AppSettings
 import dev.antomanc.ameki.core.model.DataPart
-import dev.antomanc.ameki.core.model.ProviderId
+import dev.antomanc.ameki.core.model.SourceId
 import dev.antomanc.ameki.core.model.RefreshPolicy
 import dev.antomanc.ameki.core.model.WeatherSnapshot
 import kotlinx.coroutines.CancellationException
@@ -30,7 +30,7 @@ class WeatherRepository(
     private val placeDao: PlaceDao,
     private val snapshotDao: SnapshotDao,
     private val settings: SettingsRepository,
-    private val providers: ProviderRegistry,
+    private val sources: SourceRegistry,
     private val places: PlaceRepository,
     private val listeners: () -> List<WeatherUpdateListener> = { emptyList() },
     private val clock: () -> Instant = Instant::now,
@@ -43,16 +43,16 @@ class WeatherRepository(
         places.places, snapshotDao.observeAll(), settings.settings,
     ) { placeList, snapshots, s ->
         val byPlace = snapshots.associateBy { it.placeId }
-        placeList.map { place -> toPlaceWeather(place, byPlace[place.id], s.provider) }
+        placeList.map { place -> toPlaceWeather(place, byPlace[place.id], s.source) }
     }
 
     suspend fun get(placeId: Long): PlaceWeather? {
         val place = placeDao.byId(placeId)?.toModel() ?: return null
-        return toPlaceWeather(place, snapshotDao.get(placeId), settings.current().provider)
+        return toPlaceWeather(place, snapshotDao.get(placeId), settings.current().source)
     }
 
-    private fun toPlaceWeather(place: dev.antomanc.ameki.core.model.Place, e: SnapshotEntity?, provider: ProviderId): PlaceWeather {
-        val snapshot = e?.let { decode(it) }?.let { valid(it, provider) }
+    private fun toPlaceWeather(place: dev.antomanc.ameki.core.model.Place, e: SnapshotEntity?, source: SourceId): PlaceWeather {
+        val snapshot = e?.let { decode(it) }?.let { valid(it, source) }
         return PlaceWeather(
             place = place,
             snapshot = snapshot,
@@ -64,12 +64,12 @@ class WeatherRepository(
     private fun decode(e: SnapshotEntity): WeatherSnapshot? =
         runCatching { json.decodeFromString(WeatherSnapshot.serializer(), e.json) }.getOrNull()
 
-    /** Drop data from another provider and parts past their retention limit. */
-    private fun valid(s: WeatherSnapshot, provider: ProviderId): WeatherSnapshot? {
-        if (s.provider != provider) return null
+    /** Drop data from another source and parts past their retention limit. */
+    private fun valid(s: WeatherSnapshot, source: SourceId): WeatherSnapshot? {
+        if (s.source != source) return null
         val now = clock()
         val keep = s.fetchedAt.filter { (part, at) ->
-            Duration.between(at, now) < RefreshPolicy.maxAge(s.provider, part)
+            Duration.between(at, now) < RefreshPolicy.maxAge(s.source, part)
         }.keys
         return s.retain(keep).takeIf { keep.isNotEmpty() }
     }
@@ -107,17 +107,17 @@ class WeatherRepository(
             if (!places.updateCurrentLocation()) return record(placeId, s, null, SyncError.NO_LOCATION)
             placeEntity = placeDao.byId(placeId) ?: return null
         }
-        val provider = providers[s.provider]
-        val existing = snapshotDao.get(placeId)?.let(::decode)?.let { valid(it, s.provider) }
+        val source = sources[s.source]
+        val existing = snapshotDao.get(placeId)?.let(::decode)?.let { valid(it, s.source) }
         val parts = if (force) {
             DataPart.entries.toSet()
         } else {
-            RefreshPolicy.dueParts(s.provider, existing, s.refreshIntervalMinutes, clock())
-        }.filterTo(mutableSetOf()) { it != DataPart.ALERTS || dev.antomanc.ameki.core.model.Capability.ALERTS in provider.capabilities }
+            RefreshPolicy.dueParts(s.source, existing, s.refreshIntervalMinutes, clock())
+        }.filterTo(mutableSetOf()) { it != DataPart.ALERTS || dev.antomanc.ameki.core.model.Capability.ALERTS in source.capabilities }
         if (parts.isEmpty()) return null
 
         return try {
-            val fresh = provider.fetch(placeEntity.toModel().point.coarse(), language(s), parts)
+            val fresh = source.fetch(placeEntity.toModel().point.coarse(), language(s), parts)
             val merged = existing?.mergedWith(fresh) ?: fresh
             record(placeId, s, merged, null)
         } catch (e: CancellationException) {
@@ -131,7 +131,7 @@ class WeatherRepository(
         snapshotDao.upsert(
             SnapshotEntity(
                 placeId = placeId,
-                providerId = s.provider.name,
+                sourceId = s.source.name,
                 json = snapshot?.let { json.encodeToString(WeatherSnapshot.serializer(), it) }
                     ?: snapshotDao.get(placeId)?.json ?: EMPTY,
                 lastAttemptAt = clock().epochSecond,
@@ -143,17 +143,17 @@ class WeatherRepository(
 
     /** Physically delete expired data (required by Google's caching terms, tidy for the rest). */
     suspend fun purgeExpired() {
-        val provider = settings.current().provider
+        val source = settings.current().source
         snapshotDao.all().forEach { e ->
             val s = decode(e) ?: return@forEach
-            val kept = valid(s, provider)
+            val kept = valid(s, source)
             if (kept != s) {
                 snapshotDao.upsert(e.copy(json = kept?.let { json.encodeToString(WeatherSnapshot.serializer(), it) } ?: EMPTY))
             }
         }
     }
 
-    /** Switching provider: old data is meaningless for the new one (and Google's must go). */
+    /** Switching source: old data is meaningless for the new one (and Google's must go). */
     suspend fun clearAll() {
         snapshotDao.clear()
         notifyListeners()

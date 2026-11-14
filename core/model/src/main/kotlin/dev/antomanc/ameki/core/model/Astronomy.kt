@@ -4,7 +4,7 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import kotlin.math.floor
 
-/** Moon phase from the date alone, for providers that don't report it. Accurate to about a day. */
+/** Moon phase from the date alone, for sources that don't report it. Accurate to about a day. */
 object Astronomy {
     private const val SYNODIC_MONTH = 29.530588853
     private const val KNOWN_NEW_MOON_EPOCH_DAY = 10_962.76 // 2000-01-06 18:14 UTC

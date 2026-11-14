@@ -35,7 +35,7 @@ internal fun Project.configureKotlin() {
     }
 }
 
-/** Pure Kotlin module: domain model and providers. No Android dependency, fast unit tests. */
+/** Pure Kotlin module: domain model and sources. No Android dependency, fast unit tests. */
 class JvmLibraryConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
         pluginManager.apply("org.jetbrains.kotlin.jvm")

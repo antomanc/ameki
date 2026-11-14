@@ -9,7 +9,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import dev.antomanc.ameki.core.model.AppSettings
-import dev.antomanc.ameki.core.model.ProviderId
+import dev.antomanc.ameki.core.model.SourceId
 import dev.antomanc.ameki.core.model.RefreshPolicy
 import dev.antomanc.ameki.core.model.ThemeMode
 import dev.antomanc.ameki.core.model.TimeFormat
@@ -26,10 +26,12 @@ import kotlinx.coroutines.flow.map
 class SettingsRepository(
     private val store: DataStore<Preferences>,
     private val cipher: SecretCipher,
+    /** Sources compiled into this build; a stored choice outside this set falls back to the default. */
+    private val availableSources: Set<SourceId> = SourceId.entries.toSet(),
     private val defaults: () -> AppSettings = { AppSettings() },
 ) {
     private object Keys {
-        val provider = stringPreferencesKey("provider")
+        val source = stringPreferencesKey("source")
         val apiKey = stringPreferencesKey("google_api_key_enc")
         val tempUnit = stringPreferencesKey("unit_temperature")
         val windUnit = stringPreferencesKey("unit_wind")
@@ -51,9 +53,9 @@ class SettingsRepository(
 
     private fun read(p: Preferences): AppSettings {
         val d = defaults()
-        val provider = p[Keys.provider].enumOr(d.provider)
+        val source = p[Keys.source].enumOr(d.source).takeIf { it in availableSources } ?: d.source
         return AppSettings(
-            provider = provider,
+            source = source,
             hasGoogleApiKey = p[Keys.apiKey] != null,
             units = Units(
                 temperature = p[Keys.tempUnit].enumOr(d.units.temperature),
@@ -65,7 +67,7 @@ class SettingsRepository(
             theme = p[Keys.theme].enumOr(d.theme),
             timeFormat = p[Keys.timeFormat].enumOr(d.timeFormat),
             dataLanguage = p[Keys.dataLanguage],
-            refreshIntervalMinutes = RefreshPolicy.clampInterval(provider, p[Keys.interval] ?: d.refreshIntervalMinutes),
+            refreshIntervalMinutes = RefreshPolicy.clampInterval(source, p[Keys.interval] ?: d.refreshIntervalMinutes),
             dynamicColor = p[Keys.dynamicColor] ?: d.dynamicColor,
             onboardingDone = p[Keys.onboardingDone] ?: d.onboardingDone,
             selectedPlaceId = p[Keys.selectedPlace],
@@ -80,9 +82,9 @@ class SettingsRepository(
         if (trimmed.isNullOrEmpty()) remove(Keys.apiKey) else this[Keys.apiKey] = cipher.encrypt(trimmed)
     }
 
-    suspend fun setProvider(provider: ProviderId) = edit {
-        this[Keys.provider] = provider.name
-        this[Keys.interval] = RefreshPolicy.clampInterval(provider, this[Keys.interval] ?: RefreshPolicy.DEFAULT_INTERVAL_MINUTES)
+    suspend fun setSource(source: SourceId) = edit {
+        this[Keys.source] = source.name
+        this[Keys.interval] = RefreshPolicy.clampInterval(source, this[Keys.interval] ?: RefreshPolicy.DEFAULT_INTERVAL_MINUTES)
     }
 
     suspend fun setUnits(units: Units) = edit {

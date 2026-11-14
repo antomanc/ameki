@@ -3,8 +3,9 @@ package dev.antomanc.ameki.core.data.di
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
 import dev.antomanc.ameki.core.data.AppIdentity
+import dev.antomanc.ameki.core.data.BuildConfig
 import dev.antomanc.ameki.core.data.PlaceRepository
-import dev.antomanc.ameki.core.data.ProviderRegistry
+import dev.antomanc.ameki.core.data.SourceRegistry
 import dev.antomanc.ameki.core.data.WeatherRepository
 import dev.antomanc.ameki.core.data.db.AmekiDatabase
 import dev.antomanc.ameki.core.data.location.DeviceLocation
@@ -14,10 +15,10 @@ import dev.antomanc.ameki.core.data.settings.SettingsRepository
 import dev.antomanc.ameki.core.data.sync.RefreshScheduler
 import dev.antomanc.ameki.core.data.sync.RefreshWorker
 import dev.antomanc.ameki.core.data.sync.WeatherUpdateListener
-import dev.antomanc.ameki.provider.api.PlaceSearch
-import dev.antomanc.ameki.provider.google.GoogleWeatherProvider
-import dev.antomanc.ameki.provider.openmeteo.OpenMeteoPlaceSearch
-import dev.antomanc.ameki.provider.openmeteo.OpenMeteoProvider
+import dev.antomanc.ameki.source.api.PlaceSearch
+import dev.antomanc.ameki.source.google.GoogleWeatherSource
+import dev.antomanc.ameki.source.openmeteo.OpenMeteoPlaceSearch
+import dev.antomanc.ameki.source.openmeteo.OpenMeteoSource
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
@@ -46,24 +47,31 @@ val dataModule = module {
     single { get<AmekiDatabase>().snapshots() }
     single { get<AmekiDatabase>().widgets() }
     single<SecretCipher> { KeystoreSecretCipher() }
-    single { SettingsRepository(androidContext().dataStore, get()) }
+    single { SettingsRepository(androidContext().dataStore, get(), get<SourceRegistry>().ids) }
     single { DeviceLocation(androidContext()) }
     single<PlaceSearch> { OpenMeteoPlaceSearch(get()) }
     single { PlaceRepository(get(), get(), get()) }
-    single { OpenMeteoProvider(get()) }
+    single { OpenMeteoSource(get()) }
     single {
         val settings = get<SettingsRepository>()
-        GoogleWeatherProvider(
+        GoogleWeatherSource(
             http = get(),
             apiKey = { settings.googleApiKey() },
             appIdentity = AppIdentity.of(androidContext()),
         )
     }
-    single { ProviderRegistry(listOf(get<OpenMeteoProvider>(), get<GoogleWeatherProvider>())) }
+    single {
+        SourceRegistry(
+            listOfNotNull(
+                get<OpenMeteoSource>(),
+                if (BuildConfig.GOOGLE_SOURCE_ENABLED) get<GoogleWeatherSource>() else null,
+            ),
+        )
+    }
     single {
         val koin = getKoin()
         WeatherRepository(
-            placeDao = get(), snapshotDao = get(), settings = get(), providers = get(), places = get(),
+            placeDao = get(), snapshotDao = get(), settings = get(), sources = get(), places = get(),
             listeners = { koin.getAll<WeatherUpdateListener>() },
         )
     }
