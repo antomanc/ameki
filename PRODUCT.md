@@ -9,23 +9,24 @@ android
 ## Users
 
 A broad Android audience from day one, technical or not, found through GitHub and F-Droid.
-The core case: someone on a non-Pixel phone (the reference device is a Samsung Galaxy Z Fold 8)
-who wants home-screen weather widgets as good as Pixel's and finds One UI's At a Glance too thin.
+The core case: someone on a non-Pixel phone who wants home-screen weather widgets as good as
+Pixel's and finds One UI's At a Glance too thin.
 They glance at a widget many times a day and open the app only to check the hours ahead, the
 next ten days, or an alert.
 
 ## Product Purpose
 
 Ameki (あめき · 雨木, "rain tree") is an open source Android weather app whose widgets are the
-main product. It shows Google's forecasts (Weather API, WeatherNext 2) when the user brings their
-own API key, and Open-Meteo with no setup at all. Success: widgets people keep on their home
-screen because they are beautiful, readable on any wallpaper, and always up to date.
+main product. Default builds use Open-Meteo without an API key. A Google Weather API source is available
+behind a build flag for local experimentation; see ADR 0002 for the distribution policy.
+Success: widgets people keep on their home screen because they are beautiful, readable on
+any wallpaper, and always up to date.
 
 ## Positioning
 
 Widgets first. Ameki aims to have the most beautiful and dependable weather widgets on any
-Android phone, Samsung first. The app complements them. Google's forecast data is an optional
-premium source, and no other open source app offers it.
+Android phone, Samsung first. The app complements them. Open-Meteo is the default source;
+optional sources must fit the same interface.
 
 ## Operating Context
 
@@ -37,9 +38,9 @@ premium source, and no other open source app offers it.
 ## Capabilities and Constraints
 
 - Kotlin, Jetpack Compose, Material 3, dynamic color, Glance widgets. minSdk 31.
-- Data sources: Google Maps Platform Weather API (each user supplies their own key; none ships with the app) and Open-Meteo (free, non-commercial, CC BY 4.0).
+- Data sources: Open-Meteo by default (free API for non-commercial use, data under CC BY 4.0). Google Weather API is disabled unless built with `-Pameki.googleSource=true`; users supply their own key.
 - Google's Service Specific Terms let you cache current conditions, hourly forecasts and alerts for 1 hour at most, and daily forecasts for 24 hours.
-- Google's terms (section 21.1) forbid using Weather API content in "a weather app ... whose primary purpose is to provide weather information". This is an **open decision**: whether and how the Google provider ships, and which provider is the default.
+- The Google source stays disabled in default builds because of its usage restrictions. This decision is recorded in [ADR 0002](docs/adr/0002-google-source-off-in-public-builds.md).
 - No tracking, no analytics, no key in the repo or APK. Must be compatible with F-Droid.
 - Interface languages: Italian and English from the start, with strings ready for Weblate/Crowdin.
 - Licence: GPL-3.0.
@@ -53,8 +54,10 @@ premium source, and no other open source app offers it.
 
 ## Evidence on Hand
 
-- `HANDOFF.md`: requirements, the widget catalogue and the v1 definition of done.
-- No screenshots, users, reviews or press yet. Do not invent them.
+- `README.md`: current features, widget catalogue and build instructions.
+- `docs/screenshots/`: app and widget screenshots.
+- `docs/adr/`: architecture and distribution decisions.
+- No user reviews or press are documented.
 
 ## Product Principles
 
@@ -62,7 +65,7 @@ premium source, and no other open source app offers it.
 2. Defaults over options: setup in a few steps, few settings, each one clear.
 3. One look whatever the data source: the UI knows only the domain model and hides what the source lacks, without empty cards.
 4. Honest data: always show when the data was last updated, and never show data that has expired.
-5. Private by design: location stays on the device, and is sent only to the chosen source.
+5. Private by design: no tracking. Weather requests use coarse coordinates; city search and Android geocoding may contact external services as described in the README.
 
 ## Accessibility & Inclusion
 
