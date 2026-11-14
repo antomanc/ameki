@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOn
 
 /**
  * The single typed entry point for settings. To add a setting: a field in [AppSettings],
@@ -47,16 +48,26 @@ class SettingsRepository(
         val selectedPlace = longPreferencesKey("selected_place")
     }
 
-    val settings: Flow<AppSettings> = store.data.map(::read).distinctUntilChanged()
+    val settings: Flow<AppSettings> = store.data.map(::read).flowOn(kotlinx.coroutines.Dispatchers.Default).distinctUntilChanged()
 
     suspend fun current(): AppSettings = settings.first()
+
+    @Volatile private var checkedKey: Pair<String?, Boolean>? = null
+
+    private fun keyIsUsable(value: String?): Boolean {
+        checkedKey?.takeIf { it.first == value }?.let { return it.second }
+        val usable = value?.let { runCatching { cipher.decrypt(it) }.getOrNull() }?.isNotBlank() == true
+        checkedKey = value to usable
+        return usable
+    }
 
     private fun read(p: Preferences): AppSettings {
         val d = defaults()
         val source = p[Keys.source].enumOr(d.source).takeIf { it in availableSources } ?: d.source
         return AppSettings(
             source = source,
-            hasGoogleApiKey = p[Keys.apiKey] != null,
+            // A ciphertext we cannot decrypt (keystore reset, restored backup) is not a key.
+            hasGoogleApiKey = keyIsUsable(p[Keys.apiKey]),
             units = Units(
                 temperature = p[Keys.tempUnit].enumOr(d.units.temperature),
                 windSpeed = p[Keys.windUnit].enumOr(d.units.windSpeed),
@@ -74,8 +85,13 @@ class SettingsRepository(
         )
     }
 
-    /** Decrypted only on demand, never exposed through [settings]. */
-    suspend fun googleApiKey(): String? = store.data.first()[Keys.apiKey]?.let(cipher::decrypt)
+    /** Decrypted only on demand, never exposed through [settings]. Undecryptable ciphertext is dropped. */
+    suspend fun googleApiKey(): String? {
+        val stored = store.data.first()[Keys.apiKey] ?: return null
+        val plain = runCatching { cipher.decrypt(stored) }.getOrNull()?.takeIf { it.isNotBlank() }
+        if (plain == null) edit { remove(Keys.apiKey) }
+        return plain
+    }
 
     suspend fun setGoogleApiKey(key: String?) = edit {
         val trimmed = key?.trim()

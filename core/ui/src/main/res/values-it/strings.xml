@@ -31,7 +31,7 @@
     <string name="updated_stale">Ultimi dati %1$s</string>
     <string name="current_location">Posizione attuale</string>
     <string name="rain_chance">%1$d%% di probabilità di pioggia</string>
-    <string name="cd_temperature_dial">Ora %1$s, oggi tra %2$s e %3$s</string>
+    <string name="cd_temperature_dial">Temperatura %1$s, minima %2$s, massima %3$s. %4$s</string>
     <string name="attribution_open_meteo">Dati meteo di Open-Meteo.com (CC BY 4.0)</string>
     <string name="attribution_google">Source: Includes weather data from Google</string>
 

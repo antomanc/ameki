@@ -59,4 +59,9 @@
     <string name="key_err_unknown">Qualcosa è andato storto. Riprova.</string>
     <string name="key_package">Nome del pacchetto</string>
     <string name="key_sha1">Impronta certificato SHA-1</string>
+    <string name="app_information">Informazioni app</string>
+    <string name="version_licenses">Versione e licenze</string>
+    <string name="background_location_settings">Nelle impostazioni Android, apri Autorizzazioni, poi Posizione e scegli Consenti sempre. Puoi cambiare questa scelta quando vuoi.</string>
+    <string name="open_settings">Apri impostazioni</string>
+    <string name="third_party_notices">Licenze di terze parti</string>
 </resources>

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -39,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.runtime.rememberCoroutineScope
@@ -47,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -94,6 +97,7 @@ internal fun DayPage(
     val chips = rememberLazyListState()
     val scope = rememberCoroutineScope()
     BackHandler(onBack = onBack)
+    LaunchedEffect(target.day) { pager.scrollToPage(target.day.coerceIn(0, s.daily.lastIndex)) }
     LaunchedEffect(pager.currentPage) {
         onDayChange(pager.currentPage)
         chips.animateScrollToItem((pager.currentPage - 1).coerceAtLeast(0))
@@ -119,7 +123,7 @@ internal fun DayPage(
                     FilterChip(
                         selected = i == pager.currentPage,
                         onClick = { scope.launch { pager.animateScrollToPage(i) } },
-                        label = { Text(if (i == 0) stringResource(UiR.string.today) else "${fmt.weekdayShort(d.date)} ${d.date.dayOfMonth}") },
+                        label = { Text(if (d.date == java.time.LocalDate.now(s.timeZone)) stringResource(UiR.string.today) else "${fmt.weekdayShort(d.date)} ${d.date.dayOfMonth}") },
                     )
                 }
             }
@@ -129,6 +133,7 @@ internal fun DayPage(
                     focusHour = target.hour.takeIf { page == target.day },
                     loading = pw.place.id in state.loadingHours,
                     failed = state.hoursError != null,
+                    onRetry = { onNeedHours(s.daily[page].date.plusDays(1).atStartOfDay(s.timeZone).toInstant()) },
                 )
             }
         }
@@ -136,18 +141,21 @@ internal fun DayPage(
 }
 
 @Composable
-private fun DayContent(s: WeatherSnapshot, index: Int, units: Units, fmt: TimeFormatter, focusHour: Long?, loading: Boolean, failed: Boolean) {
+private fun DayContent(s: WeatherSnapshot, index: Int, units: Units, fmt: TimeFormatter, focusHour: Long?, loading: Boolean, failed: Boolean, onRetry: () -> Unit) {
     val day = s.daily[index]
     val now = Instant.now()
     val hours = s.hourly.filter { it.time.atZone(s.timeZone).toLocalDate() == day.date }
-        .let { list -> if (index == 0) list.filter { it.time.plusSeconds(3600) > now } else list }
+        .let { list -> if (day.date == java.time.LocalDate.now(s.timeZone)) list.filter { it.time.plusSeconds(3600) > now } else list }
+    var waitingForRequest by androidx.compose.runtime.remember(day.date) { androidx.compose.runtime.mutableStateOf(true) }
+    LaunchedEffect(day.date) { androidx.compose.runtime.withFrameNanos { }; waitingForRequest = false }
     val list = rememberLazyListState()
     LaunchedEffect(focusHour, hours.size) {
         val i = hours.indexOfFirst { it.time.epochSecond == focusHour }
-        if (i >= 0) list.scrollToItem(i + 2)
+        if (i >= 0) list.scrollToItem(i + 4)
     }
     LazyColumn(state = list, contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 32.dp)) {
         item { DayHeader(day, s, units, fmt) }
+        item { DayTemperatureChart(day, s.hourly.filter { it.time.atZone(s.timeZone).toLocalDate() == day.date }, s, units, fmt) }
         item { HorizontalDivider(Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant) }
         when {
             hours.isNotEmpty() -> {
@@ -160,15 +168,16 @@ private fun DayContent(s: WeatherSnapshot, index: Int, units: Units, fmt: TimeFo
                 }
             }
             // No hours yet and no error: they are on their way (the fetch starts a frame later).
-            !failed || loading -> {
+            loading || waitingForRequest -> {
                 item { HourHeaderRow() }
                 items(8) { SkeletonRow() }
             }
             else -> item {
                 Text(
-                    stringResource(R.string.day_hours_failed),
+                    stringResource(if (failed) R.string.day_hours_failed else R.string.day_no_hourly),
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                androidx.compose.material3.Button(onClick = onRetry) { Text(stringResource(R.string.retry)) }
             }
         }
     }
@@ -187,7 +196,7 @@ private fun SkeletonRow() {
     )
     val c = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = alpha)
     val shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
-    Row(Modifier.fillMaxWidth().height(52.dp).semantics { contentDescription = "" }, verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).semantics { contentDescription = "" }, verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.width(48.dp).height(16.dp).background(c, shape))
         Spacer(Modifier.width(28.dp))
         Box(Modifier.size(32.dp).background(c, androidx.compose.foundation.shape.CircleShape))
@@ -212,9 +221,9 @@ private fun DayHeader(d: DailyForecast, s: WeatherSnapshot, units: Units, fmt: T
                 Text(stringResource(R.string.day_night, stringResource(it.label(false))), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        Column(horizontalAlignment = Alignment.End) {
-            Text(units.temp(d.temperatureMax), style = MaterialTheme.typography.headlineMedium)
-            Text(units.temp(d.temperatureMin), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(start = 8.dp)) {
+            Text(stringResource(R.string.temperature_range, units.temp(d.temperatureMin), units.temp(d.temperatureMax)),
+                style = MaterialTheme.typography.titleMedium)
         }
     }
     Spacer(Modifier.height(12.dp))
@@ -229,6 +238,7 @@ private fun DayHeader(d: DailyForecast, s: WeatherSnapshot, units: Units, fmt: T
 
 @Composable
 private fun HourHeaderRow() {
+    if (LocalDensity.current.fontScale > 1.3f) return
     val style = MaterialTheme.typography.labelSmall
     val color = MaterialTheme.colorScheme.onSurfaceVariant
     Row(Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
@@ -242,10 +252,21 @@ private fun HourHeaderRow() {
 
 @Composable
 private fun HourRow(h: HourlyForecast, s: WeatherSnapshot, units: Units, fmt: TimeFormatter, highlighted: Boolean) {
+    if (LocalDensity.current.fontScale > 1.3f) {
+        Column(Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+            Text(fmt.time(h.time, s.timeZone), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(h.condition.label(h.isDaytime)), style = MaterialTheme.typography.bodyMedium)
+            Text(units.temp(h.temperature), style = MaterialTheme.typography.headlineSmall)
+            h.feelsLike?.let { Text(stringResource(UiR.string.feels_like, units.temp(it))) }
+            h.precipitationProbability?.let { Text(stringResource(R.string.day_rain, it, h.precipitation?.let(units::precipitation) ?: "")) }
+            h.windSpeed?.let { Text(stringResource(R.string.day_wind, units.wind(it))) }
+        }
+        return
+    }
     val colors = LocalInstrumentColors.current
     val bg = if (highlighted) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent
     Row(
-        Modifier.fillMaxWidth().height(52.dp).then(Modifier.androidxBackground(bg)),
+        Modifier.fillMaxWidth().heightIn(min = 52.dp).then(Modifier.androidxBackground(bg)),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(fmt.time(h.time, s.timeZone), style = MaterialTheme.typography.titleMedium, maxLines = 1, modifier = Modifier.width(76.dp))

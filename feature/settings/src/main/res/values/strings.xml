@@ -60,4 +60,9 @@
     <string name="key_err_unknown">Something went wrong. Try again.</string>
     <string name="key_package">Package name</string>
     <string name="key_sha1">SHA-1 certificate fingerprint</string>
+    <string name="app_information">App information</string>
+    <string name="version_licenses">Version and licences</string>
+    <string name="background_location_settings">In Android settings, open Permissions, then Location, and choose Allow all the time. You can change this whenever you want.</string>
+    <string name="open_settings">Open settings</string>
+    <string name="third_party_notices">Third-party notices</string>
 </resources>

@@ -7,6 +7,7 @@ import dev.antomanc.ameki.core.model.DailyForecast
 import dev.antomanc.ameki.core.model.DataPart
 import dev.antomanc.ameki.core.model.GeoPoint
 import dev.antomanc.ameki.core.model.HourlyForecast
+import dev.antomanc.ameki.core.model.NowcastSlot
 import dev.antomanc.ameki.core.model.Place
 import dev.antomanc.ameki.core.model.SourceId
 import dev.antomanc.ameki.core.model.WeatherCondition
@@ -48,9 +49,13 @@ object PreviewData {
             source = SourceId.OPEN_METEO, timeZone = zone,
             current = CurrentWeather(now, 15.0, 14.0, WeatherCondition.PARTLY_CLOUDY, null, true, 70, 9.0, 2.0, 1017.0, 12.0, 25.0, 200, 20.0, 50, 10),
             hourly = hourly, daily = daily,
+            // The Rain preview should show its own dots, not fall back to the hourly strip.
+            nowcast = (0 until 8).map { i ->
+                NowcastSlot(now.plusSeconds(900L * i), listOf(0.0, 0.05, 0.2, 0.6, 0.8, 0.4, 0.1, 0.0)[i])
+            },
             fetchedAt = DataPart.entries.associateWith { now },
         )
         val place = Place(0, "Roma", "Lazio", "Italia", GeoPoint(41.89, 12.48), "Europe/Rome")
-        return WidgetData(WidgetConfig.Default, PlaceWeather(place, snapshot, now, null), AppSettings())
+        return WidgetData(WidgetConfig.Default, PlaceWeather(place, snapshot, now, null), AppSettings(), placeExists = true)
     }
 }

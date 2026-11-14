@@ -20,11 +20,14 @@ data class PlaceEntity(
     val sortOrder: Int = 0,
     /** Epoch seconds; places not opened for a while and not on a widget are not refreshed. */
     val lastOpenedAt: Long? = null,
+    /** The real city name after the user gave the place a personal label. */
+    val originalName: String? = null,
 ) {
     fun toModel() = Place(
         id = id, name = name, region = region, country = country,
         point = GeoPoint(latitude, longitude), timeZone = timeZone,
         isCurrentLocation = isCurrentLocation, sortOrder = sortOrder,
+        originalName = originalName,
     )
 }
 
@@ -41,7 +44,13 @@ data class SnapshotEntity(
     val lastAttemptAt: Long?,
     /** Name of a SyncError, null when the last attempt succeeded. */
     val lastError: String?,
-)
+    /** Coordinates the snapshot belongs to; null for rows written before this was stored. */
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+) {
+    fun pointOrNull(): GeoPoint? =
+        if (latitude != null && longitude != null) GeoPoint(latitude, longitude) else null
+}
 
 @Entity(
     tableName = "widgets",

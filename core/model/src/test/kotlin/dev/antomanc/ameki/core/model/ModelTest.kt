@@ -3,6 +3,7 @@ package dev.antomanc.ameki.core.model
 import com.google.common.truth.Truth.assertThat
 import kotlinx.serialization.json.Json
 import org.junit.Test
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -128,6 +129,40 @@ class ModelTest {
     fun `coarse point rounds to two decimals`() {
         assertThat(GeoPoint(41.892345, 12.485678).coarse()).isEqualTo(GeoPoint(41.89, 12.49))
     }
+
+    @Test
+    fun `points within a kilometre are the same place for weather`() {
+        val rome = GeoPoint(41.89, 12.48)
+        assertThat(rome.isNear(GeoPoint(41.895, 12.485))).isTrue()
+        assertThat(rome.isNear(GeoPoint(41.91, 12.48))).isFalse()
+    }
+
+    @Test
+    fun `renaming keeps the original city in the subtitle`() {
+        val rome = Place(1, "Casa", "Lazio", "Italia", GeoPoint(41.89, 12.48), "Europe/Rome", originalName = "Roma")
+        assertThat(rome.subtitle).isEqualTo("Roma, Lazio, Italia")
+        val plain = rome.copy(name = "Roma", originalName = null)
+        assertThat(plain.subtitle).isEqualTo("Lazio, Italia")
+    }
+
+    @Test
+    fun `retention is longer than weather freshness`() {
+        assertThat(RefreshPolicy.maxAge(SourceId.OPEN_METEO, DataPart.CURRENT)).isEqualTo(Duration.ofDays(7))
+        assertThat(RefreshPolicy.weatherFreshness(SourceId.OPEN_METEO, DataPart.CURRENT)).isEqualTo(Duration.ofHours(2))
+        // Google's one-hour retention is stricter than the two-hour weather window.
+        assertThat(RefreshPolicy.weatherFreshness(SourceId.GOOGLE, DataPart.CURRENT)).isEqualTo(Duration.ofHours(1))
+    }
+
+    @Test
+    fun `an old current reading is kept but no longer fresh`() {
+        val s = WeatherSnapshot(
+            SourceId.OPEN_METEO, rome, current(10.0),
+            fetchedAt = mapOf(DataPart.CURRENT to t0),
+        )
+        assertThat(s.currentIsFresh(t0.plusSeconds(3600))).isTrue()
+        assertThat(s.currentIsFresh(t0.plusSeconds(3 * 3600))).isFalse()
+        assertThat(s.current).isNotNull() // retention still shows it offline
+    }
 }
 
 class NowcastTest {
@@ -143,6 +178,78 @@ class NowcastTest {
     @Test fun `rain stopping`() = assertThat(Nowcast.outlook(snap(0.4, 0.2, 0.0), now)).isEqualTo(RainOutlook.StopsIn(30))
     @Test fun `raining throughout`() = assertThat(Nowcast.outlook(snap(0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4), now)).isEqualTo(RainOutlook.RainingNow)
 
+    @Test fun `no nowcast and no hours is unavailable, not dry`() {
+        val empty = WeatherSnapshot(SourceId.OPEN_METEO, ZoneId.of("UTC"), null)
+        assertThat(Nowcast.outlook(empty, now)).isEqualTo(RainOutlook.Unavailable)
+    }
+
+    @Test fun `a nowcast that does not cover two hours is unavailable when it stays dry`() {
+        assertThat(Nowcast.outlook(snap(0.0, 0.0), now)).isEqualTo(RainOutlook.Unavailable)
+    }
+
+    @Test fun `a partial nowcast still reports rain it can see`() {
+        assertThat(Nowcast.outlook(snap(0.0, 0.3), now)).isEqualTo(RainOutlook.StartsIn(15))
+    }
+
+    @Test fun `a nowcast that starts after now is incomplete when it stays dry`() {
+        val slots = (0 until 7).map { i ->
+            NowcastSlot(Instant.parse("2026-11-14T10:00:00Z").plusSeconds(900L * (i + 1)), 0.0)
+        }
+        val s = WeatherSnapshot(SourceId.OPEN_METEO, ZoneId.of("UTC"), null, nowcast = slots,
+            fetchedAt = mapOf(DataPart.NOWCAST to now))
+        assertThat(Nowcast.outlook(s, now)).isEqualTo(RainOutlook.Unavailable)
+    }
+
+    @Test fun `a nowcast with a gap is incomplete when it stays dry`() {
+        val slots = (0 until 8).filter { it != 3 }.map { i ->
+            NowcastSlot(Instant.parse("2026-11-14T10:00:00Z").plusSeconds(900L * i), 0.0)
+        }
+        val s = WeatherSnapshot(SourceId.OPEN_METEO, ZoneId.of("UTC"), null, nowcast = slots,
+            fetchedAt = mapOf(DataPart.NOWCAST to now))
+        assertThat(Nowcast.outlook(s, now)).isEqualTo(RainOutlook.Unavailable)
+    }
+
+    @Test fun `a dry partial nowcast plus one hour cannot cover the horizon`() {
+        val s = snap(0.0, 0.0).copy(
+            hourly = listOf(
+                HourlyForecast(Instant.parse("2026-11-14T10:00:00Z"), 10.0, null, WeatherCondition.CLOUDY, true, 20, 0.0, null, null, null, null, null, null),
+            ),
+            fetchedAt = mapOf(DataPart.NOWCAST to now, DataPart.HOURLY to now),
+        )
+        assertThat(Nowcast.outlook(s, now)).isEqualTo(RainOutlook.Unavailable)
+    }
+
+    @Test fun `one dry hour cannot promise two dry hours`() {
+        val s = WeatherSnapshot(
+            SourceId.GOOGLE, ZoneId.of("UTC"), null,
+            hourly = listOf(
+                HourlyForecast(Instant.parse("2026-11-14T10:00:00Z"), 10.0, null, WeatherCondition.CLOUDY, true, 20, 0.0, null, null, null, null, null, null),
+            ),
+            fetchedAt = mapOf(DataPart.HOURLY to now),
+        )
+        assertThat(Nowcast.outlook(s, now)).isEqualTo(RainOutlook.Unavailable)
+    }
+
+    @Test fun `missing hourly probabilities are unavailable even with complete time coverage`() {
+        val first = HourlyForecast(Instant.parse("2026-11-14T10:00:00Z"), 10.0, null, WeatherCondition.CLOUDY, true, null, null, null, null, null, null, null, null)
+        val s = WeatherSnapshot(SourceId.OPEN_METEO, ZoneId.of("UTC"), null,
+            hourly = (0..2).map { first.copy(time = first.time.plusSeconds(it * 3600L)) },
+            fetchedAt = mapOf(DataPart.HOURLY to now))
+        assertThat(Nowcast.outlook(s, now)).isEqualTo(RainOutlook.Unavailable)
+        assertThat(Nowcast.outlook(s.copy(hourly = s.hourly.map { it.copy(precipitationProbability = 0) }), now)).isEqualTo(RainOutlook.NoneSoon)
+    }
+
+    @Test fun `stale hours are not used as a confident fallback`() {
+        val s = WeatherSnapshot(
+            SourceId.GOOGLE, ZoneId.of("UTC"), null,
+            hourly = listOf(
+                HourlyForecast(Instant.parse("2026-11-14T10:00:00Z"), 10.0, null, WeatherCondition.CLOUDY, true, 20, 0.0, null, null, null, null, null, null),
+            ),
+            fetchedAt = mapOf(DataPart.HOURLY to now.minusSeconds(7 * 3600)),
+        )
+        assertThat(Nowcast.outlook(s, now)).isEqualTo(RainOutlook.Unavailable)
+    }
+
     @Test fun `falls back to hourly probability`() {
         val s = WeatherSnapshot(
             SourceId.GOOGLE, ZoneId.of("UTC"), null,
@@ -150,6 +257,7 @@ class NowcastTest {
                 HourlyForecast(Instant.parse("2026-11-14T10:00:00Z"), 10.0, null, WeatherCondition.CLOUDY, true, 20, 0.0, null, null, null, null, null, null),
                 HourlyForecast(Instant.parse("2026-11-14T11:00:00Z"), 10.0, null, WeatherCondition.RAIN, true, 70, 1.0, null, null, null, null, null, null),
             ),
+            fetchedAt = mapOf(DataPart.HOURLY to now),
         )
         assertThat(Nowcast.outlook(s, now)).isEqualTo(RainOutlook.LikelyAround(Instant.parse("2026-11-14T11:00:00Z")))
     }

@@ -9,12 +9,17 @@ import dev.antomanc.ameki.core.data.sync.SyncError
 import dev.antomanc.ameki.core.data.sync.WeatherUpdateListener
 import dev.antomanc.ameki.core.model.AppSettings
 import dev.antomanc.ameki.core.model.DataPart
-import dev.antomanc.ameki.core.model.SourceId
+import dev.antomanc.ameki.core.model.GeoPoint
 import dev.antomanc.ameki.core.model.RefreshPolicy
+import dev.antomanc.ameki.core.model.SourceId
 import dev.antomanc.ameki.core.model.WeatherSnapshot
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
@@ -33,6 +38,7 @@ class WeatherRepository(
     private val sources: SourceRegistry,
     private val places: PlaceRepository,
     private val listeners: () -> List<WeatherUpdateListener> = { emptyList() },
+    private val onNextExpiry: (Instant?) -> Unit = {},
     private val clock: () -> Instant = Instant::now,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
@@ -40,8 +46,8 @@ class WeatherRepository(
 
     /** Weather for every saved place, in display order. */
     val all: Flow<List<PlaceWeather>> = combine(
-        places.places, snapshotDao.observeAll(), settings.settings,
-    ) { placeList, snapshots, s ->
+        places.places, snapshotDao.observeAll(), settings.settings, expiryTicks(),
+    ) { placeList, snapshots, s, _ ->
         val byPlace = snapshots.associateBy { it.placeId }
         placeList.map { place -> toPlaceWeather(place, byPlace[place.id], s.source) }
     }
@@ -52,7 +58,7 @@ class WeatherRepository(
     }
 
     private fun toPlaceWeather(place: dev.antomanc.ameki.core.model.Place, e: SnapshotEntity?, source: SourceId): PlaceWeather {
-        val snapshot = e?.let { decode(it) }?.let { valid(it, source) }
+        val snapshot = e?.let { decode(it) }?.let { valid(it, source, place.point.coarse(), e.pointOrNull()) }
         return PlaceWeather(
             place = place,
             snapshot = snapshot,
@@ -64,14 +70,41 @@ class WeatherRepository(
     private fun decode(e: SnapshotEntity): WeatherSnapshot? =
         runCatching { json.decodeFromString(WeatherSnapshot.serializer(), e.json) }.getOrNull()
 
-    /** Drop data from another source and parts past their retention limit. */
-    private fun valid(s: WeatherSnapshot, source: SourceId): WeatherSnapshot? {
+    /**
+     * Drop data from another source, from another location, and parts past their retention limit.
+     * Coordinates are compared only when both are known: old rows predate the stored point.
+     */
+    private fun valid(
+        s: WeatherSnapshot,
+        source: SourceId,
+        placePoint: GeoPoint? = null,
+        snapshotPoint: GeoPoint? = null,
+    ): WeatherSnapshot? {
         if (s.source != source) return null
+        if (placePoint != null && snapshotPoint != null && !placePoint.isNear(snapshotPoint)) return null
         val now = clock()
         val keep = s.fetchedAt.filter { (part, at) ->
             Duration.between(at, now) < RefreshPolicy.maxAge(s.source, part)
         }.keys
         return s.retain(keep).takeIf { keep.isNotEmpty() }
+    }
+
+    /**
+     * Re-emits exactly when the oldest cached part crosses its retention limit, so screens and
+     * widgets stop showing expired data even when no refresh reaches the network.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun expiryTicks(): Flow<Unit> = snapshotDao.observeAll().flatMapLatest { entities ->
+        flow {
+            emit(Unit)
+            while (true) {
+                val now = clock()
+                val next = entities.mapNotNull { e -> decode(e)?.let { nextExpiry(it, now) } }.minOrNull()
+                    ?: break
+                delay(Duration.between(now, next).toMillis().coerceAtLeast(1_000) + 50)
+                emit(Unit)
+            }
+        }
     }
 
     /**
@@ -104,11 +137,18 @@ class WeatherRepository(
         val s = settings.current()
         var placeEntity = placeDao.byId(placeId) ?: return null
         if (placeEntity.isCurrentLocation) {
-            if (!places.updateCurrentLocation()) return record(placeId, s, null, SyncError.NO_LOCATION)
+            if (!places.updateCurrentLocation()) {
+                val stillHere = placeEntity.toModel().point.coarse()
+                return record(placeId, s, null, SyncError.NO_LOCATION, stillHere)
+            }
             placeEntity = placeDao.byId(placeId) ?: return null
         }
+        // The point this refresh is for: a move must never mix with the previous place's data.
+        val point = placeEntity.toModel().point.coarse()
         val source = sources[s.source]
-        val existing = snapshotDao.get(placeId)?.let(::decode)?.let { valid(it, s.source) }
+        val existingEntity = snapshotDao.get(placeId)
+        val existing = existingEntity?.let(::decode)
+            ?.let { valid(it, s.source, point, existingEntity.pointOrNull()) }
         val parts = if (force) {
             DataPart.entries.filterTo(mutableSetOf()) { it.capability in source.capabilities }
         } else {
@@ -117,25 +157,42 @@ class WeatherRepository(
         if (parts.isEmpty()) return null
 
         return try {
-            val fresh = source.fetch(placeEntity.toModel().point.coarse(), language(s), parts)
+            val fresh = source.fetch(point, language(s), parts)
             val merged = existing?.mergedWith(fresh) ?: fresh
-            record(placeId, s, merged, null)
+            record(placeId, s, merged, null, point)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            record(placeId, s, existing, SyncError.from(e))
+            record(placeId, s, existing, SyncError.from(e), point)
         }
     }
 
-    private suspend fun record(placeId: Long, s: AppSettings, snapshot: WeatherSnapshot?, error: SyncError?): SyncError? {
+    private suspend fun record(
+        placeId: Long,
+        s: AppSettings,
+        snapshot: WeatherSnapshot?,
+        error: SyncError?,
+        point: GeoPoint? = null,
+    ): SyncError? {
+        val previous = snapshotDao.get(placeId)
+        val previousPoint = previous?.pointOrNull()
+        // On failure keep the old snapshot only if it belongs to the same place.
+        val keepPrevious = snapshot == null &&
+            (point == null || previousPoint == null || point.isNear(previousPoint))
+        val encoded = when {
+            snapshot != null -> json.encodeToString(WeatherSnapshot.serializer(), snapshot)
+            keepPrevious -> previous?.json ?: EMPTY
+            else -> EMPTY
+        }
         snapshotDao.upsert(
             SnapshotEntity(
                 placeId = placeId,
                 sourceId = s.source.name,
-                json = snapshot?.let { json.encodeToString(WeatherSnapshot.serializer(), it) }
-                    ?: snapshotDao.get(placeId)?.json ?: EMPTY,
+                json = encoded,
                 lastAttemptAt = clock().epochSecond,
                 lastError = error?.name,
+                latitude = point?.latitude ?: previous?.latitude?.takeIf { keepPrevious },
+                longitude = point?.longitude ?: previous?.longitude?.takeIf { keepPrevious },
             ),
         )
         return error
@@ -149,15 +206,18 @@ class WeatherRepository(
     suspend fun ensureHourlyUntil(placeId: Long, until: Instant): SyncError? = mutex.withLock {
         val s = settings.current()
         val source = sources[s.source]
-        val existing = snapshotDao.get(placeId)?.let(::decode)?.let { valid(it, s.source) }
+        val place = placeDao.byId(placeId) ?: return@withLock null
+        val point = place.toModel().point.coarse()
+        val existingEntity = snapshotDao.get(placeId)
+        val existing = existingEntity?.let(::decode)
+            ?.let { valid(it, s.source, point, existingEntity.pointOrNull()) }
         val lastHour = existing?.hourly?.lastOrNull()?.time
         if (lastHour != null && !lastHour.isBefore(until.minusSeconds(3600))) return@withLock null
-        val place = placeDao.byId(placeId) ?: return@withLock null
         val hours = (Duration.between(clock(), until).toHours() + 2).toInt()
         try {
-            val extra = source.fetchHours(place.toModel().point.coarse(), language(s), hours) ?: return@withLock null
+            val extra = source.fetchHours(point, language(s), hours) ?: return@withLock null
             val merged = existing?.mergedWith(extra) ?: extra
-            record(placeId, s, merged, null)
+            record(placeId, s, merged, null, point)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -170,7 +230,8 @@ class WeatherRepository(
         val source = settings.current().source
         snapshotDao.all().forEach { e ->
             val s = decode(e) ?: return@forEach
-            val kept = valid(s, source)
+            val placePoint = placeDao.byId(e.placeId)?.let { GeoPoint(it.latitude, it.longitude) }
+            val kept = valid(s, source, placePoint, e.pointOrNull())
             if (kept != s) {
                 snapshotDao.upsert(e.copy(json = kept?.let { json.encodeToString(WeatherSnapshot.serializer(), it) } ?: EMPTY))
             }
@@ -183,7 +244,17 @@ class WeatherRepository(
         notifyListeners()
     }
 
-    private suspend fun notifyListeners() = listeners().forEach { runCatching { it.onWeatherUpdated() } }
+    /** Local-only expiry also runs when the network worker is waiting for connectivity. */
+    suspend fun refreshCachedState() {
+        purgeExpired()
+        notifyListeners()
+    }
+
+    private suspend fun notifyListeners() {
+        listeners().forEach { runCatching { it.onWeatherUpdated() } }
+        val now = clock()
+        onNextExpiry(snapshotDao.all().mapNotNull { decode(it)?.let { snapshot -> nextExpiry(snapshot, now) } }.minOrNull())
+    }
 
     private fun language(s: AppSettings): String = s.dataLanguage ?: Locale.getDefault().toLanguageTag()
 
@@ -191,3 +262,15 @@ class WeatherRepository(
         const val EMPTY = ""
     }
 }
+
+/** When the next cached part crosses its retention limit; internal so the timer logic is testable. */
+internal fun nextExpiry(s: WeatherSnapshot, now: Instant): Instant? = s.fetchedAt.entries
+    .filter { (part, at) -> at.plus(RefreshPolicy.maxAge(s.source, part)).isAfter(now) }
+    .flatMap { (part, at) -> buildList {
+        add(at.plus(RefreshPolicy.maxAge(s.source, part)))
+        add(at.plus(RefreshPolicy.weatherFreshness(s.source, part)))
+        if (part == DataPart.CURRENT) s.current?.let { add(it.time.plus(RefreshPolicy.weatherFreshness(s.source, part))) }
+        add(now.atZone(s.timeZone).toLocalDate().plusDays(1).atStartOfDay(s.timeZone).toInstant())
+    } }
+    .filter { it.isAfter(now) }
+    .minOrNull()

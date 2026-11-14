@@ -15,6 +15,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.get
 import org.koin.android.ext.koin.androidContext
@@ -32,9 +34,9 @@ class AmekiApp : Application() {
         }
         WorkManager.initialize(this, Configuration.Builder().setWorkerFactory(KoinWorkerFactory()).build())
         appScope.launch {
-            // Units, theme, time format... change what widgets draw: redraw them on every change.
+            // Selection only changes the app pager; widget rendering follows the other settings.
             launch {
-                get<SettingsRepository>().settings.drop(1).collect { get<WidgetUpdater>().onWeatherUpdated() }
+                get<SettingsRepository>().settings.map { it.copy(selectedPlaceId = null) }.distinctUntilChanged().drop(1).collect { get<WidgetUpdater>().onWeatherUpdated() }
             }
             val settings = get<SettingsRepository>().current()
             get<RefreshScheduler>().schedule(settings.refreshIntervalMinutes)
@@ -45,6 +47,32 @@ class AmekiApp : Application() {
                 prefs.edit().putInt("previews_for", BuildConfig.VERSION_CODE).apply()
             }
         }
+    }
+
+    /** Called from a foreground Activity on IO; background workers never publish shortcuts. */
+    fun publishShortcuts() {
+        val shortcuts = getSystemService(android.content.pm.ShortcutManager::class.java)
+        if (shortcuts.isRateLimitingActive) return
+        val entries = listOf(
+            "places" to getString(R.string.shortcut_places),
+            "refresh" to getString(R.string.shortcut_refresh),
+            "widget" to getString(R.string.shortcut_widget),
+        ).filter { (action, _) -> action != "widget" || android.appwidget.AppWidgetManager.getInstance(this).isRequestPinAppWidgetSupported }.map { (action, label) ->
+            android.content.pm.ShortcutInfo.Builder(this, action)
+                .setShortLabel(label)
+                .setLongLabel(label)
+                .setIcon(android.graphics.drawable.Icon.createWithResource(this, when (action) {
+                    "places" -> android.R.drawable.ic_menu_mylocation
+                    "refresh" -> android.R.drawable.ic_popup_sync
+                    else -> android.R.drawable.ic_input_add
+                }))
+                .setIntent(android.content.Intent(this, MainActivity::class.java)
+                    .setAction(android.content.Intent.ACTION_VIEW)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    .putExtra("dev.antomanc.ameki.ACTION", action))
+                .build()
+        }
+        shortcuts.setDynamicShortcuts(entries)
     }
 
     companion object {

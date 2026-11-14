@@ -10,4 +10,15 @@
     <string name="move_down">Sposta giù</string>
     <string name="remove">Rimuovi</string>
     <string name="locating">Sto cercando la tua posizione…</string>
+    <string name="place_removed">Località rimossa</string>
+    <string name="undo">Annulla</string>
+    <string name="rename">Rinomina località</string>
+    <string name="place_label">Nome (ad esempio, Casa)</string>
+    <string name="save">Salva</string>
+    <string name="cancel">Annulla</string>
+    <string name="retry_location">Aggiorna la mia posizione</string>
+    <string name="location_permission_denied">Accesso alla posizione disattivato. Cerca una città o consenti la posizione nelle impostazioni Android.</string>
+    <string name="location_failed">Posizione non disponibile. Verifica che sia attiva, poi riprova o cerca una città.</string>
+    <string name="open_settings">Apri impostazioni</string>
+    <string name="place_actions">Azioni per %1$s</string>
 </resources>

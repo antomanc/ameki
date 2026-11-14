@@ -59,6 +59,20 @@ class RefreshAction : ActionCallback, KoinComponent {
     }
 }
 
+/** Tap on an hour or a day: opens that detail in the app, with a fresh request id per tap. */
+class OpenDetailAction : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        val day = parameters[dayKey] ?: return
+        context.startActivity(detailIntent(context, parameters[placeKey], day, parameters[hourKey]))
+    }
+
+    companion object {
+        val placeKey = ActionParameters.Key<Long>("placeId")
+        val dayKey = ActionParameters.Key<Long>("dayEpochDay")
+        val hourKey = ActionParameters.Key<Long>("hourEpochSecond")
+    }
+}
+
 /** Redraws every widget after the cache changes. */
 class WidgetUpdater(private val context: Context) : WeatherUpdateListener {
     override suspend fun onWeatherUpdated() {

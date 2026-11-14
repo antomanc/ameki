@@ -17,6 +17,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme.shapes
@@ -25,6 +27,7 @@ import dev.antomanc.ameki.core.model.PlaceSearchResult
 /** City search field with live results. Shared by onboarding and the places screen. */
 @Composable
 fun PlaceSearch(state: SearchState, onQuery: (String) -> Unit, onPick: (PlaceSearchResult) -> Unit, modifier: Modifier = Modifier) {
+    val keyboard = LocalSoftwareKeyboardController.current
     Column(modifier) {
         OutlinedTextField(
             value = state.query,
@@ -36,6 +39,7 @@ fun PlaceSearch(state: SearchState, onQuery: (String) -> Unit, onPick: (PlaceSea
             leadingIcon = { Icon(Icons.Outlined.Search, null) },
             trailingIcon = { if (state.searching) CircularProgressIndicator(Modifier.padding(12.dp), strokeWidth = 2.dp) },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
         )
         if (state.failed) {
             Text(stringResource(R.string.search_failed), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(12.dp))

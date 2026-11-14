@@ -38,6 +38,8 @@ data class PlaceWeather(
     val snapshot: WeatherSnapshot?,
     val lastAttemptAt: Instant?,
     val error: SyncError?,
+    /** Makes time-based expiry observable even when the retained snapshot is unchanged. */
+    val evaluatedAt: Instant = Instant.now(),
 ) {
     val hasData: Boolean get() = snapshot?.current != null || snapshot?.daily?.isNotEmpty() == true
 }

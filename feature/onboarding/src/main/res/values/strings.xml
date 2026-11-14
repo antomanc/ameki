@@ -22,4 +22,5 @@
     <string name="ob_widget_manual">Long-press your home screen, tap Widgets and look for Ameki.</string>
     <string name="ob_finish">Done</string>
     <string name="ob_locating">Finding your location…</string>
+    <string name="ob_choose_later">Choose a city later</string>
 </resources>

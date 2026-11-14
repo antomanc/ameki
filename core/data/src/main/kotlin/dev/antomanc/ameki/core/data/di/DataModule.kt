@@ -51,7 +51,10 @@ val dataModule = module {
     single { SettingsRepository(androidContext().dataStore, get(), get<SourceRegistry>().ids) }
     single { DeviceLocation(androidContext()) }
     single<PlaceSearch> { OpenMeteoPlaceSearch(get()) }
-    single { PlaceRepository(get(), get(), get()) }
+    single {
+        val koin = getKoin()
+        PlaceRepository(get(), get(), get(), onRestored = { koin.get<RefreshScheduler>().refreshNow() })
+    }
     single { OpenMeteoSource(get()) }
     single {
         // Resolve settings lazily: SettingsRepository depends on the source registry, which
@@ -76,6 +79,7 @@ val dataModule = module {
         WeatherRepository(
             placeDao = get(), snapshotDao = get(), settings = get(), sources = get(), places = get(),
             listeners = { koin.getAll<WeatherUpdateListener>() },
+            onNextExpiry = { koin.get<RefreshScheduler>().scheduleExpiry(it) },
         )
     }
     single { RefreshScheduler(androidContext()) }
@@ -86,4 +90,5 @@ val dataModule = module {
         )
     }
     worker { RefreshWorker(get(), get()) }
+    worker { dev.antomanc.ameki.core.data.sync.CacheExpiryWorker(get(), get()) }
 }

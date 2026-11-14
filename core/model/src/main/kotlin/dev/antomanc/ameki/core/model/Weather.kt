@@ -1,6 +1,7 @@
 package dev.antomanc.ameki.core.model
 
 import kotlinx.serialization.Serializable
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -132,7 +133,22 @@ data class WeatherSnapshot(
      */
     val updatedAt: Instant? get() = fetchedAt[DataPart.CURRENT] ?: fetchedAt[DataPart.HOURLY] ?: fetchedAt.values.maxOrNull()
 
-    val today: DailyForecast? get() = daily.firstOrNull()
+    /**
+     * Whether [part] still describes the weather it claims to at [now]. Retention can be longer
+     * (offline we keep the last data), but an old current reading must not be shown as "now".
+     */
+    fun partIsFresh(part: DataPart, now: Instant): Boolean = fetchedAt[part]?.let { at ->
+        Duration.between(at, now) < RefreshPolicy.weatherFreshness(source, part)
+    } == true
+
+    fun currentIsFresh(now: Instant): Boolean {
+        val c = current ?: return false
+        if (!partIsFresh(DataPart.CURRENT, now)) return false
+        // The source's observation time must be current too: fetched recently, stale values still lie.
+        return Duration.between(c.time, now).abs() < RefreshPolicy.weatherFreshness(source, DataPart.CURRENT)
+    }
+
+    val today: DailyForecast? get() = daily.firstOrNull { it.date == java.time.LocalDate.now(timeZone) }
 
     /** Upcoming hours, starting with the current one. */
     fun hoursFrom(now: Instant): List<HourlyForecast> =

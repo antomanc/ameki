@@ -34,16 +34,34 @@ class RefreshScheduler(private val context: Context) {
     }
 
     /** Refresh now, e.g. after adding a widget or changing source. */
+    private var lastForcedAt = Long.MIN_VALUE
+
+    @Synchronized
     fun refreshNow(force: Boolean = false) {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (force && lastForcedAt != Long.MIN_VALUE && now - lastForcedAt < 5_000) return
+        if (force) lastForcedAt = now
         val request = OneTimeWorkRequestBuilder<RefreshWorker>()
             .setConstraints(constraints)
             .setInputData(androidx.work.workDataOf(RefreshWorker.KEY_FORCE to force))
             .addTag(TAG)
             .build()
-        wm.enqueueUniqueWork(ONE_SHOT, ExistingWorkPolicy.REPLACE, request)
+        // A forced run joins the queue; an ordinary one must not cancel work already in flight.
+        val policy = ExistingWorkPolicy.APPEND_OR_REPLACE
+        wm.enqueueUniqueWork(ONE_SHOT, policy, request)
+    }
+
+    /** A network-free redraw at the next data/freshness boundary. Android may defer it in Doze. */
+    fun scheduleExpiry(at: java.time.Instant?) {
+        if (at == null) { wm.cancelUniqueWork(CACHE_EXPIRY); return }
+        val delay = java.time.Duration.between(java.time.Instant.now(), at).toMillis().coerceAtLeast(1_000)
+        val request = OneTimeWorkRequestBuilder<CacheExpiryWorker>()
+            .setInitialDelay(delay, TimeUnit.MILLISECONDS).build()
+        wm.enqueueUniqueWork(CACHE_EXPIRY, ExistingWorkPolicy.REPLACE, request)
     }
 
     companion object {
+        const val CACHE_EXPIRY = "ameki-cache-expiry"
         const val TAG = "ameki-refresh"
         const val PERIODIC = "ameki-refresh-periodic"
         const val ONE_SHOT = "ameki-refresh-now"

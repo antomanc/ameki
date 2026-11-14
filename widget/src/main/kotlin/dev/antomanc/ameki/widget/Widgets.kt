@@ -12,6 +12,9 @@ import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.LocalSize
+import androidx.glance.action.actionParametersOf
+import androidx.glance.action.clickable
+import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.background
 import androidx.glance.layout.Alignment
@@ -22,9 +25,9 @@ import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
+import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
-import androidx.glance.layout.padding
 import androidx.glance.semantics.contentDescription
 import androidx.glance.semantics.semantics
 import androidx.glance.text.FontWeight
@@ -33,6 +36,8 @@ import androidx.glance.text.TextAlign
 import androidx.glance.unit.ColorProvider
 import dev.antomanc.ameki.core.model.DailyForecast
 import dev.antomanc.ameki.core.model.HourlyForecast
+import dev.antomanc.ameki.core.model.Nowcast
+import dev.antomanc.ameki.core.model.RainOutlook
 import dev.antomanc.ameki.core.model.Units
 import dev.antomanc.ameki.core.ui.TimeFormatter
 import dev.antomanc.ameki.core.ui.label
@@ -54,8 +59,8 @@ private fun Dial(data: WidgetData, palette: WidgetPalette, size: Dp, content: @C
     val context = LocalContext.current
     val c = data.weather?.snapshot?.current ?: return
     val today = data.weather.snapshot?.today
-    val low = minOf(today?.temperatureMin ?: c.temperature, c.temperature)
-    val high = maxOf(today?.temperatureMax ?: c.temperature, c.temperature)
+    val low = today?.temperatureMin ?: c.temperature
+    val high = today?.temperatureMax ?: c.temperature
     val night = palette.dark ?: context.isNight()
     val px = (size.value * context.resources.displayMetrics.density).toInt().coerceIn(64, 900)
     val bmp = DialBitmap.draw(
@@ -68,7 +73,7 @@ private fun Dial(data: WidgetData, palette: WidgetPalette, size: Dp, content: @C
     val units = data.settings.units
     Box(
         GlanceModifier.size(size).semantics {
-            contentDescription = context.getString(dev.antomanc.ameki.core.ui.R.string.cd_temperature_dial, units.temp(c.temperature), units.temp(low), units.temp(high))
+            contentDescription = context.getString(dev.antomanc.ameki.core.ui.R.string.cd_temperature_dial, units.temp(c.temperature), units.temp(low), units.temp(high), c.feelsLike?.let { context.getString(dev.antomanc.ameki.core.ui.R.string.feels_like, units.temp(it)) } ?: "")
         },
         contentAlignment = Alignment.Center,
     ) {
@@ -81,31 +86,63 @@ private fun Dial(data: WidgetData, palette: WidgetPalette, size: Dp, content: @C
 private fun TempText(celsius: Double, units: Units, palette: WidgetPalette, size: Int, light: Boolean = true) =
     Text(units.temp(celsius), style = textStyle(palette.onSurface, size.sp, FontWeight.Normal, light = light))
 
+/** High and low from the same daily row the dial uses, with explicit meaning for TalkBack. */
+@Composable
+private fun HighLow(today: DailyForecast?, units: Units, palette: WidgetPalette, size: Int = 12) {
+    today ?: return
+    val context = LocalContext.current
+    Text(
+        context.getString(R.string.widget_high_low, units.temp(today.temperatureMax), units.temp(today.temperatureMin)),
+        style = textStyle(palette.onSurfaceVariant, size.sp),
+        maxLines = 1,
+        modifier = GlanceModifier.semantics {
+            contentDescription = context.getString(R.string.widget_high_low_cd, units.temp(today.temperatureMax), units.temp(today.temperatureMin))
+        },
+    )
+}
+
 // ---------------------------------------------------------------- Compact (2×1 → 2×2+)
 
 class CompactWidget : AmekiWidget(setOf(S2x1, S2x2, S3x2)) {
+    override val need = WidgetNeed.CURRENT
+
     @Composable
     override fun Content(data: WidgetData, palette: WidgetPalette, fmt: TimeFormatter) {
         val size = LocalSize.current
         val context = LocalContext.current
-        val c = data.weather!!.snapshot!!.current ?: return
+        val s = data.weather!!.snapshot!!
+        val c = s.current ?: return
         val units = data.settings.units
-        val today = data.weather.snapshot!!.today
         when {
             size.height < 90.dp -> Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                ConditionIcon(c.condition, c.isDaytime, 32.dp, palette)
-                Spacer(GlanceModifier.width(8.dp))
-                TempText(c.temperature, units, palette, 28)
-                Spacer(GlanceModifier.defaultWeight())
-                today?.let { Text(context.getString(dev.antomanc.ameki.core.ui.R.string.high_low, units.temp(it.temperatureMax), units.temp(it.temperatureMin)), style = textStyle(palette.onSurfaceVariant, 12.sp)) }
+                ConditionIcon(c.condition, c.isDaytime, 24.dp, palette)
+                Spacer(GlanceModifier.width(6.dp))
+                TempText(c.temperature, units, palette, 22)
+                Spacer(GlanceModifier.width(6.dp))
+                Column(GlanceModifier.defaultWeight()) {
+                    Text(data.weather.place.name, style = textStyle(palette.onSurface, 10.sp, FontWeight.Medium), maxLines = 1)
+                    Freshness(data, palette, fmt, compact = true)
+                }
             }
-            size.width < 170.dp -> Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Dial(data, palette, minOf(size.width, size.height) - 20.dp) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        ConditionIcon(c.condition, c.isDaytime, 22.dp, palette)
-                        TempText(c.temperature, units, palette, 30)
-                        Text(data.weather.place.name, style = textStyle(palette.onSurfaceVariant, 10.sp), maxLines = 1)
+            size.width < 170.dp -> Column(GlanceModifier.fillMaxSize()) {
+                Box(GlanceModifier.fillMaxWidth().defaultWeight(), contentAlignment = Alignment.Center) {
+                    Dial(data, palette, minOf(size.width, size.height) - 48.dp) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            ConditionIcon(c.condition, c.isDaytime, 20.dp, palette)
+                            TempText(c.temperature, units, palette, 26)
+                        }
                     }
+                }
+                Text(
+                    data.weather.place.name,
+                    style = textStyle(palette.onSurface, 10.sp, FontWeight.Medium),
+                    maxLines = 1,
+                    modifier = GlanceModifier.fillMaxWidth().semantics { contentDescription = data.weather.place.name },
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    HighLow(s.today, units, palette, 9)
+                    Spacer(GlanceModifier.width(6.dp))
+                    Freshness(data, palette, fmt, compact = true)
                 }
             }
             else -> Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
@@ -119,8 +156,8 @@ class CompactWidget : AmekiWidget(setOf(S2x1, S2x2, S3x2)) {
                 Column {
                     Text(data.weather.place.name, style = textStyle(palette.onSurface, 14.sp, FontWeight.Medium), maxLines = 1)
                     Text(c.conditionText ?: context.getString(c.condition.label(c.isDaytime)), style = textStyle(palette.onSurfaceVariant, 12.sp), maxLines = 2)
-                    today?.let { Text(context.getString(dev.antomanc.ameki.core.ui.R.string.high_low, units.temp(it.temperatureMax), units.temp(it.temperatureMin)), style = textStyle(palette.onSurfaceVariant, 12.sp)) }
-                    Spacer(GlanceModifier.height(4.dp))
+                    HighLow(s.today, units, palette, 12)
+                    Spacer(GlanceModifier.height(2.dp))
                     Freshness(data, palette, fmt)
                 }
             }
@@ -138,59 +175,100 @@ private fun HourStrip(
     fmt: TimeFormatter,
     showRain: Boolean,
     large: Boolean = false,
+    tiny: Boolean = false,
+    compact: Boolean = false,
     modifier: GlanceModifier = GlanceModifier.fillMaxWidth(),
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     val s = data.weather!!.snapshot!!
     val units = data.settings.units
     val context = LocalContext.current
+    val nowFresh = s.currentIsFresh(Instant.now())
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
         hours.forEachIndexed { i, h ->
-            Column(GlanceModifier.defaultWeight(), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    if (i == 0) context.getString(dev.antomanc.ameki.core.ui.R.string.now) else fmt.hour(h.time, s.timeZone),
-                    style = textStyle(if (i == 0) palette.now else palette.onSurfaceVariant, if (large) 12.sp else 11.sp),
-                )
-                Spacer(GlanceModifier.height(2.dp))
-                ConditionIcon(h.condition, h.isDaytime, if (large) 34.dp else 28.dp, palette)
-                Spacer(GlanceModifier.height(2.dp))
-                Text(units.temp(h.temperature), style = textStyle(palette.onSurface, if (large) 16.sp else 14.sp, FontWeight.Medium))
-                if (showRain) {
-                    Spacer(GlanceModifier.height(4.dp))
-                    RainDot(h.precipitationProbability, 14.dp, palette)
-                    if (large) Text("${h.precipitationProbability ?: 0}%", style = textStyle(palette.rain, 10.sp))
+            val label = if (i == 0 && nowFresh) context.getString(dev.antomanc.ameki.core.ui.R.string.now) else fmt.hour(h.time, s.timeZone)
+            val day = h.time.atZone(s.timeZone).toLocalDate()
+            Column(
+                GlanceModifier.defaultWeight().height(if (tiny) 48.dp else 80.dp)
+                    .clickable(
+                        androidx.glance.appwidget.action.actionStartActivity(detailIntent(context, data.weather.place.id, day.toEpochDay(), h.time.epochSecond)),
+                    )
+                    .semantics {
+                        contentDescription = context.getString(
+                            R.string.widget_hour_cd, label, units.temp(h.temperature),
+                        )
+                    },
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                if (tiny) {
+                    // A 1-row widget has ~30 dp of content: label and icon share a line.
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(label, style = textStyle(palette.onSurfaceVariant, 9.sp), maxLines = 1)
+                        Spacer(GlanceModifier.width(2.dp))
+                        ConditionIcon(h.condition, h.isDaytime, 16.dp, palette)
+                    }
+                    Text(units.temp(h.temperature), style = textStyle(palette.onSurface, 12.sp, FontWeight.Medium), maxLines = 1)
+                } else {
+                    Text(label, style = textStyle(if (i == 0 && nowFresh) palette.now else palette.onSurfaceVariant, if (large) 12.sp else if (compact) 10.sp else 11.sp), maxLines = 1)
+                    Spacer(GlanceModifier.height(2.dp))
+                    ConditionIcon(h.condition, h.isDaytime, if (large) 34.dp else if (compact) 22.dp else 28.dp, palette)
+                    Spacer(GlanceModifier.height(2.dp))
+                    Text(units.temp(h.temperature), style = textStyle(palette.onSurface, if (large) 16.sp else if (compact) 13.sp else 14.sp, FontWeight.Medium), maxLines = 1)
+                    if (showRain) {
+                        Spacer(GlanceModifier.height(4.dp))
+                        RainDot(h.precipitationProbability, 14.dp, palette)
+                        if (large) Text("${h.precipitationProbability ?: 0}%", style = textStyle(palette.rain, 10.sp))
+                    }
                 }
             }
         }
+        trailing?.let { stamp -> Box(GlanceModifier.width(42.dp)) { stamp() } }
     }
 }
 
 class HourlyWidget : AmekiWidget(setOf(S4x1, S4x2, S5x2)) {
+    override val need = WidgetNeed.HOURLY
+
     @Composable
     override fun Content(data: WidgetData, palette: WidgetPalette, fmt: TimeFormatter) {
         val size = LocalSize.current
         val s = data.weather!!.snapshot!!
         val c = s.current
         val units = data.settings.units
-        val count = if (size.width >= 300.dp) 8 else 6
+        val count = if (size.width >= 300.dp) 5 else 4
         val hours = s.hoursFrom(Instant.now()).take(count)
-        if (size.height < 90.dp || c == null) {
-            HourStrip(hours, data, palette, fmt, showRain = false, modifier = GlanceModifier.fillMaxSize())
+        if (size.height < 90.dp) {
+            // One row: the hours keep their labels and temperatures, the stamp gets its own slot.
+            HourStrip(
+                hours.take(count), data, palette, fmt, showRain = false, tiny = true,
+                modifier = GlanceModifier.fillMaxSize(),
+                trailing = { Freshness(data, palette, fmt, compact = true) },
+            )
             return
         }
         Column(GlanceModifier.fillMaxSize()) {
+            val dense = size.height < 150.dp
             Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                ConditionIcon(c.condition, c.isDaytime, 30.dp, palette)
-                Spacer(GlanceModifier.width(6.dp))
-                TempText(c.temperature, units, palette, 30)
-                Spacer(GlanceModifier.width(10.dp))
+                if (c != null) {
+                    ConditionIcon(c.condition, c.isDaytime, if (dense) 26.dp else 30.dp, palette)
+                    Spacer(GlanceModifier.width(6.dp))
+                    TempText(c.temperature, units, palette, if (dense) 26 else 30)
+                    Spacer(GlanceModifier.width(10.dp))
+                }
                 Column(GlanceModifier.defaultWeight()) {
                     Text(data.weather.place.name, style = textStyle(palette.onSurface, 14.sp, FontWeight.Medium), maxLines = 1)
-                    Text(c.conditionText ?: LocalContext.current.getString(c.condition.label(c.isDaytime)), style = textStyle(palette.onSurfaceVariant, 12.sp), maxLines = 1)
+                    c?.let { Text(it.conditionText ?: LocalContext.current.getString(it.condition.label(it.isDaytime)), style = textStyle(palette.onSurfaceVariant, 12.sp), maxLines = 1) }
                 }
                 Freshness(data, palette, fmt)
             }
             // The strip takes all the remaining height and centres in it: no dead band.
-            HourStrip(hours, data, palette, fmt, showRain = true, large = size.height >= 150.dp, modifier = GlanceModifier.fillMaxWidth().defaultWeight())
+            HourStrip(
+                hours, data, palette, fmt,
+                showRain = !dense,
+                large = size.height >= 150.dp,
+                tiny = dense,
+                modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
+            )
         }
     }
 }
@@ -199,6 +277,8 @@ class HourlyWidget : AmekiWidget(setOf(S4x1, S4x2, S5x2)) {
 
 @Composable
 private fun DayRows(days: List<DailyForecast>, data: WidgetData, palette: WidgetPalette, fmt: TimeFormatter, modifier: GlanceModifier) {
+    if (days.isEmpty()) return
+    val placeId = data.weather?.place?.id ?: return
     val context = LocalContext.current
     val units = data.settings.units
     val min = days.minOf { it.temperatureMin }
@@ -210,11 +290,23 @@ private fun DayRows(days: List<DailyForecast>, data: WidgetData, palette: Widget
     val track = Color(palette.track.getColor(context).value).copy(alpha = 0.25f)
     Column(modifier) {
         days.forEachIndexed { i, d ->
+            val label = if (d.date == java.time.LocalDate.now(data.weather!!.snapshot!!.timeZone)) context.getString(dev.antomanc.ameki.core.ui.R.string.today) else fmt.weekdayShort(d.date)
             // Every row takes an equal share of the height, so the widget is filled at any size.
-            Row(GlanceModifier.fillMaxWidth().defaultWeight(), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                GlanceModifier.fillMaxWidth().height(48.dp)
+                    .clickable(
+                        androidx.glance.appwidget.action.actionStartActivity(detailIntent(context, placeId, d.date.toEpochDay(), null)),
+                    )
+                    .semantics {
+                        contentDescription = context.getString(
+                            R.string.widget_day_cd, label, units.temp(d.temperatureMax), units.temp(d.temperatureMin),
+                        )
+                    },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text(
-                    if (i == 0) context.getString(dev.antomanc.ameki.core.ui.R.string.today) else fmt.weekdayShort(d.date),
-                    style = textStyle(palette.onSurface, 14.sp), modifier = GlanceModifier.width(44.dp),
+                    label,
+                    style = textStyle(palette.onSurface, 14.sp), modifier = GlanceModifier.width(44.dp), maxLines = 1,
                 )
                 ConditionIcon(d.condition, true, 26.dp, palette)
                 if (wide) {
@@ -242,6 +334,8 @@ private fun DayRows(days: List<DailyForecast>, data: WidgetData, palette: Widget
 }
 
 class DailyWidget : AmekiWidget(setOf(S4x2, S4x3, S4x4)) {
+    override val need = WidgetNeed.DAILY
+
     @Composable
     override fun Content(data: WidgetData, palette: WidgetPalette, fmt: TimeFormatter) {
         val size = LocalSize.current
@@ -249,18 +343,25 @@ class DailyWidget : AmekiWidget(setOf(S4x2, S4x3, S4x4)) {
         val c = s.current
         val units = data.settings.units
         // Rows sized ~34 dp each: as many days as fit, then they share the height evenly.
-        val rows = ((size.height.value - 70f) / 34f).toInt().coerceIn(3, s.daily.size.coerceAtLeast(3))
+        val rows = ((size.height.value - 60f) / 48f).toInt().coerceIn(1, s.daily.size.coerceAtLeast(1))
+        val dense = size.height < 150.dp
         Column(GlanceModifier.fillMaxSize()) {
             if (c != null) {
                 Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    ConditionIcon(c.condition, c.isDaytime, 32.dp, palette)
+                    ConditionIcon(c.condition, c.isDaytime, if (dense) 26.dp else 32.dp, palette)
                     Spacer(GlanceModifier.width(6.dp))
-                    TempText(c.temperature, units, palette, 30)
+                    TempText(c.temperature, units, palette, if (dense) 24 else 30)
                     Spacer(GlanceModifier.width(10.dp))
                     Column(GlanceModifier.defaultWeight()) {
                         Text(data.weather.place.name, style = textStyle(palette.onSurface, 14.sp, FontWeight.Medium), maxLines = 1)
                         Text(c.conditionText ?: LocalContext.current.getString(c.condition.label(c.isDaytime)), style = textStyle(palette.onSurfaceVariant, 12.sp), maxLines = 1)
                     }
+                    Freshness(data, palette, fmt)
+                }
+                Spacer(GlanceModifier.height(6.dp))
+            } else {
+                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(data.weather.place.name, style = textStyle(palette.onSurface, 14.sp, FontWeight.Medium), modifier = GlanceModifier.defaultWeight(), maxLines = 1)
                     Freshness(data, palette, fmt)
                 }
                 Spacer(GlanceModifier.height(6.dp))
@@ -273,28 +374,46 @@ class DailyWidget : AmekiWidget(setOf(S4x2, S4x3, S4x4)) {
 // ---------------------------------------------------------------- Complete (4×3 → 5×5)
 
 class CompleteWidget : AmekiWidget(setOf(S4x3, S4x4, S5x5)) {
+    override val need = WidgetNeed.ANY
+
     @Composable
     override fun Content(data: WidgetData, palette: WidgetPalette, fmt: TimeFormatter) {
         val size = LocalSize.current
         val context = LocalContext.current
         val s = data.weather!!.snapshot!!
-        val c = s.current ?: return
+        val c = s.current
         val units = data.settings.units
         val alert = s.alerts.firstOrNull()
+        val dense = size.height < 240.dp
         Column(GlanceModifier.fillMaxSize()) {
-            Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Dial(data, palette, if (size.height >= 300.dp) 112.dp else 88.dp) {
-                    TempText(c.temperature, units, palette, if (size.height >= 300.dp) 32 else 26)
+            if (c != null) {
+                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Dial(data, palette, when {
+                        dense -> 64.dp
+                        size.height >= 300.dp -> 112.dp
+                        else -> 88.dp
+                    }) {
+                        TempText(c.temperature, units, palette, when {
+                            dense -> 22
+                            size.height >= 300.dp -> 32
+                            else -> 26
+                        })
+                    }
+                    Spacer(GlanceModifier.width(12.dp))
+                    Column(GlanceModifier.defaultWeight()) {
+                        Text(data.weather.place.name, style = textStyle(palette.onSurface, 16.sp, FontWeight.Medium), maxLines = 1)
+                        Text(c.conditionText ?: context.getString(c.condition.label(c.isDaytime)), style = textStyle(palette.onSurfaceVariant, 12.sp), maxLines = 1)
+                        if (!dense) c.feelsLike?.let { Text(context.getString(dev.antomanc.ameki.core.ui.R.string.feels_like, units.temp(it)), style = textStyle(palette.onSurfaceVariant, 12.sp)) }
+                        Spacer(GlanceModifier.height(2.dp))
+                        Freshness(data, palette, fmt)
+                    }
+                    ConditionIcon(c.condition, c.isDaytime, 40.dp, palette)
                 }
-                Spacer(GlanceModifier.width(12.dp))
-                Column(GlanceModifier.defaultWeight()) {
-                    Text(data.weather.place.name, style = textStyle(palette.onSurface, 16.sp, FontWeight.Medium), maxLines = 1)
-                    Text(c.conditionText ?: context.getString(c.condition.label(c.isDaytime)), style = textStyle(palette.onSurfaceVariant, 12.sp), maxLines = 1)
-                    c.feelsLike?.let { Text(context.getString(dev.antomanc.ameki.core.ui.R.string.feels_like, units.temp(it)), style = textStyle(palette.onSurfaceVariant, 12.sp)) }
-                    Spacer(GlanceModifier.height(2.dp))
+            } else {
+                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(data.weather.place.name, style = textStyle(palette.onSurface, 16.sp, FontWeight.Medium), modifier = GlanceModifier.defaultWeight(), maxLines = 1)
                     Freshness(data, palette, fmt)
                 }
-                ConditionIcon(c.condition, c.isDaytime, 40.dp, palette)
             }
             if (alert != null) {
                 Spacer(GlanceModifier.height(6.dp))
@@ -302,11 +421,22 @@ class CompleteWidget : AmekiWidget(setOf(S4x3, S4x4, S5x5)) {
                     Text(alert.title, style = textStyle(ColorProvider(Color.White), 12.sp, FontWeight.Medium), maxLines = 1)
                 }
             }
-            Spacer(GlanceModifier.height(8.dp))
-            HourStrip(s.hoursFrom(Instant.now()).take(if (size.width >= 300.dp) 7 else 6), data, palette, fmt, showRain = size.height >= 240.dp, large = size.height >= 300.dp)
-            Spacer(GlanceModifier.height(6.dp))
-            val rows = when { size.height >= 300.dp -> 5; size.height >= 240.dp -> 3; else -> 2 }
-            DayRows(s.daily.take(rows), data, palette, fmt, GlanceModifier.fillMaxWidth().defaultWeight())
+            if (s.hourly.isNotEmpty()) {
+                Spacer(GlanceModifier.height(if (dense) 4.dp else 8.dp))
+                HourStrip(
+                    s.hoursFrom(Instant.now()).take(if (size.width >= 300.dp) 7 else 6),
+                    data, palette, fmt,
+                    showRain = !dense && size.height >= 240.dp,
+                    large = size.height >= 300.dp,
+                    compact = size.height < 300.dp,
+                    tiny = dense,
+                )
+            }
+            if (s.daily.isNotEmpty()) {
+                Spacer(GlanceModifier.height(if (dense) 4.dp else 6.dp))
+                val rows = ((size.height.value - if (alert != null) 220f else 180f) / 48f).toInt().coerceAtLeast(0)
+                if (rows > 0) DayRows(s.daily.take(rows), data, palette, fmt, GlanceModifier.fillMaxWidth().defaultWeight())
+            }
         }
     }
 }
@@ -315,20 +445,15 @@ class CompleteWidget : AmekiWidget(setOf(S4x3, S4x4, S5x5)) {
 // ---------------------------------------------------------------- Rain (2×2 → 4×2)
 
 class RainWidget : AmekiWidget(setOf(S2x2, S4x2)) {
+    override val need = WidgetNeed.RAIN
+
     @Composable
     override fun Content(data: WidgetData, palette: WidgetPalette, fmt: TimeFormatter) {
         val context = LocalContext.current
         val size = LocalSize.current
         val s = data.weather!!.snapshot!!
         val now = Instant.now()
-        val outlook = dev.antomanc.ameki.core.model.Nowcast.outlook(s, now)
-        val sentence = when (outlook) {
-            dev.antomanc.ameki.core.model.RainOutlook.NoneSoon -> context.getString(dev.antomanc.ameki.core.ui.R.string.rain_none_2h)
-            dev.antomanc.ameki.core.model.RainOutlook.RainingNow -> context.getString(dev.antomanc.ameki.core.ui.R.string.rain_now)
-            is dev.antomanc.ameki.core.model.RainOutlook.StopsIn -> context.getString(dev.antomanc.ameki.core.ui.R.string.rain_stops_in, outlook.minutes)
-            is dev.antomanc.ameki.core.model.RainOutlook.StartsIn -> context.getString(dev.antomanc.ameki.core.ui.R.string.rain_in, outlook.minutes)
-            is dev.antomanc.ameki.core.model.RainOutlook.LikelyAround -> context.getString(dev.antomanc.ameki.core.ui.R.string.rain_in_hours, fmt.time(outlook.at, s.timeZone))
-        }
+        val sentence = rainSummary(context, s, now, fmt)
         val slots = s.nowcast.filter { it.time.plusSeconds(900) > now }.take(8)
         val wide = size.width >= 200.dp
         Column(GlanceModifier.fillMaxSize()) {
@@ -338,7 +463,7 @@ class RainWidget : AmekiWidget(setOf(S2x2, S4x2)) {
                     style = textStyle(palette.onSurfaceVariant, 10.sp, FontWeight.Medium),
                     modifier = GlanceModifier.defaultWeight(),
                 )
-                if (wide) Freshness(data, palette, fmt)
+                Freshness(data, palette, fmt, compact = !wide)
             }
             Spacer(GlanceModifier.height(4.dp))
             Text(sentence, style = textStyle(palette.onSurface, if (wide) 17.sp else 15.sp, FontWeight.Medium), maxLines = 2)
@@ -349,7 +474,7 @@ class RainWidget : AmekiWidget(setOf(S2x2, S4x2)) {
                 Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     shown.forEach { slot ->
                         Box(GlanceModifier.defaultWeight(), contentAlignment = Alignment.Center) {
-                            RainDot((dev.antomanc.ameki.core.model.Nowcast.intensity(slot.precipitation) * 100).toInt(), dot, palette)
+                            RainDot((Nowcast.intensity(slot.precipitation) * 100).toInt(), dot, palette)
                         }
                     }
                 }
@@ -361,10 +486,21 @@ class RainWidget : AmekiWidget(setOf(S2x2, S4x2)) {
                         )
                     }
                 }
-            } else {
+            } else if (s.hourly.isNotEmpty()) {
                 // No 15-minute data (e.g. Google): the next hours' probability instead.
                 HourStrip(s.hoursFrom(now).take(if (wide) 6 else 3), data, palette, fmt, showRain = true)
             }
         }
     }
+}
+
+internal fun rainSummary(context: android.content.Context, s: dev.antomanc.ameki.core.model.WeatherSnapshot, now: Instant, fmt: TimeFormatter): String {
+    return when (val outlook = Nowcast.outlook(s, now)) {
+            RainOutlook.Unavailable -> context.getString(R.string.widget_rain_unavailable)
+            RainOutlook.NoneSoon -> context.getString(dev.antomanc.ameki.core.ui.R.string.rain_none_2h)
+            RainOutlook.RainingNow -> context.getString(dev.antomanc.ameki.core.ui.R.string.rain_now)
+            is RainOutlook.StopsIn -> context.getString(dev.antomanc.ameki.core.ui.R.string.rain_stops_in, outlook.minutes)
+            is RainOutlook.StartsIn -> context.getString(dev.antomanc.ameki.core.ui.R.string.rain_in, outlook.minutes)
+            is RainOutlook.LikelyAround -> context.getString(dev.antomanc.ameki.core.ui.R.string.rain_in_hours, fmt.timestamp(outlook.at, s.timeZone, now))
+        }
 }

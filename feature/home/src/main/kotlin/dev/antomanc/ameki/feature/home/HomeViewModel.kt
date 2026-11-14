@@ -57,12 +57,18 @@ class HomeViewModel(
     }
 
     /** A day page needs hours up to [until]: fetch the missing ones (Google only; Open-Meteo has them). */
+    private val pendingHours = mutableMapOf<Long, java.time.Instant>()
+
     fun ensureHours(id: Long, until: java.time.Instant) {
+        pendingHours[id] = maxOf(pendingHours[id] ?: until, until)
         if (id in loadingHours.value) return
+        loadingHours.value += id
         viewModelScope.launch {
-            loadingHours.value += id
             try {
-                hoursError.value = weather.ensureHourlyUntil(id, until)
+                while (true) {
+                    val target = pendingHours.remove(id) ?: break
+                    hoursError.value = weather.ensureHourlyUntil(id, target)
+                }
             } finally {
                 loadingHours.value -= id
             }

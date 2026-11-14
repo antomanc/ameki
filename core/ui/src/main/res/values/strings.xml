@@ -35,7 +35,7 @@
     <string name="updated_stale">Last data %1$s</string>
     <string name="current_location">Current location</string>
     <string name="rain_chance">%1$d%% chance of rain</string>
-    <string name="cd_temperature_dial">Now %1$s, today between %2$s and %3$s</string>
+    <string name="cd_temperature_dial">Temperature %1$s, minimum %2$s, maximum %3$s. %4$s</string>
     <string name="attribution_open_meteo">Weather data by Open-Meteo.com (CC BY 4.0)</string>
     <string name="attribution_google">Source: Includes weather data from Google</string>
 

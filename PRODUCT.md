@@ -32,7 +32,7 @@ optional sources must fit the same interface.
 
 - Home-screen widgets on One UI (Fold outer and inner screen, different grids) and Pixel Launcher.
 - Foldable continuity: the app moves between a one-column outer screen and a two-column inner one without losing state.
-- Background refresh through one shared WorkManager job. Widgets read only from the local cache.
+- Background network refresh through one shared WorkManager job; a local expiry job redraws retained data without a connection. Widgets read only from the local cache.
 - Offline: show the last data with its time, within each provider's retention limits.
 
 ## Capabilities and Constraints

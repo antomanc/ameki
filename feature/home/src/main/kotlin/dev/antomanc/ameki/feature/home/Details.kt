@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -58,32 +59,45 @@ internal fun HourlyCharts(hours: List<HourlyForecast>, s: WeatherSnapshot, units
     val colors = LocalInstrumentColors.current
     val onVariant = MaterialTheme.colorScheme.onSurfaceVariant
     Card(null) {
-        SecondaryTabRow(selectedTabIndex = tab, containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+        if (LocalDensity.current.fontScale > 1.3f) {
+            Column {
+                tabs.forEachIndexed { i, t ->
+                    androidx.compose.material3.FilterChip(selected = tab == i, onClick = { tab = i },
+                        label = { Text(stringResource(t)) }, modifier = Modifier.fillMaxWidth())
+                }
+            }
+        } else SecondaryTabRow(selectedTabIndex = tab, containerColor = MaterialTheme.colorScheme.surfaceContainer) {
             tabs.forEachIndexed { i, t -> Tab(selected = tab == i, onClick = { tab = i }, text = { Text(stringResource(t)) }) }
         }
         Spacer(Modifier.height(12.dp))
-        val values: List<Double> = when (tab) {
-            0 -> hours.map { it.precipitation ?: 0.0 }
-            1 -> hours.map { it.windSpeed ?: 0.0 }
-            else -> hours.map { (it.humidity ?: 0).toDouble() }
+        val values: List<Double?> = when (tab) {
+            0 -> hours.map { it.precipitation }
+            1 -> hours.map { it.windSpeed }
+            else -> hours.map { it.humidity?.toDouble() }
         }
-        val summary = when (tab) {
-            0 -> units.precipitation(values.sum())
-            1 -> units.wind(values.maxOrNull() ?: 0.0)
-            else -> "${values.average().roundToInt()}%"
+        val available = values.filterNotNull()
+        val summary = if (available.isEmpty()) stringResource(R.string.chart_no_data) else when (tab) {
+            0 -> units.precipitation(available.sum())
+            1 -> units.wind(available.maxOrNull() ?: 0.0)
+            else -> "${available.average().roundToInt()}%"
         }
+        if (available.size != values.size) Text(stringResource(R.string.chart_coverage, available.size, values.size), style = MaterialTheme.typography.bodySmall)
+        val peakIndex = values.indices.filter { values[it] != null }.maxByOrNull { values[it]!! }
+        val peakLabel = peakIndex?.let { stringResource(R.string.chart_peak, fmt.time(hours[it].time, s.timeZone)) }
         Text(summary, style = MaterialTheme.typography.headlineSmall)
         Text(
             stringResource(listOf(R.string.chart_precip_total, R.string.chart_wind_max, R.string.chart_humidity_avg)[tab]),
             style = MaterialTheme.typography.bodySmall, color = onVariant,
         )
+        peakLabel?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
         Spacer(Modifier.height(12.dp))
         val barColor = when (tab) { 0 -> colors.rain; 1 -> colors.mild; else -> colors.cold }
-        val maxV = when (tab) { 0 -> maxOf(values.maxOrNull() ?: 0.0, 2.0); 1 -> maxOf(values.maxOrNull() ?: 0.0, 20.0); else -> 100.0 }
-        Canvas(Modifier.fillMaxWidth().height(96.dp).semantics { contentDescription = summary }) {
+        val maxV = when (tab) { 0 -> maxOf(available.maxOrNull() ?: 0.0, 2.0); 1 -> maxOf(available.maxOrNull() ?: 0.0, 20.0); else -> 100.0 }
+        Canvas(Modifier.fillMaxWidth().height(96.dp).semantics { contentDescription = listOfNotNull(summary, peakLabel).joinToString(". ") }) {
             val n = values.size.coerceAtLeast(1)
             val w = size.width / n
             values.forEachIndexed { i, v ->
+                if (v == null) return@forEachIndexed
                 val h = (v / maxV).toFloat().coerceIn(0f, 1f) * size.height
                 val x = i * w + w / 2
                 drawLine(colors.track, Offset(x, size.height), Offset(x, 0f), strokeWidth = w * 0.42f, cap = StrokeCap.Round, alpha = 0.5f)
@@ -120,11 +134,12 @@ internal fun DetailGrid(s: WeatherSnapshot, units: Units, fmt: TimeFormatter, ca
         if (Capability.MOON_PHASE in caps) today?.let { d -> add { m -> MoonTile(d.moonPhase ?: Astronomy.moonPhase(d.date), Astronomy.illumination(d.date), m) } }
     }
     // Two per row, both tiles stretched to the taller one, so rows line up.
+    val columns = if (LocalDensity.current.fontScale > 1.3f) 1 else 2
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        tiles.chunked(2).forEach { row ->
+        tiles.chunked(columns).forEach { row ->
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 row.forEach { it(Modifier.weight(1f).fillMaxHeight()) }
-                if (row.size == 1) Spacer(Modifier.weight(1f))
+                if (row.size < columns) Spacer(Modifier.weight(1f))
             }
         }
     }
