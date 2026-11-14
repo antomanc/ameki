@@ -74,6 +74,7 @@ fun OnboardingRoute(
     val keyState by settingsVm.keyState.collectAsStateWithLifecycle()
     val search by placesVm.search.collectAsStateWithLifecycle()
     val places by placesVm.list.collectAsStateWithLifecycle()
+    val locating by placesVm.locating.collectAsStateWithLifecycle()
     val steps = buildList {
         add(Step.WELCOME)
         if (settings.sources.size > 1) add(Step.SOURCE)
@@ -123,8 +124,19 @@ fun OnboardingRoute(
                                     if (placesVm.hasLocationPermission()) placesVm.useCurrentLocation(currentName) { next() }
                                     else permission.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
                                 },
+                                enabled = !locating,
                                 modifier = Modifier.fillMaxWidth().height(56.dp),
-                            ) { Text(stringResource(R.string.ob_use_location)) }
+                            ) {
+                                if (locating) {
+                                    androidx.compose.material3.CircularProgressIndicator(
+                                        Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Spacer(Modifier.size(12.dp))
+                                    Text(stringResource(R.string.ob_locating))
+                                } else {
+                                    Text(stringResource(R.string.ob_use_location))
+                                }
+                            }
                             Text(
                                 stringResource(R.string.ob_location_privacy),
                                 style = MaterialTheme.typography.bodySmall,

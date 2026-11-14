@@ -19,7 +19,6 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
@@ -60,16 +59,35 @@ class GoogleWeatherSource(
         val key = apiKey()?.takeIf { it.isNotBlank() } ?: throw SourceException.InvalidApiKey("No API key")
         val now = clock()
         return coroutineScope {
-            val current = async { if (DataPart.CURRENT in parts) currentConditions(key, location, language) else null }
-            val hours = async { if (DataPart.HOURLY in parts) hours(key, location, language) else null }
-            val days = async { if (DataPart.DAILY in parts) days(key, location, language) else null }
-            val alerts = async { if (DataPart.ALERTS in parts) alerts(key, location, language) else null }
-            awaitAll(current, hours, days, alerts)
+            // Each part is fetched on its own: one failing endpoint (say, alerts) must not
+            // throw away the forecast the others returned.
+            suspend fun <T> part(p: DataPart, block: suspend () -> T): Result<T>? =
+                if (p !in parts) null else try {
+                    Result.success(block())
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Result.failure(e)
+                }
+            val current = async { part(DataPart.CURRENT) { currentConditions(key, location, language) } }
+            val hours = async { part(DataPart.HOURLY) { hours(key, location, language) } }
+            val days = async { part(DataPart.DAILY) { days(key, location, language) } }
+            val alerts = async { part(DataPart.ALERTS) { alerts(key, location, language) } }
+            val results = listOf(current, hours, days, alerts).map { it.await() }
 
-            val c = current.await()
-            val h = hours.await()
-            val d = days.await()
-            val a = alerts.await()
+            val requested = results.filterNotNull()
+            if (requested.isNotEmpty() && requested.all { it.isFailure }) {
+                // Nothing came back: report the most actionable error (key or access first).
+                val errors = requested.mapNotNull { it.exceptionOrNull() }
+                throw errors.firstOrNull { it is SourceException.InvalidApiKey }
+                    ?: errors.firstOrNull { it is SourceException.AccessDenied }
+                    ?: errors.first()
+            }
+
+            val c = current.await()?.getOrNull()
+            val h = hours.await()?.getOrNull()
+            val d = days.await()?.getOrNull()
+            val a = alerts.await()?.getOrNull()
             val zone = listOfNotNull(c?.timeZone?.id, h?.timeZone?.id, d?.timeZone?.id).firstOrNull()
                 ?.let { runCatching { ZoneId.of(it) }.getOrNull() } ?: ZoneOffset.UTC
 
@@ -140,7 +158,8 @@ class GoogleWeatherSource(
         var pages = 0
         do {
             val t = token
-            page = get("publicAlerts:lookup", key, p, lang, AlertsResponse.serializer()) {
+            // publicAlerts rejects unitsSystem with HTTP 400 (it has no units).
+            page = get("publicAlerts:lookup", key, p, lang, AlertsResponse.serializer(), withUnits = false) {
                 if (t != null) parameter("pageToken", t)
             }
             all += page.weatherAlerts
@@ -155,6 +174,7 @@ class GoogleWeatherSource(
         p: GeoPoint,
         lang: String,
         serializer: KSerializer<T>,
+        withUnits: Boolean = true,
         extra: io.ktor.client.request.HttpRequestBuilder.() -> Unit = {},
     ): T {
         val response: HttpResponse = try {
@@ -167,7 +187,7 @@ class GoogleWeatherSource(
                 }
                 parameter("location.latitude", p.latitude)
                 parameter("location.longitude", p.longitude)
-                parameter("unitsSystem", "METRIC")
+                if (withUnits) parameter("unitsSystem", "METRIC")
                 parameter("languageCode", lang)
                 extra()
             }

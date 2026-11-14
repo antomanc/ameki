@@ -58,4 +58,6 @@
     <string name="key_err_network">Can\'t reach Google. Check your connection.</string>
     <string name="key_err_quota">The key has hit its quota.</string>
     <string name="key_err_unknown">Something went wrong. Try again.</string>
+    <string name="key_package">Package name</string>
+    <string name="key_sha1">SHA-1 certificate fingerprint</string>
 </resources>

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
@@ -47,6 +48,7 @@ fun LocationsRoute(onBack: () -> Unit, onOpenPlace: (Long) -> Unit, viewModel: L
     val list by viewModel.list.collectAsStateWithLifecycle()
     val search by viewModel.search.collectAsStateWithLifecycle()
     val units by viewModel.units.collectAsStateWithLifecycle()
+    val locating by viewModel.locating.collectAsStateWithLifecycle()
     val currentName = stringResource(UiR.string.current_location)
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) viewModel.useCurrentLocation(currentName, onOpenPlace)
@@ -78,9 +80,10 @@ fun LocationsRoute(onBack: () -> Unit, onOpenPlace: (Long) -> Unit, viewModel: L
                                 }.padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(Icons.Outlined.LocationOn, null)
+                            if (locating) androidx.compose.material3.CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                            else Icon(Icons.Outlined.LocationOn, null)
                             Spacer(Modifier.width(12.dp))
-                            Text(stringResource(R.string.use_my_location), style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(if (locating) R.string.locating else R.string.use_my_location), style = MaterialTheme.typography.titleMedium)
                         }
                     }
                 }

@@ -87,6 +87,7 @@ class SettingsViewModel(
         if (error == null) {
             repo.setGoogleApiKey(key)
             _key.value = KeyCheck.Valid
+            scheduler.refreshNow(force = true)
             onValid()
         } else {
             _key.value = KeyCheck.Invalid(error)

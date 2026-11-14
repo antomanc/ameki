@@ -36,6 +36,10 @@ class LocationsViewModel(
     val list: StateFlow<List<PlaceWeather>> = weather.all.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val units: StateFlow<Units> = settings.settings.map { it.units }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Units())
 
+    private val _locating = MutableStateFlow(false)
+    /** True while the device location is being looked up after "Use my location". */
+    val locating: StateFlow<Boolean> = _locating.asStateFlow()
+
     private val _search = MutableStateFlow(SearchState())
     val search: StateFlow<SearchState> = _search.asStateFlow()
     private val query = MutableStateFlow("")
@@ -73,10 +77,16 @@ class LocationsViewModel(
     }
 
     fun useCurrentLocation(fallbackName: String, onAdded: (Long) -> Unit = {}) = viewModelScope.launch {
-        val id = places.enableCurrentLocation(fallbackName)
-        settings.setSelectedPlace(id)
-        onAdded(id)
-        weather.refresh(id, force = true)
+        if (_locating.value) return@launch
+        _locating.value = true
+        try {
+            val id = places.enableCurrentLocation(fallbackName)
+            settings.setSelectedPlace(id)
+            onAdded(id)
+            weather.refresh(id, force = true)
+        } finally {
+            _locating.value = false
+        }
     }
 
     fun remove(id: Long) = viewModelScope.launch { places.remove(id) }

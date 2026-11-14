@@ -69,11 +69,9 @@ fun GoogleKeySetup(
         if (identity != null) {
             Spacer(Modifier.size(4.dp))
             Text(stringResource(R.string.key_restrict_values), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("${identity.packageName}\n${identity.certSha1}", style = MaterialTheme.typography.bodySmall)
-            TextButton(onClick = {
-                context.getSystemService(ClipboardManager::class.java)
-                    ?.setPrimaryClip(ClipData.newPlainText("Ameki", "${identity.packageName}\n${identity.certSha1}"))
-            }) { Text(stringResource(R.string.copy)) }
+            // Google's form has two separate fields, so each value gets its own copy button.
+            CopyRow(stringResource(R.string.key_package), identity.packageName)
+            CopyRow(stringResource(R.string.key_sha1), identity.certSha1)
         }
         OutlinedButton(onClick = {
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://console.cloud.google.com/apis/library/weather.googleapis.com")))
@@ -106,4 +104,18 @@ private fun keyError(e: SyncError) = when (e) {
     SyncError.NETWORK -> R.string.key_err_network
     SyncError.QUOTA -> R.string.key_err_quota
     else -> R.string.key_err_unknown
+}
+
+@Composable
+private fun CopyRow(label: String, value: String) {
+    val context = LocalContext.current
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.bodySmall)
+        }
+        TextButton(onClick = {
+            context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText(label, value))
+        }) { Text(stringResource(R.string.copy)) }
+    }
 }

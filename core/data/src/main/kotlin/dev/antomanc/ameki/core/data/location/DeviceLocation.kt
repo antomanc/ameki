@@ -26,10 +26,13 @@ class DeviceLocation(private val context: Context) {
         ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) ==
             PackageManager.PERMISSION_GRANTED
 
-    /** A fresh fix if one arrives within [timeoutMs], else the most recent known one. */
-    suspend fun locate(timeoutMs: Long = 10_000): GeoPoint? {
+    /** A recent known fix, else a fresh one if it arrives within [timeoutMs], else the last known. */
+    suspend fun locate(timeoutMs: Long = 8_000): GeoPoint? {
         if (!hasPermission()) return null
         val lm = context.getSystemService(LocationManager::class.java) ?: return null
+        // A fix from the last half hour is good enough for weather and costs no waiting.
+        lastKnown(lm)?.takeIf { System.currentTimeMillis() - it.time < 30 * 60_000 }
+            ?.let { return GeoPoint(it.latitude, it.longitude) }
         val source = listOf(LocationManager.NETWORK_PROVIDER, LocationManager.FUSED_PROVIDER, LocationManager.GPS_PROVIDER)
             .firstOrNull { runCatching { lm.isProviderEnabled(it) }.getOrDefault(false) }
         val fresh = source?.let { p ->

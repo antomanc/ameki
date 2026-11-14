@@ -53,7 +53,8 @@ class PlaceRepository(
         val fix = device.locate()
         return dao.insert(
             PlaceEntity(
-                name = fix?.let { device.placeName(it)?.first } ?: fallbackName,
+                // The city name arrives on the first refresh: never make the user wait for the Geocoder.
+                name = fallbackName,
                 region = null, country = null,
                 latitude = fix?.latitude ?: 0.0, longitude = fix?.longitude ?: 0.0,
                 timeZone = null, isCurrentLocation = true, sortOrder = -1,

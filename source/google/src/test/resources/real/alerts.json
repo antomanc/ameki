@@ -1,0 +1,58 @@
+{
+  "weatherAlerts": [
+    {
+      "alertId": "2.49.0.0.380.3.IT.261114104409.042",
+      "alertTitle": {
+        "text": "Allerta precipitazioni di media intensità",
+        "languageCode": "it"
+      },
+      "eventType": "RAIN_EVENT",
+      "areaName": "Lazio",
+      "instruction": [
+        "STARE (RIMANERE) ATTENTI. Tenersi aggiornati con le previsioni del tempo più recenti. Aspettarsi alcuni disagi minori per le attività all'aria aperta."
+      ],
+      "safetyRecommendations": [],
+      "timezoneOffset": "3600s",
+      "dataSource": {
+        "publisher": "METEO_ALARM_IT",
+        "name": "Servizio Meteorologico dell'Aeronautica Militare",
+        "authorityUri": "https://www.meteoam.it/it/home"
+      },
+      "polygon": "{\"type\":\"Polygon\",\"coordinates\":[[[11.889800,42.843781],[11.447761,42.377881],[11.456833,42.375684],[11.552330,42.339784],[11.632328,42.293584],[12.140811,41.914888],[12.147910,41.908789],[12.166810,41.887789],[12.181709,41.868389],[12.196108,41.845290],[12.332704,41.704992],[12.666693,41.455694],[13.190379,41.278994],[13.266977,41.294093],[13.281877,41.296593],[13.706767,41.252491],[13.717767,41.247991],[13.762465,41.221391],[13.855438,41.277325],[13.889198,41.323744],[13.863880,41.403923],[13.986933,41.456587],[13.969381,41.673998],[13.918743,41.724637],[13.728847,41.800597],[13.133840,42.011599],[13.108523,42.180396],[13.188708,42.593948],[13.323745,42.568627],[13.391264,42.581287],[13.412364,42.644585],[13.361726,42.699445],[13.218249,42.762745],[13.159169,42.644587],[12.547276,42.370297],[11.914291,42.699456],[11.889800,42.843781]]]}",
+      "description": "Sono previsti fenomeni meteorologici di moderata intensità\n (DISCLAIMER: \"Le informazioni fornite su METEOALARM per l'Italia riguardano esclusivamente l'intensità e la ricorrenza dei fenomeni, maggiori dettagli sono disponibili su www.meteoam.it. Le informazioni METEOALARM non forniscono la valutazione di impatto sul territorio e non rappresentano i messaggi di Allerta Ufficiali che vengono emessi dal Servizio Nazionale di Protezione Civile https://www.protezionecivile.gov.it\")",
+      "severity": "MODERATE",
+      "certainty": "LIKELY",
+      "urgency": "FUTURE",
+      "startTime": "2026-11-15T00:00:00Z",
+      "expirationTime": "2026-11-16T11:59:00Z"
+    },
+    {
+      "alertId": "2.49.0.0.380.3.IT.261113102507.098",
+      "alertTitle": {
+        "text": "Allerta temporale violento",
+        "languageCode": "it"
+      },
+      "eventType": "THUNDERSTORM",
+      "areaName": "Lazio",
+      "instruction": [
+        "ESSERE PREPARATI. Prendere le dovute precauzioni e tenersi aggiornati sulle ultime previsioni del tempo. Aspettarsi qualche disgio durante le normali attività quotidiane ed essere pronti ad interrompere le attività all'aria aperta."
+      ],
+      "safetyRecommendations": [],
+      "timezoneOffset": "3600s",
+      "dataSource": {
+        "publisher": "METEO_ALARM_IT",
+        "name": "Servizio Meteorologico dell'Aeronautica Militare",
+        "authorityUri": "https://www.meteoam.it/it/home"
+      },
+      "polygon": "{\"type\":\"Polygon\",\"coordinates\":[[[11.889800,42.843781],[11.447761,42.377881],[11.456833,42.375684],[11.552330,42.339784],[11.632328,42.293584],[12.140811,41.914888],[12.147910,41.908789],[12.166810,41.887789],[12.181709,41.868389],[12.196108,41.845290],[12.332704,41.704992],[12.666693,41.455694],[13.190379,41.278994],[13.266977,41.294093],[13.281877,41.296593],[13.706767,41.252491],[13.717767,41.247991],[13.762465,41.221391],[13.855438,41.277325],[13.889198,41.323744],[13.863880,41.403923],[13.986933,41.456587],[13.969381,41.673998],[13.918743,41.724637],[13.728847,41.800597],[13.133840,42.011599],[13.108523,42.180396],[13.188708,42.593948],[13.323745,42.568627],[13.391264,42.581287],[13.412364,42.644585],[13.361726,42.699445],[13.218249,42.762745],[13.159169,42.644587],[12.547276,42.370297],[11.914291,42.699456],[11.889800,42.843781]]]}",
+      "description": "Sono previsti fenomeni meteorologici intensi\n (DISCLAIMER: \"Le informazioni fornite su METEOALARM per l'Italia riguardano esclusivamente l'intensità e la ricorrenza dei fenomeni, maggiori dettagli sono disponibili su www.meteoam.it. Le informazioni METEOALARM non forniscono la valutazione di impatto sul territorio e non rappresentano i messaggi di Allerta Ufficiali che vengono emessi dal Servizio Nazionale di Protezione Civile https://www.protezionecivile.gov.it\")",
+      "severity": "SEVERE",
+      "certainty": "LIKELY",
+      "urgency": "FUTURE",
+      "startTime": "2026-11-15T00:00:00Z",
+      "expirationTime": "2026-11-15T11:59:00Z"
+    }
+  ],
+  "regionCode": "IT",
+  "nextPageToken": ""
+}

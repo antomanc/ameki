@@ -1,5 +1,6 @@
 # Google Weather API fixtures
 
+- `real/` holds real responses (Fara in Sabina, 2026-11-14), including `error_alerts_units.json`: publicAlerts rejects `unitsSystem`.
 - `error_invalid_key.json` is a real response, captured from `currentConditions:lookup` with an invalid key.
 - The other files follow the documented REST schema
   (https://developers.google.com/maps/documentation/weather/reference/rest) with realistic values.
