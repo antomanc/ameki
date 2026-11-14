@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -72,14 +73,12 @@ internal fun PlaceWeatherPane(
     val now = Instant.now()
 
     PullToRefreshBox(isRefreshing = refreshing, onRefresh = onRefresh, modifier = modifier.fillMaxSize()) {
-        Atmosphere(snapshot)
         if (snapshot == null || !pw.hasData) {
             NoData(pw, refreshing, onFixProblem)
             return@PullToRefreshBox
         }
         val primary: List<@Composable () -> Unit> = buildList {
-            add { Hero(pw, snapshot, units, fmt) }
-            add { Freshness(pw, snapshot, fmt, state.settings.refreshIntervalMinutes, onFixProblem) }
+            add { Hero(pw, snapshot, units, fmt) { Freshness(pw, snapshot, fmt, state.settings.refreshIntervalMinutes, onFixProblem) } }
             if (snapshot.hourly.isNotEmpty()) add { HourlyCard(snapshot.hoursFrom(now).take(24), snapshot, units, fmt) }
             if (snapshot.hourly.isNotEmpty()) add { HourlyCharts(snapshot.hoursFrom(now).take(24), snapshot, units, fmt) }
         }
@@ -112,15 +111,15 @@ internal fun PlaceWeatherPane(
 
 /** A faint wash in the colour of the current temperature, darker at night: atmosphere, never a sky picture. */
 @Composable
-private fun Atmosphere(snapshot: WeatherSnapshot?) {
+internal fun Atmosphere(snapshot: WeatherSnapshot?) {
     val colors = LocalInstrumentColors.current
     val c = snapshot?.current ?: return
     val tint = colors.temperature(c.temperature).copy(alpha = if (c.isDaytime) 0.16f else 0.10f)
-    Box(Modifier.fillMaxWidth().height(420.dp).background(Brush.verticalGradient(listOf(tint, Color.Transparent))))
+    Box(Modifier.fillMaxWidth().height(520.dp).background(Brush.verticalGradient(listOf(tint, Color.Transparent))))
 }
 
 @Composable
-private fun Hero(pw: PlaceWeather, s: WeatherSnapshot, units: Units, fmt: TimeFormatter) {
+private fun Hero(pw: PlaceWeather, s: WeatherSnapshot, units: Units, fmt: TimeFormatter, stamp: @Composable () -> Unit) {
     val c = s.current
     val today = s.today
     Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp)) {
@@ -148,7 +147,7 @@ private fun Hero(pw: PlaceWeather, s: WeatherSnapshot, units: Units, fmt: TimeFo
                 TemperatureDial(
                     current = c.temperature, low = low, high = high,
                     description = stringResource(UiR.string.cd_temperature_dial, units.temp(c.temperature), units.temp(low), units.temp(high)),
-                    modifier = Modifier.fillMaxWidth(0.82f).aspectRatio(1f),
+                    modifier = Modifier.fillMaxWidth(0.78f).widthIn(max = 340.dp).aspectRatio(1f),
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         AnimatedWeatherIcon(c.condition, c.isDaytime, size = 72.dp)
@@ -163,6 +162,8 @@ private fun Hero(pw: PlaceWeather, s: WeatherSnapshot, units: Units, fmt: TimeFo
                         )
                     }
                 }
+                // The stamp sits in the dial's open bottom, where a gauge has its label.
+                Box(Modifier.align(Alignment.BottomCenter)) { stamp() }
             }
         }
     }
@@ -174,7 +175,7 @@ private fun Freshness(pw: PlaceWeather, s: WeatherSnapshot, fmt: TimeFormatter, 
     val updated = s.updatedAt ?: return
     val stale = Duration.between(updated, Instant.now()) > Duration.ofMinutes(intervalMin * 2L + 10)
     val colors = LocalInstrumentColors.current
-    Row(Modifier.padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Row(
             Modifier.clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,

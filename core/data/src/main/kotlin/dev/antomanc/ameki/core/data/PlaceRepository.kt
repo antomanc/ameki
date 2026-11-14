@@ -75,12 +75,14 @@ class PlaceRepository(
         val fix: GeoPoint? = device.locate()
         if (fix == null) return entry.latitude != 0.0 || entry.longitude != 0.0
         val moved = abs(fix.latitude - entry.latitude) > 0.01 || abs(fix.longitude - entry.longitude) > 0.01
-        if (moved) {
+        // Never named (Geocoder unavailable or slow the first time): try again.
+        val unnamed = entry.region == null
+        if (moved || unnamed) {
             val name = device.placeName(fix)
             dao.upsert(
                 entry.copy(
                     latitude = fix.latitude, longitude = fix.longitude,
-                    name = name?.first ?: entry.name, region = name?.second,
+                    name = name?.first ?: entry.name, region = name?.second ?: entry.region,
                 ),
             )
         }

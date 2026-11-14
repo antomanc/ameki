@@ -1,6 +1,7 @@
 plugins {
     id("ameki.android.library")
     id("ameki.android.compose")
+    alias(libs.plugins.roborazzi)
 }
 
 android {

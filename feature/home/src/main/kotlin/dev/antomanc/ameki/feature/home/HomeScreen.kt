@@ -88,8 +88,11 @@ fun HomeScreen(
         snapshotFlow { pager.currentPage }.collect { page -> places.getOrNull(page)?.let { onPlaceShown(it.place.id) } }
     }
 
+    val shown = places.getOrNull(pager.currentPage)?.snapshot
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) { Atmosphere(shown) }
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onSurface,
         topBar = {
             CenterAlignedTopAppBar(
                 title = {},
@@ -99,7 +102,7 @@ fun HomeScreen(
                 actions = {
                     IconButton(onClick = onOpenSettings) { Icon(Icons.Outlined.Settings, stringResource(R.string.settings)) }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
             )
         },
     ) { padding ->

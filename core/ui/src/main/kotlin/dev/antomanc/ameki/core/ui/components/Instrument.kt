@@ -97,9 +97,10 @@ fun TemperatureDial(
                 size = arcSize,
                 style = Stroke(stroke, cap = StrokeCap.Round),
             )
-            // Ticks: one per degree band, quiet, like an engraved scale.
-            val ticks = 36
+            // Ticks: an engraved scale, only where there is room for it to stay quiet.
+            val ticks = if (diameter > 220.dp.toPx()) 36 else 0
             for (i in 0..ticks) {
+                if (ticks == 0) break
                 val a = START_ANGLE + SWEEP * i / ticks
                 val outer = diameter / 2 - stroke * 1.4f
                 val inner = outer - if (i % 6 == 0) stroke * 0.9f else stroke * 0.45f
