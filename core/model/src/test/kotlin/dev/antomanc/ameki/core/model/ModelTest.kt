@@ -8,6 +8,8 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 class ModelTest {
+    private val googleCaps = Capability.entries.toSet() - Capability.NOWCAST
+
     private val t0 = Instant.parse("2026-11-14T10:00:00Z")
 
     private fun current(temp: Double) = CurrentWeather(
@@ -67,19 +69,19 @@ class ModelTest {
             SourceId.GOOGLE, rome, current(10.0),
             fetchedAt = DataPart.entries.associateWith { t0 },
         )
-        val after30 = RefreshPolicy.dueParts(SourceId.GOOGLE, s, 30, t0.plusSeconds(30 * 60))
+        val after30 = RefreshPolicy.dueParts(SourceId.GOOGLE, s, 30, t0.plusSeconds(30 * 60), googleCaps)
         assertThat(after30).containsExactly(DataPart.CURRENT, DataPart.HOURLY)
-        val after60 = RefreshPolicy.dueParts(SourceId.GOOGLE, s, 30, t0.plusSeconds(60 * 60))
+        val after60 = RefreshPolicy.dueParts(SourceId.GOOGLE, s, 30, t0.plusSeconds(60 * 60), googleCaps)
         assertThat(after60).containsExactly(DataPart.CURRENT, DataPart.HOURLY, DataPart.ALERTS)
-        val after3h = RefreshPolicy.dueParts(SourceId.GOOGLE, s, 30, t0.plusSeconds(180 * 60))
-        assertThat(after3h).containsExactlyElementsIn(DataPart.entries)
+        val after3h = RefreshPolicy.dueParts(SourceId.GOOGLE, s, 30, t0.plusSeconds(180 * 60), googleCaps)
+        assertThat(after3h).containsExactlyElementsIn(DataPart.entries - DataPart.NOWCAST)
     }
 
     @Test
     fun `everything is due without a snapshot or with another source`() {
-        assertThat(RefreshPolicy.dueParts(SourceId.GOOGLE, null, 30, t0)).hasSize(4)
+        assertThat(RefreshPolicy.dueParts(SourceId.GOOGLE, null, 30, t0)).hasSize(5)
         val om = WeatherSnapshot(SourceId.OPEN_METEO, rome, null, fetchedAt = DataPart.entries.associateWith { t0 })
-        assertThat(RefreshPolicy.dueParts(SourceId.GOOGLE, om, 30, t0)).hasSize(4)
+        assertThat(RefreshPolicy.dueParts(SourceId.GOOGLE, om, 30, t0)).hasSize(5)
     }
 
     @Test
@@ -125,5 +127,30 @@ class ModelTest {
     @Test
     fun `coarse point rounds to two decimals`() {
         assertThat(GeoPoint(41.892345, 12.485678).coarse()).isEqualTo(GeoPoint(41.89, 12.49))
+    }
+}
+
+class NowcastTest {
+    private val now = Instant.parse("2026-11-14T10:02:00Z")
+    private fun snap(vararg mm: Double) = WeatherSnapshot(
+        SourceId.OPEN_METEO, ZoneId.of("UTC"), null,
+        nowcast = mm.mapIndexed { i, v -> NowcastSlot(Instant.parse("2026-11-14T10:00:00Z").plusSeconds(900L * i), v) },
+        fetchedAt = mapOf(DataPart.NOWCAST to now),
+    )
+
+    @Test fun `dry two hours`() = assertThat(Nowcast.outlook(snap(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0), now)).isEqualTo(RainOutlook.NoneSoon)
+    @Test fun `rain starting`() = assertThat(Nowcast.outlook(snap(0.0, 0.0, 0.3, 0.5), now)).isEqualTo(RainOutlook.StartsIn(30))
+    @Test fun `rain stopping`() = assertThat(Nowcast.outlook(snap(0.4, 0.2, 0.0), now)).isEqualTo(RainOutlook.StopsIn(30))
+    @Test fun `raining throughout`() = assertThat(Nowcast.outlook(snap(0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4), now)).isEqualTo(RainOutlook.RainingNow)
+
+    @Test fun `falls back to hourly probability`() {
+        val s = WeatherSnapshot(
+            SourceId.GOOGLE, ZoneId.of("UTC"), null,
+            hourly = listOf(
+                HourlyForecast(Instant.parse("2026-11-14T10:00:00Z"), 10.0, null, WeatherCondition.CLOUDY, true, 20, 0.0, null, null, null, null, null, null),
+                HourlyForecast(Instant.parse("2026-11-14T11:00:00Z"), 10.0, null, WeatherCondition.RAIN, true, 70, 1.0, null, null, null, null, null, null),
+            ),
+        )
+        assertThat(Nowcast.outlook(s, now)).isEqualTo(RainOutlook.LikelyAround(Instant.parse("2026-11-14T11:00:00Z")))
     }
 }

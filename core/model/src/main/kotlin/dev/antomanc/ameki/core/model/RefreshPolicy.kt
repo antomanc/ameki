@@ -30,6 +30,7 @@ object RefreshPolicy {
             DataPart.CURRENT, DataPart.HOURLY -> Duration.ofMinutes(baseMinutes.toLong())
             DataPart.ALERTS -> Duration.ofMinutes(maxOf(baseMinutes, 60).toLong())
             DataPart.DAILY -> Duration.ofMinutes(maxOf(baseMinutes, 180).toLong())
+            DataPart.NOWCAST -> Duration.ofMinutes(baseMinutes.toLong())
         }
     }
 
@@ -39,7 +40,7 @@ object RefreshPolicy {
      */
     fun maxAge(source: SourceId, part: DataPart): Duration = when (source) {
         SourceId.GOOGLE -> when (part) {
-            DataPart.CURRENT, DataPart.HOURLY, DataPart.ALERTS -> Duration.ofHours(1)
+            DataPart.CURRENT, DataPart.HOURLY, DataPart.ALERTS, DataPart.NOWCAST -> Duration.ofHours(1)
             DataPart.DAILY -> Duration.ofHours(24)
         }
         SourceId.OPEN_METEO -> Duration.ofDays(7)
@@ -54,7 +55,8 @@ object RefreshPolicy {
         snapshot: WeatherSnapshot?,
         baseMinutes: Int,
         now: java.time.Instant,
-    ): Set<DataPart> = DataPart.entries.filterTo(mutableSetOf()) { part ->
+        capabilities: Set<Capability> = Capability.entries.toSet(),
+    ): Set<DataPart> = DataPart.entries.filter { it.capability in capabilities }.filterTo(mutableSetOf()) { part ->
         val fetched = snapshot?.takeIf { it.source == source }?.fetchedAt?.get(part)
             ?: return@filterTo true
         Duration.between(fetched, now) >= partInterval(source, part, baseMinutes).minus(tolerance)
@@ -69,7 +71,8 @@ object RefreshPolicy {
      */
     fun estimateGoogleCallsPerMonth(places: Int, baseMinutes: Int): Int {
         val minutesPerMonth = 30 * 24 * 60
-        val perPlace = DataPart.entries.sumOf { part ->
+        // Google has no nowcast, so it costs nothing.
+        val perPlace = DataPart.entries.filter { it != DataPart.NOWCAST }.sumOf { part ->
             minutesPerMonth / partInterval(SourceId.GOOGLE, part, baseMinutes).toMinutes().toInt()
         }
         return perPlace * places

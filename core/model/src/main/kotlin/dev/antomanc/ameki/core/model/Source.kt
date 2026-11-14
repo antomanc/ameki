@@ -17,4 +17,5 @@ enum class Capability {
     MOON_PHASE,
     UV,
     VISIBILITY,
+    NOWCAST,
 }

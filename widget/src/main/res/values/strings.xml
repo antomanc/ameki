@@ -22,4 +22,6 @@
     <string name="style_transparent">Transparent</string>
     <string name="config_opacity">Background %1$d%%</string>
     <string name="config_save">Save</string>
+    <string name="widget_rain_name">Rain</string>
+    <string name="widget_rain_desc">Will it rain in the next two hours?</string>
 </resources>

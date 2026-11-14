@@ -93,7 +93,22 @@ data class WeatherAlert(
 
 /** The parts a source can be asked for. Each part is refreshed and expired independently. */
 @Serializable
-enum class DataPart { CURRENT, HOURLY, DAILY, ALERTS }
+enum class DataPart(val capability: Capability) {
+    CURRENT(Capability.CURRENT),
+    HOURLY(Capability.HOURLY),
+    DAILY(Capability.DAILY),
+    ALERTS(Capability.ALERTS),
+    /** Precipitation for the next couple of hours in 15-minute steps. */
+    NOWCAST(Capability.NOWCAST),
+}
+
+/** One 15-minute slot of the precipitation nowcast. */
+@Serializable
+data class NowcastSlot(
+    @Serializable(InstantSerializer::class) val time: Instant,
+    /** Millimetres falling in this 15-minute slot. */
+    val precipitation: Double,
+)
 
 /**
  * Everything we know about one place from one source. Sections the source does not
@@ -107,6 +122,7 @@ data class WeatherSnapshot(
     val hourly: List<HourlyForecast> = emptyList(),
     val daily: List<DailyForecast> = emptyList(),
     val alerts: List<WeatherAlert> = emptyList(),
+    val nowcast: List<NowcastSlot> = emptyList(),
     /** When each part was fetched. A part missing here was never fetched or has expired. */
     val fetchedAt: Map<DataPart, @Serializable(InstantSerializer::class) Instant> = emptyMap(),
 ) {
@@ -125,6 +141,7 @@ data class WeatherSnapshot(
         hourly = if (DataPart.HOURLY in parts) hourly else emptyList(),
         daily = if (DataPart.DAILY in parts) daily else emptyList(),
         alerts = if (DataPart.ALERTS in parts) alerts else emptyList(),
+        nowcast = if (DataPart.NOWCAST in parts) nowcast else emptyList(),
         fetchedAt = fetchedAt.filterKeys { it in parts },
     )
 
@@ -139,6 +156,7 @@ data class WeatherSnapshot(
             hourly = if (DataPart.HOURLY in parts) newer.hourly else hourly,
             daily = if (DataPart.DAILY in parts) newer.daily else daily,
             alerts = if (DataPart.ALERTS in parts) newer.alerts else alerts,
+            nowcast = if (DataPart.NOWCAST in parts) newer.nowcast else nowcast,
             fetchedAt = fetchedAt + newer.fetchedAt,
         )
     }

@@ -22,4 +22,6 @@
     <string name="style_transparent">Trasparente</string>
     <string name="config_opacity">Sfondo %1$d%%</string>
     <string name="config_save">Salva</string>
+    <string name="widget_rain_name">Pioggia</string>
+    <string name="widget_rain_desc">Piove nelle prossime due ore?</string>
 </resources>

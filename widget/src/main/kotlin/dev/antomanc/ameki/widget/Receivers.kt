@@ -42,12 +42,14 @@ class CompactWidgetReceiver : AmekiReceiver() { override val glanceAppWidget: Gl
 class HourlyWidgetReceiver : AmekiReceiver() { override val glanceAppWidget: GlanceAppWidget = HourlyWidget() }
 class DailyWidgetReceiver : AmekiReceiver() { override val glanceAppWidget: GlanceAppWidget = DailyWidget() }
 class CompleteWidgetReceiver : AmekiReceiver() { override val glanceAppWidget: GlanceAppWidget = CompleteWidget() }
+class RainWidgetReceiver : AmekiReceiver() { override val glanceAppWidget: GlanceAppWidget = RainWidget() }
 
 internal val allWidgets: List<Pair<KClass<out GlanceAppWidgetReceiver>, () -> GlanceAppWidget>> = listOf(
     CompactWidgetReceiver::class to ::CompactWidget,
     HourlyWidgetReceiver::class to ::HourlyWidget,
     DailyWidgetReceiver::class to ::DailyWidget,
     CompleteWidgetReceiver::class to ::CompleteWidget,
+    RainWidgetReceiver::class to ::RainWidget,
 )
 
 /** Tap on "updated at": refresh now through the shared worker, never a per-widget fetch. */

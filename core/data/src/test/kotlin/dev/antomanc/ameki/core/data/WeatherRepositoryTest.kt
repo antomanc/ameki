@@ -34,7 +34,7 @@ import java.time.Instant
 import java.time.ZoneId
 
 private class FakeSource(override val id: SourceId, private val clock: () -> Instant) : WeatherSource {
-    override val capabilities = if (id == SourceId.GOOGLE) Capability.entries.toSet() else Capability.entries.toSet() - Capability.ALERTS
+    override val capabilities = if (id == SourceId.GOOGLE) Capability.entries.toSet() - Capability.NOWCAST else Capability.entries.toSet() - Capability.ALERTS
     val calls = mutableListOf<Set<DataPart>>()
     var failWith: Exception? = null
     var temperature = 20.0
@@ -100,7 +100,7 @@ class WeatherRepositoryTest {
         val id = addRome()
 
         assertThat(repo.refresh(id)).isNull()
-        assertThat(google.calls.last()).containsExactlyElementsIn(DataPart.entries)
+        assertThat(google.calls.last()).containsExactlyElementsIn(DataPart.entries - DataPart.NOWCAST)
         assertThat(repo.get(id)!!.snapshot!!.current!!.temperature).isEqualTo(20.0)
 
         now = now.plusSeconds(10 * 60)

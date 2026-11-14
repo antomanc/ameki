@@ -10,6 +10,13 @@ internal data class ForecastResponse(
     val current: CurrentDto? = null,
     val hourly: HourlyDto? = null,
     val daily: DailyDto? = null,
+    @SerialName("minutely_15") val minutely15: Minutely15Dto? = null,
+)
+
+@Serializable
+internal data class Minutely15Dto(
+    val time: List<Long>,
+    val precipitation: List<Double?> = emptyList(),
 )
 
 @Serializable

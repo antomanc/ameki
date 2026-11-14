@@ -110,10 +110,10 @@ class WeatherRepository(
         val source = sources[s.source]
         val existing = snapshotDao.get(placeId)?.let(::decode)?.let { valid(it, s.source) }
         val parts = if (force) {
-            DataPart.entries.toSet()
+            DataPart.entries.filterTo(mutableSetOf()) { it.capability in source.capabilities }
         } else {
-            RefreshPolicy.dueParts(s.source, existing, s.refreshIntervalMinutes, clock())
-        }.filterTo(mutableSetOf()) { it != DataPart.ALERTS || dev.antomanc.ameki.core.model.Capability.ALERTS in source.capabilities }
+            RefreshPolicy.dueParts(s.source, existing, s.refreshIntervalMinutes, clock(), source.capabilities)
+        }
         if (parts.isEmpty()) return null
 
         return try {

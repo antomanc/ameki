@@ -7,6 +7,7 @@ import dev.antomanc.ameki.core.model.DailyForecast
 import dev.antomanc.ameki.core.model.DataPart
 import dev.antomanc.ameki.core.model.GeoPoint
 import dev.antomanc.ameki.core.model.HourlyForecast
+import dev.antomanc.ameki.core.model.NowcastSlot
 import dev.antomanc.ameki.core.model.PlaceSearchResult
 import dev.antomanc.ameki.core.model.SourceId
 import dev.antomanc.ameki.core.model.WeatherSnapshot
@@ -39,7 +40,7 @@ class OpenMeteoSource(
 
     override val capabilities = setOf(
         Capability.CURRENT, Capability.HOURLY, Capability.DAILY,
-        Capability.SUN_EVENTS, Capability.MOON_PHASE, Capability.UV, Capability.VISIBILITY,
+        Capability.SUN_EVENTS, Capability.MOON_PHASE, Capability.UV, Capability.VISIBILITY, Capability.NOWCAST,
     )
 
     override suspend fun fetch(location: GeoPoint, language: String, parts: Set<DataPart>): WeatherSnapshot {
@@ -54,6 +55,8 @@ class OpenMeteoSource(
                 parameter("timeformat", "unixtime")
                 parameter("forecast_days", 10)
                 parameter("forecast_hours", 48)
+                parameter("minutely_15", "precipitation")
+                parameter("forecast_minutely_15", 12)
             }
         }
         val response = json.decodeFromString(ForecastResponse.serializer(), body)
@@ -154,10 +157,16 @@ class OpenMeteoSource(
                     precipitationProbability = hourNow?.precipitationProbability,
                 )
             }
+            val nowcast = r.minutely15?.let { m ->
+                m.time.indices.mapNotNull { i ->
+                    m.precipitation.getOrNull(i)?.let { NowcastSlot(Instant.ofEpochSecond(m.time[i]), it) }
+                }
+            }.orEmpty()
             val fetched = buildMap {
                 if (current != null) put(DataPart.CURRENT, now)
                 if (hourly.isNotEmpty()) put(DataPart.HOURLY, now)
                 if (daily.isNotEmpty()) put(DataPart.DAILY, now)
+                if (nowcast.isNotEmpty()) put(DataPart.NOWCAST, now)
             }
             return WeatherSnapshot(
                 source = SourceId.OPEN_METEO,
@@ -165,6 +174,7 @@ class OpenMeteoSource(
                 current = current,
                 hourly = hourly,
                 daily = daily,
+                nowcast = nowcast,
                 fetchedAt = fetched,
             )
         }

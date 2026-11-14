@@ -1,0 +1,1 @@
+{"latitude":51.49,"longitude":-0.13,"utc_offset_seconds":0,"timezone":"GMT","current":{"time":1794651300,"interval":900,"temperature_2m":9.1,"is_day":1,"weather_code":61},"minutely_15":{"time":[1794651300,1794652200,1794653100,1794654000],"precipitation":[0.00,0.10,0.40,null]}}

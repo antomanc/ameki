@@ -102,3 +102,17 @@ class OpenMeteoSourceTest {
         assertThat(wmoToCondition(3, cloudCover = 100)).isEqualTo(WeatherCondition.CLOUDY)
     }
 }
+
+class OpenMeteoNowcastTest {
+    @Test
+    fun `maps minutely_15 into the nowcast part`() = kotlinx.coroutines.test.runTest {
+        val body = javaClass.classLoader!!.getResource("forecast_nowcast.json")!!.readText()
+        val http = io.ktor.client.HttpClient(io.ktor.client.engine.mock.MockEngine { req ->
+            com.google.common.truth.Truth.assertThat(req.url.parameters["minutely_15"]).isEqualTo("precipitation")
+            respond(body, io.ktor.http.HttpStatusCode.OK, io.ktor.http.headersOf(io.ktor.http.HttpHeaders.ContentType, "application/json"))
+        })
+        val s = OpenMeteoSource(http).fetch(dev.antomanc.ameki.core.model.GeoPoint(51.49, -0.13), "en")
+        com.google.common.truth.Truth.assertThat(s.nowcast.map { it.precipitation }).containsExactly(0.0, 0.1, 0.4).inOrder()
+        com.google.common.truth.Truth.assertThat(s.fetchedAt.keys).contains(dev.antomanc.ameki.core.model.DataPart.NOWCAST)
+    }
+}

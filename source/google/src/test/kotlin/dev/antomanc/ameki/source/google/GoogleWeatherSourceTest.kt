@@ -55,7 +55,7 @@ class GoogleWeatherSourceTest {
         val s = source().fetch(rome, "it")
 
         assertThat(requests).hasSize(4)
-        assertThat(s.fetchedAt.keys).containsExactlyElementsIn(DataPart.entries)
+        assertThat(s.fetchedAt.keys).containsExactlyElementsIn(DataPart.entries - DataPart.NOWCAST)
         assertThat(s.timeZone.id).isEqualTo("Europe/Rome")
 
         val c = s.current!!

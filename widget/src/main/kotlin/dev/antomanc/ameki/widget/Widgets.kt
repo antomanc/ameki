@@ -281,3 +281,60 @@ class CompleteWidget : AmekiWidget(setOf(S4x3, S4x4, S5x5)) {
     }
 }
 
+
+// ---------------------------------------------------------------- Rain (2×2 → 4×2)
+
+class RainWidget : AmekiWidget(setOf(S2x2, S4x2)) {
+    @Composable
+    override fun Content(data: WidgetData, palette: WidgetPalette, fmt: TimeFormatter) {
+        val context = LocalContext.current
+        val size = LocalSize.current
+        val s = data.weather!!.snapshot!!
+        val now = Instant.now()
+        val outlook = dev.antomanc.ameki.core.model.Nowcast.outlook(s, now)
+        val sentence = when (outlook) {
+            dev.antomanc.ameki.core.model.RainOutlook.NoneSoon -> context.getString(dev.antomanc.ameki.core.ui.R.string.rain_none_2h)
+            dev.antomanc.ameki.core.model.RainOutlook.RainingNow -> context.getString(dev.antomanc.ameki.core.ui.R.string.rain_now)
+            is dev.antomanc.ameki.core.model.RainOutlook.StopsIn -> context.getString(dev.antomanc.ameki.core.ui.R.string.rain_stops_in, outlook.minutes)
+            is dev.antomanc.ameki.core.model.RainOutlook.StartsIn -> context.getString(dev.antomanc.ameki.core.ui.R.string.rain_in, outlook.minutes)
+            is dev.antomanc.ameki.core.model.RainOutlook.LikelyAround -> context.getString(dev.antomanc.ameki.core.ui.R.string.rain_in_hours, fmt.time(outlook.at, s.timeZone))
+        }
+        val slots = s.nowcast.filter { it.time.plusSeconds(900) > now }.take(8)
+        val wide = size.width >= 200.dp
+        Column(GlanceModifier.fillMaxSize()) {
+            Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    context.getString(R.string.widget_rain_name).uppercase(),
+                    style = textStyle(palette.onSurfaceVariant, 10.sp, FontWeight.Medium),
+                    modifier = GlanceModifier.defaultWeight(),
+                )
+                if (wide) Freshness(data, palette, fmt)
+            }
+            Spacer(GlanceModifier.height(4.dp))
+            Text(sentence, style = textStyle(palette.onSurface, if (wide) 17.sp else 15.sp, FontWeight.Medium), maxLines = 2)
+            Spacer(GlanceModifier.defaultWeight())
+            if (slots.isNotEmpty()) {
+                val shown = if (wide) slots else slots.filterIndexed { i, _ -> i % 2 == 0 }
+                val dot = if (wide) 20.dp else 18.dp
+                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    shown.forEach { slot ->
+                        Box(GlanceModifier.defaultWeight(), contentAlignment = Alignment.Center) {
+                            RainDot((dev.antomanc.ameki.core.model.Nowcast.intensity(slot.precipitation) * 100).toInt(), dot, palette)
+                        }
+                    }
+                }
+                Row(GlanceModifier.fillMaxWidth()) {
+                    listOf(context.getString(dev.antomanc.ameki.core.ui.R.string.now), "+1h", "+2h").forEachIndexed { i, label ->
+                        Text(
+                            label, style = textStyle(palette.onSurfaceVariant, 10.sp).copy(textAlign = if (i == 0) TextAlign.Start else if (i == 1) TextAlign.Center else TextAlign.End),
+                            modifier = GlanceModifier.defaultWeight(),
+                        )
+                    }
+                }
+            } else {
+                // No 15-minute data (e.g. Google): the next hours' probability instead.
+                HourStrip(s.hoursFrom(now).take(if (wide) 6 else 3), data, palette, fmt, showRain = true)
+            }
+        }
+    }
+}
