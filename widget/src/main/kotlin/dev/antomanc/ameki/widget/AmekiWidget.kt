@@ -104,7 +104,7 @@ abstract class AmekiWidget(sizes: Set<DpSize>) : GlanceAppWidget(), KoinComponen
                     Text(context.getString(current.condition.label(current.isDaytime)), style = textStyle(palette.onSurfaceVariant, 12.sp), maxLines = 1)
                 }
             }
-            Freshness(w.view, w.data.settings, palette, fmt, compact = layout.dense)
+            Freshness(w.view, palette, fmt, compact = layout.dense)
         }
     }
 

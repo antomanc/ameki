@@ -92,7 +92,7 @@ internal fun PlaceWeatherPane(
                 if (snapshot.nowcast.isNotEmpty() || snapshot.hourly.isNotEmpty()) RainOutlookSummary(view, fmt)
             } }
             if (snapshot.alerts.isNotEmpty()) add { AlertsCard(snapshot, fmt) }
-            // 48 hours: Open-Meteo has them already; Google refreshes 24 (each extra page is a call).
+            // Up to 48 hours: as many as the snapshot holds.
             if (view.hours.isNotEmpty()) add { HourlyCard(view.hours.take(48), view, units, fmt, onOpenDay) }
             if (view.hours.isNotEmpty()) add { HourlyCharts(view.hours.take(24).map { it.forecast }, snapshot, units, fmt) }
         }

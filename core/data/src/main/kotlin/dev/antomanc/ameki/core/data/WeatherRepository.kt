@@ -223,28 +223,24 @@ class WeatherRepository(
         if (!sources[s.source].fetchesHoursOnDemand) return
         val zone = get(placeId)?.snapshot?.timeZone ?: return
         val until = date.plusDays(1).atStartOfDay(zone).toInstant()
-        var started = false
-        hourRequests.update { all ->
+        while (true) {
+            val all = hourRequests.value
             val r = all[placeId] ?: HourRequests()
-            if (r.loadingUntil != null && !r.loadingUntil.isBefore(until)) all
-            else {
-                started = true
-                all + (placeId to r.copy(loadingUntil = until))
-            }
+            // A request reaching at least this far is already running.
+            if (r.loadingUntil != null && !r.loadingUntil.isBefore(until)) return
+            if (hourRequests.compareAndSet(all, all + (placeId to r.copy(loadingUntil = until)))) break
         }
-        if (!started) return
         var error: SyncError? = null
         try {
             error = mutex.withLock { extendHoursLocked(placeId, until) }
         } finally {
             hourRequests.update { all ->
                 val r = all[placeId] ?: HourRequests()
-                val failed = if (error != null) until else r.failedUntil?.takeIf { it.isAfter(until) }
                 all + (placeId to HourRequests(
                     // A longer request queued behind this one is still running.
                     loadingUntil = r.loadingUntil?.takeIf { it.isAfter(until) },
-                    failedUntil = failed,
-                    error = if (failed == null) null else error ?: r.error,
+                    // Success covers every day up to this one; a failure marks only this day.
+                    failed = if (error != null) r.failed + (date to error!!) else r.failed.filterKeys { it.isAfter(date) },
                 ))
             }
         }
@@ -260,6 +256,8 @@ class WeatherRepository(
         val hours = (Duration.between(clock(), until).toHours() + 2).toInt()
         return try {
             val fetched = source.fetchHours(point, language(s), hours)
+            // An answer without hours must not replace the hours already stored.
+            if (fetched.hourly.isEmpty()) return SyncError.UNKNOWN
             val extra = fetched.copy(
                 hourlyExtension = HourlyExtension(fetchedAt = fetched.fetchedAt[DataPart.HOURLY] ?: clock(), requestedUntil = until),
             )
@@ -287,6 +285,7 @@ class WeatherRepository(
     /** Switching source: old data is meaningless for the new one (and Google's must go). */
     suspend fun clearAll() {
         snapshotDao.clear()
+        hourRequests.value = emptyMap()
         notifyListeners()
     }
 

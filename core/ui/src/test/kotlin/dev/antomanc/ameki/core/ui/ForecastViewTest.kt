@@ -87,4 +87,17 @@ class ForecastViewTest {
         assertThat(ForecastView(noCurrent, fetched.plusSeconds(121 * 60), 30).stale).isTrue()
         assertThat(ForecastView(noCurrent, fetched.plusSeconds(121 * 60), 60).stale).isFalse()
     }
+
+    @Test
+    fun `a day lists its remaining hours and says when they stop early`() {
+        val today = LocalDate.of(2026, 11, 15)
+        val view = ForecastView(snapshot, fetched.plusSeconds(2 * 3600 + 600), 30)
+        // 12:10 UTC is 13:10 in Rome: the 12:00 UTC hour is the current one.
+        assertThat(view.hoursOn(today).first().time).isEqualTo(fetched.plusSeconds(2 * 3600))
+        assertThat(view.allHoursOn(today)).hasSize(6)
+        assertThat(view.hourSlotsOn(today).first()).isEqualTo(fetched.plusSeconds(2 * 3600))
+        assertThat(view.hourSlotsOn(today).last()).isEqualTo(Instant.parse("2026-11-15T22:00:00Z"))
+        assertThat(view.hoursEndEarly(today)).isTrue()
+        assertThat(view.hourSlotsOn(LocalDate.of(2026, 11, 16))).hasSize(24)
+    }
 }

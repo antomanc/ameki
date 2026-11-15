@@ -92,24 +92,28 @@ class HomeViewModel(
     }
 
     private suspend fun show(id: Long, request: AppRequest.Show) {
-        var fetchedFrom: Attempt? = null
-        combine(weather.all, refreshing, ::Pair).first { (list, busy) ->
-            when (val step = nextStep(request, list, busy, fetchedFrom)) {
-                is ShowStep.Show -> {
-                    navigation.value = Navigation(id, step.placeId, step.day, done = true)
-                    true
-                }
-                is ShowStep.Fetch -> {
-                    fetchedFrom = Attempt(list.first { it.place.id == step.placeId }.lastAttemptAt)
-                    navigation.value = Navigation(id, step.placeId, null, done = false)
-                    refresh(step.placeId, force = false)
-                    false
-                }
-                is ShowStep.Wait -> {
-                    navigation.value = Navigation(id, step.placeId, null, done = false)
-                    false
-                }
-            }
+        var step = nextStep(request, weather.all.first(), fetched = false)
+        if (step is ShowStep.Fetch) {
+            // Move to the place now; the day follows once its forecast is in.
+            navigation.value = Navigation(id, step.placeId, null, done = false)
+            refreshAndWait(step.placeId)
+            // Read after the refresh has written: no waiting on a later emission.
+            step = nextStep(request, weather.all.first(), fetched = true)
+        }
+        val show = step as ShowStep.Show
+        navigation.value = Navigation(id, show.placeId, show.day, done = true)
+    }
+
+    private suspend fun refreshAndWait(placeId: Long) {
+        if (placeId in refreshing.value) {
+            refreshing.first { placeId !in it }
+            return
+        }
+        refreshing.value += placeId
+        try {
+            weather.refresh(placeId, force = false)
+        } finally {
+            refreshing.value -= placeId
         }
     }
 

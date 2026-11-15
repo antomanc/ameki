@@ -254,7 +254,7 @@ class HomeScreenshotTest {
         val base = sampleState()
         val place = base.places.first().copy(
             hoursOnDemand = true,
-            hourRequests = dev.antomanc.ameki.core.data.sync.HourRequests(failedUntil = Instant.MAX, error = dev.antomanc.ameki.core.data.sync.SyncError.NETWORK),
+            hourRequests = dev.antomanc.ameki.core.data.sync.HourRequests(failed = mapOf(base.places.first().snapshot!!.daily[3].date to dev.antomanc.ameki.core.data.sync.SyncError.NETWORK)),
         )
         val snapshot = place.snapshot!!
         val time = snapshot.daily[3].date.atStartOfDay(snapshot.timeZone).toInstant()

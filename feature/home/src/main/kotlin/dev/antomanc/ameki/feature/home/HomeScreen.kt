@@ -49,6 +49,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.antomanc.ameki.core.data.sync.PlaceWeather
+import dev.antomanc.ameki.core.ui.AppRequest
 import dev.antomanc.ameki.core.ui.PendingRequest
 import dev.antomanc.ameki.core.ui.components.WeatherIcon
 import dev.antomanc.ameki.core.ui.label
@@ -69,7 +70,8 @@ fun HomeRoute(
     LaunchedEffect(request?.id) { request?.let(viewModel::handle) }
     HomeScreen(
         state = state,
-        initialPlaceId = state.settings.selectedPlaceId,
+        // A cold start from a widget opens on the requested place, not the last one.
+        initialPlaceId = (request?.request as? AppRequest.Show)?.placeId ?: state.settings.selectedPlaceId,
         onPlaceShown = viewModel::onPlaceShown,
         onRefresh = { viewModel.refresh(it) },
         onOpenPlaces = onOpenPlaces,

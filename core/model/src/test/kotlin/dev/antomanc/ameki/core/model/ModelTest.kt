@@ -73,6 +73,17 @@ class ModelTest {
     }
 
     @Test
+    fun `hours fetched together on demand expire together`() {
+        val s = WeatherSnapshot(
+            SourceId.GOOGLE, rome, null, hourly = hours(t0, 72), fetchedAt = mapOf(DataPart.HOURLY to t0),
+            hourlyExtension = HourlyExtension(t0, t0.plusSeconds(72 * 3600)),
+        )
+        assertThat(s.retainedAt(t0.plusSeconds(3599))!!.hourly).hasSize(72)
+        // Nothing may outlive Google's hour: every hour came with the one fetch.
+        assertThat(s.retainedAt(t0.plusSeconds(3600))).isNull()
+    }
+
+    @Test
     fun `hours count as covered once the source was asked and had no more`() {
         val asked = t0.plusSeconds(300 * 3600)
         val s = WeatherSnapshot(

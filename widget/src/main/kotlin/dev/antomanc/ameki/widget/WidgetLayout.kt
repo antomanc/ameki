@@ -49,6 +49,17 @@ internal object WidgetLayout {
         )
     }
 
+    /** A day row: wide widgets add the rain column; the range bar takes what is left. */
+    data class DayRow(val rainColumn: Boolean, val bar: Dp)
+
+    fun dayRow(size: DpSize): DayRow {
+        val wide = size.width >= 280.dp
+        return DayRow(wide, (size.width - 28.dp - if (wide) 190.dp else 150.dp).coerceAtLeast(40.dp))
+    }
+
+    /** The Daily widget's header shrinks on a 2-row widget. */
+    fun dailyDense(size: DpSize): Boolean = size.height < 150.dp
+
     /** Day rows under a header, at most [available]. */
     fun dailyRows(size: DpSize, available: Int): Int =
         rowsIn(size.height - 60.dp).coerceIn(1, available.coerceAtLeast(1))

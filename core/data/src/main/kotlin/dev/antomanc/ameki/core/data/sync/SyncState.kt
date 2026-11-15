@@ -33,11 +33,13 @@ enum class SyncError {
     }
 }
 
-/** Extra hours for a place's day pages that are being fetched, or failed, in this process. */
+/**
+ * Extra hours for a place's day pages in this process: the furthest point being fetched, and
+ * the days whose last request failed, with that request's error.
+ */
 data class HourRequests(
     val loadingUntil: Instant? = null,
-    val failedUntil: Instant? = null,
-    val error: SyncError? = null,
+    val failed: Map<LocalDate, SyncError> = emptyMap(),
 )
 
 /** Whether a day page can show all of a day's hours. */
@@ -73,7 +75,7 @@ data class PlaceWeather(
         return when {
             s.hoursCover(end) -> DayHours.READY
             hourRequests.loadingUntil?.let { !it.isBefore(end) } == true -> DayHours.LOADING
-            hourRequests.failedUntil?.let { !it.isBefore(end) } == true -> DayHours.FAILED
+            date in hourRequests.failed -> DayHours.FAILED
             else -> DayHours.NEEDED
         }
     }

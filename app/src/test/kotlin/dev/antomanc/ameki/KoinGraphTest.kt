@@ -30,6 +30,7 @@ class KoinGraphTest {
         ApplicationProvider.getApplicationContext<Context>()
         val koin = GlobalContext.get()
         koin.get<WeatherRepository>()
+        koin.get<dev.antomanc.ameki.core.data.widget.WidgetInstances>()
         koin.get<HomeViewModel>()
         koin.get<LocationsViewModel>()
         koin.get<SettingsViewModel>()

@@ -42,7 +42,6 @@ import androidx.glance.semantics.contentDescription
 import androidx.glance.semantics.semantics
 import androidx.glance.unit.ColorProvider
 import dev.antomanc.ameki.core.model.WeatherCondition
-import dev.antomanc.ameki.core.model.AppSettings
 import dev.antomanc.ameki.core.ui.ForecastView
 import dev.antomanc.ameki.core.ui.TimeFormatter
 import dev.antomanc.ameki.core.ui.R as UiR
@@ -179,7 +178,7 @@ internal fun RainDot(probability: Int?, max: Dp, palette: WidgetPalette) {
  * shared worker when tapped, and says so to TalkBack. Old readings are marked as such.
  */
 @Composable
-internal fun Freshness(view: ForecastView, settings: AppSettings, palette: WidgetPalette, fmt: TimeFormatter, compact: Boolean = false) {
+internal fun Freshness(view: ForecastView, palette: WidgetPalette, fmt: TimeFormatter, compact: Boolean = false) {
     val updated = view.updatedAt ?: return
     val time = fmt.timestamp(updated, view.snapshot.timeZone, view.now)
     val context = LocalContext.current
@@ -227,7 +226,7 @@ internal fun WidgetMessage(data: WidgetData, palette: WidgetPalette, need: Widge
             maxLines = 3,
         )
         data.weather?.snapshot?.let {
-            Freshness(ForecastView(it, Instant.now(), data.settings.refreshIntervalMinutes), data.settings, palette, TimeFormatter(context, data.settings.timeFormat), compact = true)
+            Freshness(ForecastView(it, Instant.now(), data.settings.refreshIntervalMinutes), palette, TimeFormatter(context, data.settings.timeFormat), compact = true)
         }
     }
     return true

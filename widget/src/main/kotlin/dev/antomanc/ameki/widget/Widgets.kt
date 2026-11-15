@@ -112,7 +112,7 @@ private fun Header(w: ReadyWidget, palette: WidgetPalette, fmt: TimeFormatter, i
             Text(w.place.name, style = textStyle(palette.onSurface, nameSp.sp, FontWeight.Medium), maxLines = 1)
             c?.let { Text(it.conditionText ?: LocalContext.current.getString(it.condition.label(it.isDaytime)), style = textStyle(palette.onSurfaceVariant, 12.sp), maxLines = 1) }
         }
-        Freshness(w.view, w.data.settings, palette, fmt)
+        Freshness(w.view, palette, fmt)
     }
 }
 
@@ -135,7 +135,7 @@ class CompactWidget : AmekiWidget(setOf(S2x1, S2x2, S3x2)) {
                 Spacer(GlanceModifier.width(6.dp))
                 Column(GlanceModifier.defaultWeight()) {
                     Text(w.place.name, style = textStyle(palette.onSurface, 10.sp, FontWeight.Medium), maxLines = 1)
-                    Freshness(w.view, w.data.settings, palette, fmt, compact = true)
+                    Freshness(w.view, palette, fmt, compact = true)
                 }
             }
             WidgetLayout.Compact.DIAL -> Column(GlanceModifier.fillMaxSize()) {
@@ -156,7 +156,7 @@ class CompactWidget : AmekiWidget(setOf(S2x1, S2x2, S3x2)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     HighLow(w.view.today, units, palette, 9)
                     Spacer(GlanceModifier.width(6.dp))
-                    Freshness(w.view, w.data.settings, palette, fmt, compact = true)
+                    Freshness(w.view, palette, fmt, compact = true)
                 }
             }
             WidgetLayout.Compact.DIAL_AND_TEXT -> Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
@@ -172,7 +172,7 @@ class CompactWidget : AmekiWidget(setOf(S2x1, S2x2, S3x2)) {
                     Text(c.conditionText ?: context.getString(c.condition.label(c.isDaytime)), style = textStyle(palette.onSurfaceVariant, 12.sp), maxLines = 2)
                     HighLow(w.view.today, units, palette, 12)
                     Spacer(GlanceModifier.height(2.dp))
-                    Freshness(w.view, w.data.settings, palette, fmt)
+                    Freshness(w.view, palette, fmt)
                 }
             }
         }
@@ -245,7 +245,7 @@ class HourlyWidget : AmekiWidget(setOf(S4x1, S4x2, S5x2)) {
             HourStrip(
                 hours, w, palette, fmt, layout.strip.copy(tiny = true, rain = false, large = false),
                 modifier = GlanceModifier.fillMaxSize(),
-                trailing = { Freshness(w.view, w.data.settings, palette, fmt, compact = true) },
+                trailing = { Freshness(w.view, palette, fmt, compact = true) },
             )
             return
         }
@@ -267,8 +267,9 @@ private fun DayRows(days: List<DailyForecast>, w: ReadyWidget, palette: WidgetPa
     val min = days.minOf { it.temperatureMin }
     val max = days.maxOf { it.temperatureMax }
     val night = palette.dark ?: context.isNight()
-    val wide = LocalSize.current.width >= 280.dp
-    val barWidth = (LocalSize.current.width - 28.dp - (if (wide) 190.dp else 150.dp)).coerceAtLeast(40.dp)
+    val row = WidgetLayout.dayRow(LocalSize.current)
+    val wide = row.rainColumn
+    val barWidth = row.bar
     val density = context.resources.displayMetrics.density
     val track = Color(palette.track.getColor(context).value).copy(alpha = 0.25f)
     Column(modifier) {
@@ -321,7 +322,7 @@ class DailyWidget : AmekiWidget(setOf(S4x2, S4x3, S4x4)) {
     override fun Content(w: ReadyWidget, palette: WidgetPalette, fmt: TimeFormatter) {
         val size = LocalSize.current
         val days = w.view.days
-        val dense = size.height < 150.dp
+        val dense = WidgetLayout.dailyDense(size)
         Column(GlanceModifier.fillMaxSize()) {
             Header(w, palette, fmt, iconSize = if (dense) 26.dp else 32.dp, temperatureSp = if (dense) 24 else 30)
             Spacer(GlanceModifier.height(6.dp))
@@ -353,7 +354,7 @@ class CompleteWidget : AmekiWidget(setOf(S4x3, S4x4, S5x5)) {
                         Text(c.conditionText ?: context.getString(c.condition.label(c.isDaytime)), style = textStyle(palette.onSurfaceVariant, 12.sp), maxLines = 1)
                         if (!layout.dense) c.feelsLike?.let { Text(context.getString(dev.antomanc.ameki.core.ui.R.string.feels_like, units.temp(it)), style = textStyle(palette.onSurfaceVariant, 12.sp)) }
                         Spacer(GlanceModifier.height(2.dp))
-                        Freshness(w.view, w.data.settings, palette, fmt)
+                        Freshness(w.view, palette, fmt)
                     }
                     ConditionIcon(c.condition, c.isDaytime, 40.dp, palette)
                 }
@@ -397,7 +398,7 @@ class RainWidget : AmekiWidget(setOf(S2x2, S4x2)) {
                     style = textStyle(palette.onSurfaceVariant, 10.sp, FontWeight.Medium),
                     modifier = GlanceModifier.defaultWeight(),
                 )
-                Freshness(w.view, w.data.settings, palette, fmt, compact = !layout.wide)
+                Freshness(w.view, palette, fmt, compact = !layout.wide)
             }
             Spacer(GlanceModifier.height(4.dp))
             Text(sentence, style = textStyle(palette.onSurface, if (layout.wide) 17.sp else 15.sp, FontWeight.Medium), maxLines = 2)

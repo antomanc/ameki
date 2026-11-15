@@ -61,6 +61,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.antomanc.ameki.core.data.sync.DayHours
+import dev.antomanc.ameki.core.data.sync.SyncError
 import dev.antomanc.ameki.core.data.sync.PlaceWeather
 import dev.antomanc.ameki.core.model.DailyForecast
 import dev.antomanc.ameki.core.model.HourlyForecast
@@ -146,7 +147,7 @@ internal fun DayPage(
                     view, day, units, fmt,
                     focusHour = target.hour.takeIf { day.date == target.date },
                     loading = status == DayHours.LOADING || status == DayHours.NEEDED,
-                    failed = status == DayHours.FAILED,
+                    failure = pw.hourRequests.failed[day.date].takeIf { status == DayHours.FAILED },
                     onRetry = { onNeedHours(day.date) },
                 )
             }
@@ -155,12 +156,11 @@ internal fun DayPage(
 }
 
 @Composable
-private fun DayContent(view: ForecastView, day: DailyForecast, units: Units, fmt: TimeFormatter, focusHour: Instant?, loading: Boolean, failed: Boolean, onRetry: () -> Unit) {
+private fun DayContent(view: ForecastView, day: DailyForecast, units: Units, fmt: TimeFormatter, focusHour: Instant?, loading: Boolean, failure: SyncError?, onRetry: () -> Unit) {
     val s = view.snapshot
-    val now = view.now
-    val dayHours = s.hourly.filter { it.time.atZone(s.timeZone).toLocalDate() == day.date }
-    val hours = dayHours
-        .let { list -> if (view.isToday(day.date)) list.filter { it.time.plusSeconds(3600) > now } else list }
+    val failed = failure != null
+    val dayHours = view.allHoursOn(day.date)
+    val hours = view.hoursOn(day.date)
     val list = rememberLazyListState()
     LaunchedEffect(focusHour, hours.size) {
         val i = hours.indexOfFirst { it.time == focusHour }
@@ -173,23 +173,22 @@ private fun DayContent(view: ForecastView, day: DailyForecast, units: Units, fmt
         if (hours.isNotEmpty() || loading) {
             item { HourHeaderRow() }
             val byTime = hours.associateBy { it.time }
-            val times = if (loading) {
-                val start = day.date.atStartOfDay(s.timeZone).toInstant()
-                val end = day.date.plusDays(1).atStartOfDay(s.timeZone).toInstant()
-                generateSequence(start) { it.plusSeconds(3600) }.takeWhile { it < end }
-                    .filter { !view.isToday(day.date) || it.plusSeconds(3600) > now }.toList()
-            } else hours.map { it.time }
+            val times = if (loading) view.hourSlotsOn(day.date) else hours.map { it.time }
             items(times, key = { it.epochSecond }) { time ->
                 Crossfade(targetState = byTime[time], modifier = Modifier.testTag("day-hour-${time.epochSecond}"), animationSpec = tween(220), label = "hour-data") { hour ->
                     HourRow(hour, time, s, units, fmt, highlighted = time == focusHour)
                 }
             }
         }
-        if (failed) item {
-            Text(stringResource(R.string.day_hours_failed), style = MaterialTheme.typography.bodyMedium)
+        if (failure != null) item {
+            // A problem the user can fix (key, access) says so; anything else is worth a retry.
+            Text(stringResource(if (failure.needsUserAction) errorText(failure) else R.string.day_hours_failed), style = MaterialTheme.typography.bodyMedium)
             androidx.compose.material3.Button(onClick = onRetry) { Text(stringResource(R.string.retry)) }
         } else if (!loading && hours.isEmpty()) item {
             Text(stringResource(R.string.day_hours_unavailable), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else if (!loading && view.hoursEndEarly(day.date)) item {
+            Text(stringResource(R.string.day_hours_partial), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 12.dp))
         }
     }
 }

@@ -41,6 +41,7 @@ private class FakeSource(override val id: SourceId, private val clock: () -> Ins
     val hourCalls = mutableListOf<Int>()
     var failWith: Exception? = null
     var hoursFailWith: Exception? = null
+    var emptyHours = false
     var temperature = 20.0
 
     override val fetchesHoursOnDemand = id == SourceId.GOOGLE
@@ -55,7 +56,7 @@ private class FakeSource(override val id: SourceId, private val clock: () -> Ins
         hourCalls += hours
         hoursFailWith?.let { throw it }
         val now = clock()
-        return WeatherSnapshot(id, ZoneId.of("Europe/Rome"), null, hourly = hours(now, minOf(hours, 240)), fetchedAt = mapOf(DataPart.HOURLY to now))
+        return WeatherSnapshot(id, ZoneId.of("Europe/Rome"), null, hourly = if (emptyHours) emptyList() else hours(now, minOf(hours, 240)), fetchedAt = mapOf(DataPart.HOURLY to now))
     }
 
     override suspend fun fetch(location: GeoPoint, language: String, parts: Set<DataPart>): WeatherSnapshot {
@@ -298,13 +299,27 @@ class WeatherRepositoryTest {
 
         val all = repo.all.first().associateBy { it.place.id }
         assertThat(all.getValue(rome).dayHours(later)).isEqualTo(DayHours.FAILED)
-        assertThat(all.getValue(rome).hourRequests.error).isEqualTo(SyncError.NETWORK)
+        assertThat(all.getValue(rome).hourRequests.failed[later]).isEqualTo(SyncError.NETWORK)
         assertThat(all.getValue(milan).dayHours(later)).isEqualTo(DayHours.NEEDED)
+        // A nearer day that was never asked for is not reported as failed.
+        assertThat(all.getValue(rome).dayHours(later.minusDays(1))).isEqualTo(DayHours.NEEDED)
 
         google.hoursFailWith = null
         repo.loadDayHours(rome, later)
         assertThat(repo.get(rome)!!.dayHours(later)).isEqualTo(DayHours.READY)
-        assertThat(repo.get(rome)!!.hourRequests.error).isNull()
+        assertThat(repo.get(rome)!!.hourRequests.failed).isEmpty()
+    }
+
+    @Test
+    fun `an answer without hours keeps the stored ones and reports a failure`() = runTest {
+        settings.setSource(SourceId.GOOGLE)
+        val id = addRome()
+        repo.refresh(id)
+        google.emptyHours = true
+        repo.loadDayHours(id, later)
+        val w = repo.get(id)!!
+        assertThat(w.snapshot!!.hourly).hasSize(24)
+        assertThat(w.dayHours(later)).isEqualTo(DayHours.FAILED)
     }
 
     @Test

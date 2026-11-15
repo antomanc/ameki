@@ -35,6 +35,20 @@ class WidgetLayoutTest {
     }
 
     @Test
+    fun `small sizes trade padding and text for content`() {
+        assertThat(WidgetLayout.padding(size(250, 110))).isEqualTo(0.dp)
+        assertThat(WidgetLayout.padding(size(250, 180))).isEqualTo(8.dp)
+        assertThat(WidgetLayout.padding(size(320, 320))).isEqualTo(12.dp)
+        assertThat(WidgetLayout.compact(size(110, 48))).isEqualTo(WidgetLayout.Compact.ROW)
+        assertThat(WidgetLayout.compact(size(110, 110))).isEqualTo(WidgetLayout.Compact.DIAL)
+        assertThat(WidgetLayout.compact(size(180, 110))).isEqualTo(WidgetLayout.Compact.DIAL_AND_TEXT)
+        assertThat(WidgetLayout.rain(size(110, 110)).everyOtherSlot).isTrue()
+        assertThat(WidgetLayout.rain(size(250, 110)).fallbackHours).isEqualTo(6)
+        assertThat(WidgetLayout.dayRow(size(320, 250)).rainColumn).isTrue()
+        assertThat(WidgetLayout.dayRow(size(250, 250)).bar).isEqualTo(72.dp)
+    }
+
+    @Test
     fun `a one-row widget shows no list at large fonts`() {
         assertThat(WidgetLayout.largeFont(size(250, 60)).rows).isEqualTo(0)
         assertThat(WidgetLayout.largeFont(size(250, 180)).rows).isEqualTo(2)

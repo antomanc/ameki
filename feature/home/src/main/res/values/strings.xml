@@ -60,6 +60,7 @@
     <string name="back">Back</string>
     <string name="day_loading_hours">Getting the hours…</string>
     <string name="day_hours_unavailable">No hour-by-hour forecast for this day yet.</string>
+    <string name="day_hours_partial">The hour-by-hour forecast ends here.</string>
     <string name="day_hours_failed">Couldn\'t get the hours for this day. Try again in a moment.</string>
     <string name="day_night">Night: %1$s</string>
     <string name="tomorrow">Tomorrow</string>
