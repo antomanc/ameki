@@ -88,8 +88,8 @@ class WidgetStateTest {
             SourceId.OPEN_METEO, ZoneId.of("Europe/Rome"), current(),
             fetchedAt = mapOf(DataPart.CURRENT to now),
         )
-        assertTrue(s.currentFresh(now.plusSeconds(3600)))
-        assertFalse(s.currentFresh(now.plusSeconds(3 * 3600)))
+        assertTrue(s.currentIsFresh(now.plusSeconds(3600)))
+        assertFalse(s.currentIsFresh(now.plusSeconds(3 * 3600)))
     }
 
     @Test

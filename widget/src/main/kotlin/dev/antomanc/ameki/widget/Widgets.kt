@@ -12,7 +12,6 @@ import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.LocalSize
-import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.cornerRadius
@@ -191,7 +190,7 @@ private fun HourStrip(
             Column(
                 GlanceModifier.defaultWeight().height(if (tiny) 48.dp else 80.dp)
                     .clickable(
-                        androidx.glance.appwidget.action.actionStartActivity(detailIntent(context, data.weather.place.id, day.toEpochDay(), h.time.epochSecond)),
+                        androidx.glance.appwidget.action.actionStartActivity(detailIntent(context, data.weather.place.id, day, h.time)),
                     )
                     .semantics {
                         contentDescription = context.getString(
@@ -295,7 +294,7 @@ private fun DayRows(days: List<DailyForecast>, data: WidgetData, palette: Widget
             Row(
                 GlanceModifier.fillMaxWidth().height(48.dp)
                     .clickable(
-                        androidx.glance.appwidget.action.actionStartActivity(detailIntent(context, placeId, d.date.toEpochDay(), null)),
+                        androidx.glance.appwidget.action.actionStartActivity(detailIntent(context, placeId, d.date)),
                     )
                     .semantics {
                         contentDescription = context.getString(

@@ -75,111 +75,61 @@ class HomeScreenshotTest {
     @org.junit.Before fun pauseAnimations() { compose.mainClock.autoAdvance = false }
 
     @Config(qualifiers = "w411dp-h891dp-xxhdpi")
-    @Test fun requestedCityIsAppliedAfterLoadingAndOnNewRequest() {
-        val state = androidx.compose.runtime.mutableStateOf(HomeUiState())
-        val requested = androidx.compose.runtime.mutableStateOf<Long?>(2L)
-        val shown = mutableListOf<Long>()
-        var applied = 0
+    @Test fun finalNavigationOpensItsPlaceAndDayOnce() {
+        val loaded = sampleState()
+        val date = loaded.places[1].snapshot!!.daily[2].date
+        val state = androidx.compose.runtime.mutableStateOf(loaded.copy(navigation = Navigation(5, 2, DayTarget(date), done = true)))
+        val applied = mutableListOf<Long>()
         compose.setContent {
             AmekiTheme(dynamicColor = false) {
-                HomeScreen(state.value, requested.value, { shown += it }, {}, {}, {}, {},
-                    requestId = requested.value ?: 0, onRequestApplied = { applied++ })
+                HomeScreen(state.value, 1, {}, {}, {}, {}, {}, requestPending = true, onNavigationApplied = { applied += it })
             }
         }
-        compose.runOnIdle { state.value = sampleState(); androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications() }
-        compose.mainClock.advanceTimeBy(500)
-        compose.waitUntil(timeoutMillis = 5_000) { compose.mainClock.advanceTimeByFrame(); shown.lastOrNull() == 2L }
-        compose.runOnIdle {
-            val city = state.value.places.first()
-            state.value = state.value.copy(places = state.value.places + city.copy(place = city.place.copy(id = 3, name = "Torino")))
-            androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications()
-        }
-        compose.mainClock.advanceTimeBy(500)
-        compose.runOnIdle { org.junit.Assert.assertEquals("Applied requests must not replay when the city list changes", 1, applied) }
-        compose.runOnIdle { requested.value = 1L; androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications() }
-        compose.waitUntil(timeoutMillis = 5_000) { compose.mainClock.advanceTimeByFrame(); shown.lastOrNull() == 1L }
-    }
-
-    @Config(qualifiers = "w411dp-h891dp-xxhdpi")
-    @Test fun coldStartDayRequestUsesItsCityEvenWhenFirstCityHasNoDays() {
-        val state = androidx.compose.runtime.mutableStateOf(HomeUiState())
-        val loaded = sampleState().let { it.copy(places = it.places.mapIndexed { i, pw -> if (i == 0) pw.copy(snapshot = null) else pw }) }
-        val date = loaded.places[1].snapshot!!.daily.first().date.toEpochDay()
-        var applied = false
-        compose.setContent {
-            AmekiTheme(dynamicColor = false) {
-                HomeScreen(state.value, 2, {}, {}, {}, {}, {}, requestId = 20,
-                    requestedDay = date, onRequestApplied = { applied = true })
-            }
-        }
-        compose.runOnIdle { state.value = loaded; androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications() }
-        compose.mainClock.advanceTimeBy(500)
-        compose.waitUntil { compose.mainClock.advanceTimeByFrame(); applied }
+        compose.waitUntil { compose.mainClock.advanceTimeByFrame(); applied.isNotEmpty() }
         compose.onNodeWithText("Milano").assertIsDisplayed()
         compose.onNodeWithContentDescription("Back").assertIsDisplayed()
+        compose.runOnIdle {
+            state.value = state.value.copy(navigation = null, places = state.value.places.reversed())
+            androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications()
+        }
+        compose.mainClock.advanceTimeBy(500)
+        compose.runOnIdle { org.junit.Assert.assertEquals(listOf(5L), applied) }
     }
 
     @Config(qualifiers = "w411dp-h891dp-xxhdpi")
-    @Test fun pendingDayRequestDoesNotUndoAUserSwipeOnRefreshChange() {
+    @Test fun aWaitingRequestDoesNotUndoAUserSwipe() {
         val loaded = sampleState()
-        val state = androidx.compose.runtime.mutableStateOf(loaded.copy(places = loaded.places.mapIndexed { i, pw -> if (i == 1) pw.copy(snapshot = null) else pw }))
-        val shown = mutableListOf<Long>()
+        val state = androidx.compose.runtime.mutableStateOf(loaded.copy(navigation = Navigation(7, 2, null, done = false)))
         compose.setContent {
-            AmekiTheme(dynamicColor = false) {
-                HomeScreen(state.value, 2, { shown += it }, {}, {}, {}, {}, requestId = 21,
-                    requestedDay = loaded.places[0].snapshot!!.daily.first().date.toEpochDay())
-            }
+            AmekiTheme(dynamicColor = false) { HomeScreen(state.value, 1, {}, {}, {}, {}, {}, requestPending = true) }
         }
         compose.mainClock.advanceTimeBy(500)
-        compose.waitUntil { compose.mainClock.advanceTimeByFrame(); shown.lastOrNull() == 2L }
+        compose.onNodeWithText("Milano").assertIsDisplayed()
         compose.onRoot().performTouchInput { swipeRight() }
         compose.mainClock.advanceTimeBy(1_000)
-        compose.waitUntil { compose.mainClock.advanceTimeByFrame(); shown.lastOrNull() == 1L }
         compose.runOnIdle {
-            state.value = state.value.copy(refreshing = setOf(1, 2))
+            state.value = state.value.copy(refreshing = setOf(2))
             androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications()
         }
         compose.mainClock.advanceTimeBy(500)
-        compose.runOnIdle { org.junit.Assert.assertEquals(1L, shown.lastOrNull()) }
-    }
-
-    @Config(qualifiers = "w411dp-h891dp-xxhdpi")
-    @Test fun unavailableDayRequestIsConsumedAndDoesNotReplay() {
-        val state = androidx.compose.runtime.mutableStateOf(sampleState())
-        var applied = 0
-        val yesterday = state.value.places.first().snapshot!!.daily.first().date.minusDays(1).toEpochDay()
-        compose.setContent {
-            AmekiTheme(dynamicColor = false) {
-                HomeScreen(state.value, 1, {}, {}, {}, {}, {}, requestId = 9,
-                    requestedDay = yesterday, onRequestApplied = { applied++ })
-            }
-        }
-        compose.mainClock.advanceTimeBy(500)
-        compose.waitUntil { compose.mainClock.advanceTimeByFrame(); applied == 1 }
-        compose.runOnIdle {
-            state.value = state.value.copy(places = state.value.places.reversed())
-            androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications()
-        }
-        compose.mainClock.advanceTimeBy(500)
-        compose.runOnIdle { org.junit.Assert.assertEquals(1, applied) }
-        compose.onNodeWithContentDescription("Places").assertIsDisplayed()
+        compose.onNodeWithText("Roma").assertIsDisplayed()
     }
 
     @Config(qualifiers = "w411dp-h891dp-xxhdpi")
     @Test fun invalidatedDayReturnsToHomeNavigation() {
-        val state = androidx.compose.runtime.mutableStateOf(sampleState())
-        val today = state.value.places.first().snapshot!!.daily.first().date.toEpochDay()
+        val loaded = sampleState()
+        val today = loaded.places.first().snapshot!!.daily.first().date
+        val state = androidx.compose.runtime.mutableStateOf(loaded.copy(navigation = Navigation(10, 1, DayTarget(today), done = true)))
         var applied = false
         compose.setContent {
             AmekiTheme(dynamicColor = false) {
-                HomeScreen(state.value, 1, {}, {}, {}, {}, {}, requestId = 10,
-                    requestedDay = today, onRequestApplied = { applied = true })
+                HomeScreen(state.value, 1, {}, {}, {}, {}, {}, onNavigationApplied = { applied = true })
             }
         }
-        compose.mainClock.advanceTimeBy(500)
         compose.waitUntil { compose.mainClock.advanceTimeByFrame(); applied }
+        compose.onNodeWithContentDescription("Back").assertIsDisplayed()
         compose.runOnIdle {
-            state.value = state.value.copy(places = state.value.places.map { it.copy(snapshot = null) })
+            state.value = state.value.copy(navigation = null, places = state.value.places.map { it.copy(snapshot = null) })
             androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications()
         }
         compose.mainClock.advanceTimeBy(500)
@@ -236,7 +186,7 @@ class HomeScreenshotTest {
         compose.setContent {
             AmekiTheme(themeMode = ThemeMode.DARK, dynamicColor = false) {
                 androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.surface)) {
-                    DayPage(state.places.first(), state, DayTarget(1), {}, {}, {})
+                    DayPage(state.places.first(), state, DayTarget(state.places.first().snapshot!!.daily[1].date), {}, {}, {})
                 }
             }
         }
@@ -251,7 +201,7 @@ class HomeScreenshotTest {
         var requested = false
         compose.setContent {
             AmekiTheme(dynamicColor = false) {
-                DayPage(base.places.first().copy(hoursOnDemand = true), base, DayTarget(7), {}, { requested = true }, {})
+                DayPage(base.places.first().copy(hoursOnDemand = true), base, DayTarget(base.places.first().snapshot!!.daily[7].date), {}, { requested = true }, {})
             }
         }
         compose.mainClock.advanceTimeByFrame()
@@ -274,7 +224,7 @@ class HomeScreenshotTest {
         compose.setContent {
             AmekiTheme(themeMode = ThemeMode.DARK, dynamicColor = false) {
                 androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.surface)) {
-                    DayPage(state.value.places.first(), state.value, DayTarget(3), {}, {}, {})
+                    DayPage(state.value.places.first(), state.value, DayTarget(day.date), {}, {}, {})
                 }
             }
         }
@@ -311,7 +261,7 @@ class HomeScreenshotTest {
         val state = base.copy(places = listOf(place.copy(snapshot = snapshot.copy(hourly = listOf(snapshot.hourly.first().copy(time = time))))))
         compose.setContent {
             AmekiTheme(themeMode = ThemeMode.DARK, dynamicColor = false) {
-                DayPage(state.places.first(), state, DayTarget(3), {}, {}, {})
+                DayPage(state.places.first(), state, DayTarget(snapshot.daily[3].date), {}, {}, {})
             }
         }
         compose.mainClock.advanceTimeBy(500)
@@ -327,7 +277,7 @@ class HomeScreenshotTest {
         compose.setContent {
             AmekiTheme(themeMode = ThemeMode.DARK, dynamicColor = false) {
                 androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.surface)) {
-                    DayPage(state.places.first().copy(hoursOnDemand = true), state, DayTarget(5), {}, {}, {})
+                    DayPage(state.places.first().copy(hoursOnDemand = true), state, DayTarget(state.places.first().snapshot!!.daily[5].date), {}, {}, {})
                 }
             }
         }

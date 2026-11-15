@@ -10,14 +10,14 @@ import dev.antomanc.ameki.core.data.settings.SettingsRepository
 import dev.antomanc.ameki.core.data.sync.PlaceWeather
 import dev.antomanc.ameki.core.data.sync.SyncError
 import dev.antomanc.ameki.core.model.AppSettings
-import dev.antomanc.ameki.core.model.WeatherSnapshot
+import dev.antomanc.ameki.core.ui.AppRequest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import java.time.Duration
 import java.time.Instant
-import java.util.concurrent.atomic.AtomicLong
+import java.time.LocalDate
 
 enum class WidgetStyle { DYNAMIC, DARK, TRANSPARENT }
 
@@ -93,9 +93,6 @@ internal fun widgetState(data: WidgetData, need: WidgetNeed, now: Instant = Inst
     }
 }
 
-/** True when [snapshot] still describes "now"; an old current reading must not be labelled Now. */
-internal fun WeatherSnapshot.currentFresh(now: Instant = Instant.now()): Boolean = currentIsFresh(now)
-
 internal object WidgetRepository : KoinComponent {
     /** Live data for one widget: Room emits whenever the cache, places, settings or config change. */
     fun observe(appWidgetId: Int): kotlinx.coroutines.flow.Flow<WidgetData> = kotlinx.coroutines.flow.combine(
@@ -126,31 +123,17 @@ internal object WidgetRepository : KoinComponent {
     }
 }
 
-/** Extras read by MainActivity. Keep these names: shared contract with the app layer. */
-internal object WidgetExtras {
-    const val PLACE_ID = "dev.antomanc.ameki.PLACE_ID"
-    const val DAY_EPOCH_DAY = "dev.antomanc.ameki.DAY_EPOCH_DAY"
-    const val HOUR_EPOCH_SECOND = "dev.antomanc.ameki.HOUR_EPOCH_SECOND"
-    const val REQUEST_ID = "dev.antomanc.ameki.REQUEST_ID"
-}
-
-private val nextRequestId = AtomicLong(System.nanoTime())
-
 /** Opens the app on [placeId] (or its last place). The widget module can't see MainActivity, so it asks the launcher intent. */
 internal fun openAppIntent(context: Context, placeId: Long?): Intent =
     (context.packageManager.getLaunchIntentForPackage(context.packageName) ?: Intent()).apply {
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
-        if (placeId != null) putExtra(WidgetExtras.PLACE_ID, placeId)
+        if (placeId != null) AppRequest.Show(placeId).writeTo(this)
     }
 
 /** Tap on an hour or a day: the app opens that exact detail, even when already on another screen. */
-internal fun detailIntent(context: Context, placeId: Long?, dayEpochDay: Long, hourEpochSecond: Long? = null): Intent =
-    openAppIntent(context, placeId).apply {
-        putExtra(WidgetExtras.DAY_EPOCH_DAY, dayEpochDay)
-        if (hourEpochSecond != null) putExtra(WidgetExtras.HOUR_EPOCH_SECOND, hourEpochSecond)
-        putExtra(WidgetExtras.REQUEST_ID, nextRequestId.incrementAndGet())
-    }
+internal fun detailIntent(context: Context, placeId: Long, day: LocalDate, hour: Instant? = null): Intent =
+    openAppIntent(context, null).also { AppRequest.Show(placeId, day, hour).writeTo(it) }
 
 /** Opens the places list (widget config "add a place"), without inventing a second navigation path. */
 internal fun openPlacesIntent(context: Context): Intent =
-    openAppIntent(context, null).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra("dev.antomanc.ameki.OPEN_PLACES", true)
+    openAppIntent(context, null).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP).also { AppRequest.OpenPlaces.writeTo(it) }

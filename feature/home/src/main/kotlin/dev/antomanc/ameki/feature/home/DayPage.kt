@@ -76,9 +76,6 @@ import java.time.Instant
 import kotlin.math.roundToInt
 import dev.antomanc.ameki.core.ui.R as UiR
 
-/** Which day page is open, and optionally the hour to scroll to. */
-data class DayTarget(val day: Int, val hour: Long? = null)
-
 /**
  * One full page per day, swiped sideways: no sheet to fight with while scrolling the hours.
  * Each page shows its [DayHours] status; a page whose hours are still needed asks for them.
@@ -89,7 +86,7 @@ internal fun DayPage(
     pw: PlaceWeather,
     state: HomeUiState,
     target: DayTarget,
-    onDayChange: (Int) -> Unit,
+    onDayChange: (java.time.LocalDate) -> Unit,
     onNeedHours: (java.time.LocalDate) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -99,17 +96,17 @@ internal fun DayPage(
     val context = LocalContext.current
     val fmt = remember(state.settings.timeFormat) { TimeFormatter(context, state.settings.timeFormat) }
     val units = state.settings.units
-    val pager = rememberPagerState(initialPage = target.day.coerceIn(0, s.daily.lastIndex)) { s.daily.size }
+    val targetPage = s.daily.indexOfFirst { it.date == target.date }.coerceAtLeast(0)
+    val pager = rememberPagerState(initialPage = targetPage) { s.daily.size }
     val chips = rememberLazyListState()
     val scope = rememberCoroutineScope()
     BackHandler(onBack = onBack)
-    LaunchedEffect(target.day) {
-        val page = target.day.coerceIn(0, s.daily.lastIndex)
-        if (pager.currentPage != page) pager.scrollToPage(page)
+    LaunchedEffect(targetPage) {
+        if (pager.currentPage != targetPage) pager.scrollToPage(targetPage)
     }
     val currentDay = s.daily.getOrNull(pager.currentPage)
     val currentStatus = currentDay?.let { pw.dayHours(it.date) }
-    LaunchedEffect(pager.currentPage) { onDayChange(pager.currentPage) }
+    LaunchedEffect(currentDay?.date) { currentDay?.let { onDayChange(it.date) } }
     LaunchedEffect(pw.place.id, currentDay?.date, currentStatus) {
         if (currentDay != null && currentStatus == DayHours.NEEDED) onNeedHours(currentDay.date)
     }
@@ -144,7 +141,7 @@ internal fun DayPage(
                 val status = pw.dayHours(day.date)
                 DayContent(
                     s, page, units, fmt,
-                    focusHour = target.hour.takeIf { page == target.day },
+                    focusHour = target.hour.takeIf { day.date == target.date },
                     loading = status == DayHours.LOADING || status == DayHours.NEEDED,
                     failed = status == DayHours.FAILED,
                     onRetry = { onNeedHours(day.date) },
@@ -155,7 +152,7 @@ internal fun DayPage(
 }
 
 @Composable
-private fun DayContent(s: WeatherSnapshot, index: Int, units: Units, fmt: TimeFormatter, focusHour: Long?, loading: Boolean, failed: Boolean, onRetry: () -> Unit) {
+private fun DayContent(s: WeatherSnapshot, index: Int, units: Units, fmt: TimeFormatter, focusHour: Instant?, loading: Boolean, failed: Boolean, onRetry: () -> Unit) {
     val day = s.daily[index]
     val now = Instant.now()
     val dayHours = s.hourly.filter { it.time.atZone(s.timeZone).toLocalDate() == day.date }
@@ -163,7 +160,7 @@ private fun DayContent(s: WeatherSnapshot, index: Int, units: Units, fmt: TimeFo
         .let { list -> if (day.date == java.time.LocalDate.now(s.timeZone)) list.filter { it.time.plusSeconds(3600) > now } else list }
     val list = rememberLazyListState()
     LaunchedEffect(focusHour, hours.size) {
-        val i = hours.indexOfFirst { it.time.epochSecond == focusHour }
+        val i = hours.indexOfFirst { it.time == focusHour }
         if (i >= 0) list.scrollToItem(i + 4)
     }
     LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 32.dp)) {
@@ -181,7 +178,7 @@ private fun DayContent(s: WeatherSnapshot, index: Int, units: Units, fmt: TimeFo
             } else hours.map { it.time }
             items(times, key = { it.epochSecond }) { time ->
                 Crossfade(targetState = byTime[time], modifier = Modifier.testTag("day-hour-${time.epochSecond}"), animationSpec = tween(220), label = "hour-data") { hour ->
-                    HourRow(hour, time, s, units, fmt, highlighted = time.epochSecond == focusHour)
+                    HourRow(hour, time, s, units, fmt, highlighted = time == focusHour)
                 }
             }
         }

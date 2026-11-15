@@ -88,14 +88,14 @@ abstract class AmekiWidget(sizes: Set<DpSize>) : GlanceAppWidget() {
             if (!small) when (need) {
                 WidgetNeed.HOURLY -> snapshot.hoursFrom(now).take(count).forEach { hour ->
                     val label = "${fmt.hour(hour.time, snapshot.timeZone)} · ${units.temp(hour.temperature)}"
-                    Box(GlanceModifier.fillMaxWidth().height(48.dp).clickable(actionStartActivity(detailIntent(context, weather.place.id, hour.time.atZone(snapshot.timeZone).toLocalDate().toEpochDay(), hour.time.epochSecond)))) {
+                    Box(GlanceModifier.fillMaxWidth().height(48.dp).clickable(actionStartActivity(detailIntent(context, weather.place.id, hour.time.atZone(snapshot.timeZone).toLocalDate(), hour.time)))) {
                         Text(label, style = textStyle(palette.onSurface, 12.sp), maxLines = 1)
                     }
                 }
                 WidgetNeed.RAIN -> Text(rainSummary(context, snapshot, now, fmt), style = textStyle(palette.onSurface, if (dense) 10.sp else 12.sp), maxLines = 2)
                 WidgetNeed.DAILY -> snapshot.daily.filter { !it.date.isBefore(java.time.LocalDate.now(snapshot.timeZone)) }.take(count).forEach { day ->
                     val label = "${fmt.weekdayShort(day.date)} · ${units.temp(day.temperatureMin)} / ${units.temp(day.temperatureMax)}"
-                    Box(GlanceModifier.fillMaxWidth().height(48.dp).clickable(actionStartActivity(detailIntent(context, weather.place.id, day.date.toEpochDay())))) {
+                    Box(GlanceModifier.fillMaxWidth().height(48.dp).clickable(actionStartActivity(detailIntent(context, weather.place.id, day.date)))) {
                         Text(label, style = textStyle(palette.onSurface, 12.sp), maxLines = 1)
                     }
                 }

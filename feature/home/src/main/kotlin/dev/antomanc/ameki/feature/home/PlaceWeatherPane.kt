@@ -94,7 +94,7 @@ internal fun PlaceWeatherPane(
             if (snapshot.hoursFrom(now).isNotEmpty()) add { HourlyCharts(snapshot.hoursFrom(now).take(24), snapshot, units, fmt) }
         }
         val secondary: List<@Composable () -> Unit> = buildList {
-            if (snapshot.daily.isNotEmpty()) add { DailyCard(snapshot.daily, snapshot, units, fmt) { onOpenDay(DayTarget(it)) } }
+            if (snapshot.daily.isNotEmpty()) add { DailyCard(snapshot.daily, snapshot, units, fmt) { onOpenDay(DayTarget(snapshot.daily[it].date)) } }
             add { DetailGrid(snapshot, units, fmt, state.capabilities) }
             add { Attribution(snapshot, fmt) }
         }
@@ -251,8 +251,7 @@ private fun HourlyCard(hours: List<HourlyForecast>, s: WeatherSnapshot, units: U
                     }
                     Column(
                         Modifier.width(60.dp * fontScale).heightIn(min = HourItemHeight * fontScale).clip(MaterialTheme.shapes.small).clickable {
-                            val dayIndex = s.daily.indexOfFirst { it.date == date }
-                            if (dayIndex >= 0) onOpenDay(DayTarget(dayIndex, h.time.epochSecond))
+                            if (s.daily.any { it.date == date }) onOpenDay(DayTarget(date, h.time))
                         },
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
