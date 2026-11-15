@@ -123,7 +123,7 @@ internal fun HourlyCharts(hours: List<HourlyForecast>, s: WeatherSnapshot, units
 @Composable
 internal fun DetailGrid(s: WeatherSnapshot, units: Units, fmt: TimeFormatter, caps: Set<Capability>) {
     val c = s.current
-    val today = s.today
+    val today = s.today(java.time.Instant.now())
     val tiles = buildList<@Composable (Modifier) -> Unit> {
         c?.windSpeed?.let { speed -> add { m -> WindTile(speed, c.windGust, c.windDirection, units, m) } }
         c?.humidity?.let { h -> add { m -> SimpleTile(stringResource(R.string.humidity), "$h%", c.dewPoint?.let { stringResource(R.string.dew_point, units.temp(it)) }, m) } }

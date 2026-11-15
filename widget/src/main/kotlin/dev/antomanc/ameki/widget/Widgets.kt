@@ -58,7 +58,7 @@ private val S5x5 = DpSize(320.dp, 320.dp)
 private fun Dial(data: WidgetData, palette: WidgetPalette, size: Dp, content: @Composable () -> Unit) {
     val context = LocalContext.current
     val c = data.weather?.snapshot?.current ?: return
-    val today = data.weather.snapshot?.today
+    val today = data.weather.snapshot?.today(Instant.now())
     val low = today?.temperatureMin ?: c.temperature
     val high = today?.temperatureMax ?: c.temperature
     val night = palette.dark ?: context.isNight()
@@ -140,7 +140,7 @@ class CompactWidget : AmekiWidget(setOf(S2x1, S2x2, S3x2)) {
                     modifier = GlanceModifier.fillMaxWidth().semantics { contentDescription = data.weather.place.name },
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    HighLow(s.today, units, palette, 9)
+                    HighLow(s.today(Instant.now()), units, palette, 9)
                     Spacer(GlanceModifier.width(6.dp))
                     Freshness(data, palette, fmt, compact = true)
                 }
@@ -156,7 +156,7 @@ class CompactWidget : AmekiWidget(setOf(S2x1, S2x2, S3x2)) {
                 Column {
                     Text(data.weather.place.name, style = textStyle(palette.onSurface, 14.sp, FontWeight.Medium), maxLines = 1)
                     Text(c.conditionText ?: context.getString(c.condition.label(c.isDaytime)), style = textStyle(palette.onSurfaceVariant, 12.sp), maxLines = 2)
-                    HighLow(s.today, units, palette, 12)
+                    HighLow(s.today(Instant.now()), units, palette, 12)
                     Spacer(GlanceModifier.height(2.dp))
                     Freshness(data, palette, fmt)
                 }

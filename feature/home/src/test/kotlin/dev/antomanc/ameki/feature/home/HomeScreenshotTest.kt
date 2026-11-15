@@ -251,10 +251,7 @@ class HomeScreenshotTest {
         var requested = false
         compose.setContent {
             AmekiTheme(dynamicColor = false) {
-                DayPage(base.places.first(), base, DayTarget(7), {}, {
-                    requested = true
-                    kotlinx.coroutines.awaitCancellation()
-                }, {})
+                DayPage(base.places.first().copy(hoursOnDemand = true), base, DayTarget(7), {}, { requested = true }, {})
             }
         }
         compose.mainClock.advanceTimeByFrame()
@@ -265,18 +262,19 @@ class HomeScreenshotTest {
     @Test fun dayLoadingReservesTheChartBeforeHoursArrive() {
         val sample = sampleState()
         val base = sample.copy(settings = sample.settings.copy(timeFormat = dev.antomanc.ameki.core.model.TimeFormat.H12))
-        val response = kotlinx.coroutines.CompletableDeferred<Unit>()
-        val original = base.places.first()
+        val original = base.places.first().copy(hoursOnDemand = true)
         val snapshot = original.snapshot!!
         val day = snapshot.daily[3]
         val state = androidx.compose.runtime.mutableStateOf(base.copy(
-            places = listOf(original.copy(snapshot = snapshot.copy(hourly = emptyList()))),
-            loadingHours = setOf(original.place.id),
+            places = listOf(original.copy(
+                snapshot = snapshot.copy(hourly = emptyList()),
+                hourRequests = dev.antomanc.ameki.core.data.sync.HourRequests(loadingUntil = Instant.MAX),
+            )),
         ))
         compose.setContent {
             AmekiTheme(themeMode = ThemeMode.DARK, dynamicColor = false) {
                 androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.surface)) {
-                    DayPage(state.value.places.first(), state.value, DayTarget(3), {}, { response.await() }, {})
+                    DayPage(state.value.places.first(), state.value, DayTarget(3), {}, {}, {})
                 }
             }
         }
@@ -293,7 +291,6 @@ class HomeScreenshotTest {
                 hour.copy(time = day.date.atStartOfDay(snapshot.timeZone).plusHours(index.toLong()).toInstant())
             }
             state.value = base.copy(places = listOf(original.copy(snapshot = snapshot.copy(hourly = hours))))
-            response.complete(Unit)
         }
         compose.mainClock.advanceTimeBy(500)
         val after = visibleChartBounds()
@@ -305,11 +302,13 @@ class HomeScreenshotTest {
     @Config(qualifiers = "w411dp-h1100dp-night-xxhdpi")
     @Test fun failedDayRequestKeepsItsPartialHoursAndOffersRetry() {
         val base = sampleState()
-        val place = base.places.first()
+        val place = base.places.first().copy(
+            hoursOnDemand = true,
+            hourRequests = dev.antomanc.ameki.core.data.sync.HourRequests(failedUntil = Instant.MAX, error = dev.antomanc.ameki.core.data.sync.SyncError.NETWORK),
+        )
         val snapshot = place.snapshot!!
         val time = snapshot.daily[3].date.atStartOfDay(snapshot.timeZone).toInstant()
-        val state = base.copy(places = listOf(place.copy(snapshot = snapshot.copy(hourly = listOf(snapshot.hourly.first().copy(time = time))))),
-            hoursError = dev.antomanc.ameki.core.data.sync.SyncError.NETWORK)
+        val state = base.copy(places = listOf(place.copy(snapshot = snapshot.copy(hourly = listOf(snapshot.hourly.first().copy(time = time))))))
         compose.setContent {
             AmekiTheme(themeMode = ThemeMode.DARK, dynamicColor = false) {
                 DayPage(state.places.first(), state, DayTarget(3), {}, {}, {})
@@ -317,7 +316,8 @@ class HomeScreenshotTest {
         }
         compose.mainClock.advanceTimeBy(500)
         compose.onNodeWithTag("day-hour-${time.epochSecond}").assertIsDisplayed()
-        compose.onNodeWithText("Try again").assertIsDisplayed()
+        org.junit.Assert.assertEquals(1, compose.onAllNodesWithText("Try again")
+            .fetchSemanticsNodes().count { it.boundsInRoot.overlaps(compose.onRoot().fetchSemanticsNode().boundsInRoot) })
     }
 
     @Config(qualifiers = "w411dp-h891dp-night-xxhdpi")
@@ -327,7 +327,7 @@ class HomeScreenshotTest {
         compose.setContent {
             AmekiTheme(themeMode = ThemeMode.DARK, dynamicColor = false) {
                 androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.surface)) {
-                    DayPage(state.places.first(), state, DayTarget(5), {}, {}, {})
+                    DayPage(state.places.first().copy(hoursOnDemand = true), state, DayTarget(5), {}, {}, {})
                 }
             }
         }

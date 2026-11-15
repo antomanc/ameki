@@ -112,6 +112,20 @@ data class NowcastSlot(
 )
 
 /**
+ * Hours past the regular refresh window, fetched on demand for a day page. They keep their own
+ * fetch time: a later regular refresh replaces the hours it covers but must never extend how
+ * long the older extra hours may be kept.
+ */
+@Serializable
+data class HourlyExtension(
+    @Serializable(InstantSerializer::class) val fetchedAt: Instant,
+    /** End of the range asked for: up to here the hours are as complete as the source allows. */
+    @Serializable(InstantSerializer::class) val requestedUntil: Instant,
+    /** First hour that came with [fetchedAt]; null when every hour shares the hourly part's fetch. */
+    @Serializable(InstantSerializer::class) val from: Instant? = null,
+)
+
+/**
  * Everything we know about one place from one source. Sections the source does not
  * support (see [Capability]) stay empty and the UI hides them.
  */
@@ -126,6 +140,7 @@ data class WeatherSnapshot(
     val nowcast: List<NowcastSlot> = emptyList(),
     /** When each part was fetched. A part missing here was never fetched or has expired. */
     val fetchedAt: Map<DataPart, @Serializable(InstantSerializer::class) Instant> = emptyMap(),
+    val hourlyExtension: HourlyExtension? = null,
 ) {
     /**
      * When the conditions on screen were fetched. Parts refresh on different schedules (daily
@@ -148,11 +163,17 @@ data class WeatherSnapshot(
         return Duration.between(c.time, now).abs() < RefreshPolicy.weatherFreshness(source, DataPart.CURRENT)
     }
 
-    val today: DailyForecast? get() = daily.firstOrNull { it.date == java.time.LocalDate.now(timeZone) }
+    /** Today's row in the place's own time zone. */
+    fun today(now: Instant): DailyForecast? = daily.firstOrNull { it.date == now.atZone(timeZone).toLocalDate() }
 
     /** Upcoming hours, starting with the current one. */
     fun hoursFrom(now: Instant): List<HourlyForecast> =
         hourly.filter { it.time.plusSeconds(3600) > now }
+
+    /** True when the hours reach [until], or the source was already asked for them and gave what it has. */
+    fun hoursCover(until: Instant): Boolean =
+        hourly.lastOrNull()?.time?.let { !it.isBefore(until.minusSeconds(3600)) } == true ||
+            hourlyExtension?.requestedUntil?.let { !it.isBefore(until) } == true
 
     /** Keep only the parts listed, as if the others had never been fetched. */
     fun retain(parts: Set<DataPart>): WeatherSnapshot = copy(
@@ -162,21 +183,79 @@ data class WeatherSnapshot(
         alerts = if (DataPart.ALERTS in parts) alerts else emptyList(),
         nowcast = if (DataPart.NOWCAST in parts) nowcast else emptyList(),
         fetchedAt = fetchedAt.filterKeys { it in parts },
+        hourlyExtension = hourlyExtension.takeIf { DataPart.HOURLY in parts },
     )
 
-    /** Overlay the parts present in [newer] on top of this snapshot. */
+    /**
+     * What may still be kept at [now]: parts and extra hours past their retention limit are
+     * gone (Google's caching terms), or null when nothing is left.
+     */
+    fun retainedAt(now: Instant): WeatherSnapshot? {
+        val keep = fetchedAt.filter { (part, at) -> Duration.between(at, now) < RefreshPolicy.maxAge(source, part) }.keys
+        if (keep.isEmpty()) return null
+        val kept = retain(keep)
+        val extension = kept.hourlyExtension ?: return kept
+        if (Duration.between(extension.fetchedAt, now) < RefreshPolicy.maxAge(source, DataPart.HOURLY)) return kept
+        val from = extension.from
+        return kept.copy(hourly = if (from == null) kept.hourly else kept.hourly.filter { it.time < from }, hourlyExtension = null)
+    }
+
+    /**
+     * The next moment after [now] when what this snapshot may show changes: a part or the extra
+     * hours expire, a part stops being fresh, or the place's day ends. Null once nothing is left.
+     */
+    fun nextChange(now: Instant): Instant? {
+        val alive = fetchedAt.filter { (part, at) -> at.plus(RefreshPolicy.maxAge(source, part)).isAfter(now) }
+        if (alive.isEmpty()) return null
+        return buildList {
+            alive.forEach { (part, at) ->
+                add(at.plus(RefreshPolicy.maxAge(source, part)))
+                add(at.plus(RefreshPolicy.weatherFreshness(source, part)))
+                if (part == DataPart.CURRENT) current?.let { add(it.time.plus(RefreshPolicy.weatherFreshness(source, part))) }
+            }
+            hourlyExtension?.let { add(it.fetchedAt.plus(RefreshPolicy.maxAge(source, DataPart.HOURLY))) }
+            add(now.atZone(timeZone).toLocalDate().plusDays(1).atStartOfDay(timeZone).toInstant())
+        }.filter { it.isAfter(now) }.minOrNull()
+    }
+
+    /**
+     * Overlay the parts present in [newer] on top of this snapshot. A regular hourly refresh
+     * keeps extra hours past its own range, with their original fetch time.
+     */
     fun mergedWith(newer: WeatherSnapshot): WeatherSnapshot {
         if (newer.source != source) return newer
         val parts = newer.fetchedAt.keys
+        val (hours, extension) = if (DataPart.HOURLY in parts) mergeHours(newer) else hourly to hourlyExtension
         return WeatherSnapshot(
             source = source,
             timeZone = newer.timeZone,
             current = if (DataPart.CURRENT in parts) newer.current else current,
-            hourly = if (DataPart.HOURLY in parts) newer.hourly else hourly,
+            hourly = hours,
             daily = if (DataPart.DAILY in parts) newer.daily else daily,
             alerts = if (DataPart.ALERTS in parts) newer.alerts else alerts,
             nowcast = if (DataPart.NOWCAST in parts) newer.nowcast else nowcast,
             fetchedAt = fetchedAt + newer.fetchedAt,
+            hourlyExtension = extension,
         )
+    }
+
+    private fun mergeHours(newer: WeatherSnapshot): Pair<List<HourlyForecast>, HourlyExtension?> {
+        val newEnd = newer.hourly.lastOrNull()?.time
+        if (newer.hourlyExtension != null || newEnd == null) return newer.hourly to newer.hourlyExtension
+        val tail = hourly.filter { it.time > newEnd }
+        val oldExtension = hourlyExtension
+        val tailFetchedAt = oldExtension?.fetchedAt ?: fetchedAt[DataPart.HOURLY]
+        val extension = when {
+            tailFetchedAt == null -> null
+            tail.isNotEmpty() -> HourlyExtension(
+                fetchedAt = tailFetchedAt,
+                requestedUntil = oldExtension?.requestedUntil ?: tail.last().time.plusSeconds(3600),
+                from = tail.first().time,
+            )
+            // Asked for more than the source has: remember the request, not hours that don't exist.
+            oldExtension != null && oldExtension.requestedUntil > newEnd.plusSeconds(3600) -> oldExtension.copy(from = null)
+            else -> null
+        }
+        return (newer.hourly + tail) to extension
     }
 }

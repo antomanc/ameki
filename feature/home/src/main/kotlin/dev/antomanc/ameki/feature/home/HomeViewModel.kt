@@ -14,10 +14,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.launch
 
 data class HomeUiState(
@@ -26,9 +22,6 @@ data class HomeUiState(
     val settings: AppSettings = AppSettings(),
     val capabilities: Set<Capability> = emptySet(),
     val refreshing: Set<Long> = emptySet(),
-    /** Places whose extra hours are being fetched for a day page. */
-    val loadingHours: Set<Long> = emptySet(),
-    val hoursError: dev.antomanc.ameki.core.data.sync.SyncError? = null,
 )
 
 class HomeViewModel(
@@ -38,18 +31,14 @@ class HomeViewModel(
     private val sources: SourceRegistry,
 ) : ViewModel() {
     private val refreshing = MutableStateFlow<Set<Long>>(emptySet())
-    private val loadingHours = MutableStateFlow<Set<Long>>(emptySet())
-    private val hoursError = MutableStateFlow<dev.antomanc.ameki.core.data.sync.SyncError?>(null)
 
-    val state: StateFlow<HomeUiState> = combine(weather.all, settings.settings, refreshing, loadingHours, hoursError) { list, s, r, lh, he ->
+    val state: StateFlow<HomeUiState> = combine(weather.all, settings.settings, refreshing) { list, s, r ->
         HomeUiState(
             loading = false,
             places = list,
             settings = s,
             capabilities = sources[s.source].capabilities,
             refreshing = r,
-            loadingHours = lh,
-            hoursError = he,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
@@ -60,38 +49,9 @@ class HomeViewModel(
         refresh(id, force = false)
     }
 
-    /** A day page needs hours up to [until]: fetch the missing ones (Google only; Open-Meteo has them). */
-    private val pendingHours = mutableMapOf<Long, java.time.Instant>()
-
-    private val hourJobs = mutableMapOf<Long, Job>()
-
-    suspend fun ensureHours(id: Long, until: java.time.Instant) {
-        pendingHours[id] = maxOf(pendingHours[id] ?: until, until)
-        val job = hourJobs[id]?.takeIf { it.isActive } ?: viewModelScope.launch(start = CoroutineStart.LAZY) {
-            try {
-                hoursError.value = null
-                while (true) {
-                    val target = pendingHours.remove(id) ?: break
-                    hoursError.value = weather.ensureHourlyUntil(id, target)
-                    // Keep the placeholder until Room's result has reached the displayed state.
-                    val latest = weather.get(id)?.snapshot ?: continue
-                    val lastHour = latest.hourly.lastOrNull()?.time
-                    if (lastHour != null) withTimeoutOrNull(5_000) { state.first { ui ->
-                        val visible = ui.places.firstOrNull { it.place.id == id }
-                        ui.settings.source != latest.source || visible == null || visible.snapshot?.daily.isNullOrEmpty() ||
-                            visible.snapshot?.hourly?.lastOrNull()?.time?.let { it >= lastHour } == true
-                    } }
-                }
-            } finally {
-                loadingHours.value -= id
-                if (hourJobs[id] === coroutineContext[Job]) hourJobs.remove(id)
-            }
-        }.also {
-            hourJobs[id] = it
-            loadingHours.value += id
-            it.start()
-        }
-        job.join()
+    /** A day page is showing [date]: fetch its missing hours; progress shows in [PlaceWeather.dayHours]. */
+    fun loadDayHours(id: Long, date: java.time.LocalDate) {
+        viewModelScope.launch { weather.loadDayHours(id, date) }
     }
 
     fun refresh(id: Long, force: Boolean = true) {

@@ -4,12 +4,14 @@ import dev.antomanc.ameki.core.data.db.PlaceDao
 import dev.antomanc.ameki.core.data.db.SnapshotDao
 import dev.antomanc.ameki.core.data.db.SnapshotEntity
 import dev.antomanc.ameki.core.data.settings.SettingsRepository
+import dev.antomanc.ameki.core.data.sync.HourRequests
 import dev.antomanc.ameki.core.data.sync.PlaceWeather
 import dev.antomanc.ameki.core.data.sync.SyncError
 import dev.antomanc.ameki.core.data.sync.WeatherUpdateListener
 import dev.antomanc.ameki.core.model.AppSettings
 import dev.antomanc.ameki.core.model.DataPart
 import dev.antomanc.ameki.core.model.GeoPoint
+import dev.antomanc.ameki.core.model.HourlyExtension
 import dev.antomanc.ameki.core.model.RefreshPolicy
 import dev.antomanc.ameki.core.model.SourceId
 import dev.antomanc.ameki.core.model.WeatherSnapshot
@@ -17,6 +19,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -25,6 +29,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 import java.time.Duration
 import java.time.Instant
+import java.time.LocalDate
 import java.util.Locale
 
 /**
@@ -44,26 +49,36 @@ class WeatherRepository(
     private val json = Json { ignoreUnknownKeys = true }
     private val mutex = Mutex()
 
+    /** Extra hours in flight or failed, per place. In memory: it describes this process's requests. */
+    private val hourRequests = MutableStateFlow<Map<Long, HourRequests>>(emptyMap())
+
     /** Weather for every saved place, in display order. */
     val all: Flow<List<PlaceWeather>> = combine(
-        places.places, snapshotDao.observeAll(), settings.settings, expiryTicks(),
-    ) { placeList, snapshots, s, _ ->
+        places.places, snapshotDao.observeAll(), settings.settings, expiryTicks(), hourRequests,
+    ) { placeList, snapshots, s, _, requests ->
         val byPlace = snapshots.associateBy { it.placeId }
-        placeList.map { place -> toPlaceWeather(place, byPlace[place.id], s.source) }
+        placeList.map { place -> toPlaceWeather(place, byPlace[place.id], s.source, requests[place.id]) }
     }
 
     suspend fun get(placeId: Long): PlaceWeather? {
         val place = placeDao.byId(placeId)?.toModel() ?: return null
-        return toPlaceWeather(place, snapshotDao.get(placeId), settings.current().source)
+        return toPlaceWeather(place, snapshotDao.get(placeId), settings.current().source, hourRequests.value[placeId])
     }
 
-    private fun toPlaceWeather(place: dev.antomanc.ameki.core.model.Place, e: SnapshotEntity?, source: SourceId): PlaceWeather {
+    private fun toPlaceWeather(
+        place: dev.antomanc.ameki.core.model.Place,
+        e: SnapshotEntity?,
+        source: SourceId,
+        requests: HourRequests?,
+    ): PlaceWeather {
         val snapshot = e?.let { decode(it) }?.let { valid(it, source, place.point.coarse(), e.pointOrNull()) }
         return PlaceWeather(
             place = place,
             snapshot = snapshot,
             lastAttemptAt = e?.lastAttemptAt?.let(Instant::ofEpochSecond),
             error = e?.lastError?.let { name -> SyncError.entries.firstOrNull { it.name == name } },
+            hoursOnDemand = sources.ids.contains(source) && sources[source].fetchesHoursOnDemand,
+            hourRequests = requests ?: HourRequests(),
         )
     }
 
@@ -82,11 +97,13 @@ class WeatherRepository(
     ): WeatherSnapshot? {
         if (s.source != source) return null
         if (placePoint != null && snapshotPoint != null && !placePoint.isNear(snapshotPoint)) return null
-        val now = clock()
-        val keep = s.fetchedAt.filter { (part, at) ->
-            Duration.between(at, now) < RefreshPolicy.maxAge(s.source, part)
-        }.keys
-        return s.retain(keep).takeIf { keep.isNotEmpty() }
+        return s.retainedAt(clock())
+    }
+
+    /** The stored snapshot for [placeId] that may still be used for [point]. */
+    private suspend fun stored(placeId: Long, source: SourceId, point: GeoPoint): WeatherSnapshot? {
+        val e = snapshotDao.get(placeId) ?: return null
+        return decode(e)?.let { valid(it, source, point, e.pointOrNull()) }
     }
 
     /**
@@ -99,7 +116,7 @@ class WeatherRepository(
             emit(Unit)
             while (true) {
                 val now = clock()
-                val next = entities.mapNotNull { e -> decode(e)?.let { nextExpiry(it, now) } }.minOrNull()
+                val next = entities.mapNotNull { e -> decode(e)?.nextChange(now) }.minOrNull()
                     ?: break
                 delay(Duration.between(now, next).toMillis().coerceAtLeast(1_000) + 50)
                 emit(Unit)
@@ -146,9 +163,7 @@ class WeatherRepository(
         // The point this refresh is for: a move must never mix with the previous place's data.
         val point = placeEntity.toModel().point.coarse()
         val source = sources[s.source]
-        val existingEntity = snapshotDao.get(placeId)
-        val existing = existingEntity?.let(::decode)
-            ?.let { valid(it, s.source, point, existingEntity.pointOrNull()) }
+        val existing = stored(placeId, s.source, point)
         val parts = if (force) {
             DataPart.entries.filterTo(mutableSetOf()) { it.capability in source.capabilities }
         } else {
@@ -199,25 +214,56 @@ class WeatherRepository(
     }
 
     /**
-     * Make sure hourly data reaches [until] (the end of a day the user opened). Free for
-     * sources that already return every hour; for Google it fetches only the extra pages.
-     * Returns the error, or null when the hours are there.
+     * Make sure a day page has every hour of [date]. Free for sources that return every hour on
+     * refresh; otherwise only the missing pages are fetched. Progress and failure reach the UI
+     * through [PlaceWeather.dayHours], per place.
      */
-    suspend fun ensureHourlyUntil(placeId: Long, until: Instant): SyncError? = mutex.withLock {
+    suspend fun loadDayHours(placeId: Long, date: LocalDate) {
+        val s = settings.current()
+        if (!sources[s.source].fetchesHoursOnDemand) return
+        val zone = get(placeId)?.snapshot?.timeZone ?: return
+        val until = date.plusDays(1).atStartOfDay(zone).toInstant()
+        var started = false
+        hourRequests.update { all ->
+            val r = all[placeId] ?: HourRequests()
+            if (r.loadingUntil != null && !r.loadingUntil.isBefore(until)) all
+            else {
+                started = true
+                all + (placeId to r.copy(loadingUntil = until))
+            }
+        }
+        if (!started) return
+        var error: SyncError? = null
+        try {
+            error = mutex.withLock { extendHoursLocked(placeId, until) }
+        } finally {
+            hourRequests.update { all ->
+                val r = all[placeId] ?: HourRequests()
+                val failed = if (error != null) until else r.failedUntil?.takeIf { it.isAfter(until) }
+                all + (placeId to HourRequests(
+                    // A longer request queued behind this one is still running.
+                    loadingUntil = r.loadingUntil?.takeIf { it.isAfter(until) },
+                    failedUntil = failed,
+                    error = if (failed == null) null else error ?: r.error,
+                ))
+            }
+        }
+    }
+
+    private suspend fun extendHoursLocked(placeId: Long, until: Instant): SyncError? {
         val s = settings.current()
         val source = sources[s.source]
-        val place = placeDao.byId(placeId) ?: return@withLock null
+        val place = placeDao.byId(placeId) ?: return null
         val point = place.toModel().point.coarse()
-        val existingEntity = snapshotDao.get(placeId)
-        val existing = existingEntity?.let(::decode)
-            ?.let { valid(it, s.source, point, existingEntity.pointOrNull()) }
-        val lastHour = existing?.hourly?.lastOrNull()?.time
-        if (lastHour != null && !lastHour.isBefore(until.minusSeconds(3600))) return@withLock null
+        val existing = stored(placeId, s.source, point)
+        if (existing?.hoursCover(until) == true) return null
         val hours = (Duration.between(clock(), until).toHours() + 2).toInt()
-        try {
-            val extra = source.fetchHours(point, language(s), hours) ?: return@withLock null
-            val merged = existing?.mergedWith(extra) ?: extra
-            record(placeId, s, merged, null, point)
+        return try {
+            val fetched = source.fetchHours(point, language(s), hours)
+            val extra = fetched.copy(
+                hourlyExtension = HourlyExtension(fetchedAt = fetched.fetchedAt[DataPart.HOURLY] ?: clock(), requestedUntil = until),
+            )
+            record(placeId, s, existing?.mergedWith(extra) ?: extra, null, point)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -253,7 +299,7 @@ class WeatherRepository(
     private suspend fun notifyListeners() {
         listeners().forEach { runCatching { it.onWeatherUpdated() } }
         val now = clock()
-        onNextExpiry(snapshotDao.all().mapNotNull { decode(it)?.let { snapshot -> nextExpiry(snapshot, now) } }.minOrNull())
+        onNextExpiry(snapshotDao.all().mapNotNull { decode(it)?.nextChange(now) }.minOrNull())
     }
 
     private fun language(s: AppSettings): String = s.dataLanguage ?: Locale.getDefault().toLanguageTag()
@@ -262,15 +308,3 @@ class WeatherRepository(
         const val EMPTY = ""
     }
 }
-
-/** When the next cached part crosses its retention limit; internal so the timer logic is testable. */
-internal fun nextExpiry(s: WeatherSnapshot, now: Instant): Instant? = s.fetchedAt.entries
-    .filter { (part, at) -> at.plus(RefreshPolicy.maxAge(s.source, part)).isAfter(now) }
-    .flatMap { (part, at) -> buildList {
-        add(at.plus(RefreshPolicy.maxAge(s.source, part)))
-        add(at.plus(RefreshPolicy.weatherFreshness(s.source, part)))
-        if (part == DataPart.CURRENT) s.current?.let { add(it.time.plus(RefreshPolicy.weatherFreshness(s.source, part))) }
-        add(now.atZone(s.timeZone).toLocalDate().plusDays(1).atStartOfDay(s.timeZone).toInstant())
-    } }
-    .filter { it.isAfter(now) }
-    .minOrNull()

@@ -55,8 +55,10 @@ class GoogleWeatherSource(
         Capability.SUN_EVENTS, Capability.MOON_PHASE, Capability.UV, Capability.VISIBILITY,
     )
 
+    override val fetchesHoursOnDemand = true
+
     override suspend fun fetch(location: GeoPoint, language: String, parts: Set<DataPart>): WeatherSnapshot {
-        val key = apiKey()?.takeIf { it.isNotBlank() } ?: throw SourceException.InvalidApiKey("No API key")
+        val key = apiKey()?.takeIf { it.isNotBlank() } ?: throw SourceException.MissingApiKey()
         val now = clock()
         return coroutineScope {
             // Each part is fetched on its own: one failing endpoint (say, alerts) must not
@@ -79,7 +81,7 @@ class GoogleWeatherSource(
             if (requested.isNotEmpty() && requested.all { it.isFailure }) {
                 // Nothing came back: report the most actionable error (key or access first).
                 val errors = requested.mapNotNull { it.exceptionOrNull() }
-                throw errors.firstOrNull { it is SourceException.InvalidApiKey }
+                throw errors.firstOrNull { it is SourceException.InvalidApiKey || it is SourceException.MissingApiKey }
                     ?: errors.firstOrNull { it is SourceException.AccessDenied }
                     ?: errors.first()
             }
@@ -119,7 +121,7 @@ class GoogleWeatherSource(
 
     /** On demand, e.g. opening a day three days out: only the pages needed, up to 240 hours. */
     override suspend fun fetchHours(location: GeoPoint, language: String, hours: Int): WeatherSnapshot {
-        val key = apiKey()?.takeIf { it.isNotBlank() } ?: throw SourceException.InvalidApiKey("No API key")
+        val key = apiKey()?.takeIf { it.isNotBlank() } ?: throw SourceException.MissingApiKey()
         val now = clock()
         val h = hours(key, location, language, hours.coerceIn(HOURS, 240))
         val zone = h.timeZone?.id?.let { runCatching { ZoneId.of(it) }.getOrNull() } ?: ZoneOffset.UTC

@@ -11,8 +11,8 @@
     <string name="section_updates">Updates</string>
     <string name="refresh_interval">Update every</string>
     <string name="every_n_minutes">%1$d minutes</string>
-    <string name="google_estimate">About %1$s Google calls a month for %3$d places. The free tier covers %2$s.</string>
-    <string name="google_estimate_over">About %1$s Google calls a month for %3$d places: more than the %2$s free ones. Update less often or remove a place to stay free.</string>
+    <string name="google_estimate">About %1$s Google calls a month for %3$d places. The free tier covers %2$s. Opening days further ahead adds a few more.</string>
+    <string name="google_estimate_over">About %1$s Google calls a month for %3$d places: more than the %2$s free ones. Update less often or remove a place to stay free. Opening days further ahead adds a few more.</string>
     <string name="background_location">Follow me with widgets</string>
     <string name="background_location_hint">Lets widgets on your current location update while you travel. Needs location access \"all the time\".</string>
     <string name="background_location_on">On. Widgets follow your location.</string>

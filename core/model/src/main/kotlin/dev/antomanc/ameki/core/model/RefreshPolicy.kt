@@ -76,12 +76,11 @@ object RefreshPolicy {
         Duration.between(fetched, now) >= partInterval(source, part, baseMinutes).minus(tolerance)
     }
 
-    /** Google calls made for one refresh of these parts. Hourly is one 24-hour page. */
-    fun googleCalls(parts: Set<DataPart>): Int = parts.size
-
     /**
      * Estimated Google Weather API calls in a 30-day month for [places] places refreshed every
-     * [baseMinutes]. Free tier is [GOOGLE_FREE_CALLS_PER_MONTH].
+     * [baseMinutes]: background refreshes only, one call per part (hourly is one 24-hour page).
+     * Opening a later day adds its extra hour pages on top, which depends on the user.
+     * Free tier is [GOOGLE_FREE_CALLS_PER_MONTH].
      */
     fun estimateGoogleCallsPerMonth(places: Int, baseMinutes: Int): Int {
         val minutesPerMonth = 30 * 24 * 60

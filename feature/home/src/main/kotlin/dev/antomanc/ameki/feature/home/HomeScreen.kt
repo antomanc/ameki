@@ -83,7 +83,7 @@ fun HomeRoute(
         onOpenPlaces = onOpenPlaces,
         onOpenSettings = onOpenSettings,
         onFixProblem = onFixProblem,
-        onNeedHours = viewModel::ensureHours,
+        onNeedHours = viewModel::loadDayHours,
         requestId = requestId, requestedDay = requestedDay, requestedHour = requestedHour, onRequestApplied = onRequestApplied,
     )
 }
@@ -98,7 +98,7 @@ fun HomeScreen(
     onOpenPlaces: () -> Unit,
     onOpenSettings: () -> Unit,
     onFixProblem: (dev.antomanc.ameki.core.data.sync.SyncError) -> Unit,
-    onNeedHours: suspend (Long, java.time.Instant) -> Unit = { _, _ -> },
+    onNeedHours: (Long, java.time.LocalDate) -> Unit = { _, _ -> },
     requestId: Long = 0,
     requestedDay: Long? = null,
     requestedHour: Long? = null,
@@ -194,7 +194,7 @@ fun HomeScreen(
                 DayPage(
                     dayOwner, state, dayTarget,
                     onDayChange = { d -> openDay = listOf(d.toLong(), if (d == dayTarget.day) dayTarget.hour ?: -1L else -1L, dayOwner.place.id) },
-                    onNeedHours = { until -> onNeedHours(dayOwner.place.id, until) },
+                    onNeedHours = { date -> onNeedHours(dayOwner.place.id, date) },
                     onBack = { openDay = null },
                     modifier = m,
                 )

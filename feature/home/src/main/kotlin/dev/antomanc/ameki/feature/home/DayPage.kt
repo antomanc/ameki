@@ -60,6 +60,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import dev.antomanc.ameki.core.data.sync.DayHours
 import dev.antomanc.ameki.core.data.sync.PlaceWeather
 import dev.antomanc.ameki.core.model.DailyForecast
 import dev.antomanc.ameki.core.model.HourlyForecast
@@ -80,7 +81,7 @@ data class DayTarget(val day: Int, val hour: Long? = null)
 
 /**
  * One full page per day, swiped sideways: no sheet to fight with while scrolling the hours.
- * Hours missing from the cache (Google, beyond 24 h) are fetched on arrival.
+ * Each page shows its [DayHours] status; a page whose hours are still needed asks for them.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,7 +90,7 @@ internal fun DayPage(
     state: HomeUiState,
     target: DayTarget,
     onDayChange: (Int) -> Unit,
-    onNeedHours: suspend (Instant) -> Unit,
+    onNeedHours: (java.time.LocalDate) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -106,24 +107,11 @@ internal fun DayPage(
         val page = target.day.coerceIn(0, s.daily.lastIndex)
         if (pager.currentPage != page) pager.scrollToPage(page)
     }
-    var requestedDays by remember(pw.place.id, s.source) { mutableStateOf(emptySet<java.time.LocalDate>()) }
-    var pendingDay by remember(pw.place.id, s.source) { mutableStateOf<java.time.LocalDate?>(null) }
-    suspend fun requestHours(page: Int) {
-        val day = s.daily.getOrNull(page) ?: return
-        pendingDay = day.date
-        try {
-            onNeedHours(day.date.plusDays(1).atStartOfDay(s.timeZone).toInstant())
-            requestedDays = requestedDays + day.date
-        } finally {
-            if (pendingDay == day.date) pendingDay = null
-        }
-    }
     val currentDay = s.daily.getOrNull(pager.currentPage)
-    val currentDayHasHours = s.hourly.any { it.time.atZone(s.timeZone).toLocalDate() == currentDay?.date }
-    LaunchedEffect(pw.place.id, s.source, pager.currentPage, currentDay?.date, currentDayHasHours) {
-        if (currentDay == null || (currentDayHasHours && currentDay.date in requestedDays)) return@LaunchedEffect
-        onDayChange(pager.currentPage)
-        requestHours(pager.currentPage)
+    val currentStatus = currentDay?.let { pw.dayHours(it.date) }
+    LaunchedEffect(pager.currentPage) { onDayChange(pager.currentPage) }
+    LaunchedEffect(pw.place.id, currentDay?.date, currentStatus) {
+        if (currentDay != null && currentStatus == DayHours.NEEDED) onNeedHours(currentDay.date)
     }
     // Scrolling the chip strip must never delay or cancel the network request.
     LaunchedEffect(pager.currentPage) { chips.animateScrollToItem((pager.currentPage - 1).coerceAtLeast(0)) }
@@ -153,12 +141,13 @@ internal fun DayPage(
             }
             HorizontalPager(pager, Modifier.fillMaxSize(), beyondViewportPageCount = 1) { page ->
                 val day = s.daily.getOrNull(page) ?: return@HorizontalPager
+                val status = pw.dayHours(day.date)
                 DayContent(
                     s, page, units, fmt,
                     focusHour = target.hour.takeIf { page == target.day },
-                    loading = day.date !in requestedDays || pendingDay == day.date,
-                    failed = state.hoursError != null,
-                    onRetry = { scope.launch { requestHours(page) } },
+                    loading = status == DayHours.LOADING || status == DayHours.NEEDED,
+                    failed = status == DayHours.FAILED,
+                    onRetry = { onNeedHours(day.date) },
                 )
             }
         }
@@ -196,9 +185,11 @@ private fun DayContent(s: WeatherSnapshot, index: Int, units: Units, fmt: TimeFo
                 }
             }
         }
-        if (!loading && (hours.isEmpty() || failed)) item {
-            if (hours.isNotEmpty()) Text(stringResource(R.string.day_hours_failed), style = MaterialTheme.typography.bodyMedium)
+        if (failed) item {
+            Text(stringResource(R.string.day_hours_failed), style = MaterialTheme.typography.bodyMedium)
             androidx.compose.material3.Button(onClick = onRetry) { Text(stringResource(R.string.retry)) }
+        } else if (!loading && hours.isEmpty()) item {
+            Text(stringResource(R.string.day_hours_unavailable), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

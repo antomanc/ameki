@@ -59,6 +59,7 @@
     <string name="col_wind">Vento</string>
     <string name="back">Indietro</string>
     <string name="day_loading_hours">Sto prendendo le ore…</string>
+    <string name="day_hours_unavailable">Per questo giorno non c\'è ancora la previsione ora per ora.</string>
     <string name="day_hours_failed">Non riesco a prendere le ore di questo giorno. Riprova tra poco.</string>
     <string name="day_night">Notte: %1$s</string>
     <string name="tomorrow">Domani</string>
