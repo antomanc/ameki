@@ -98,7 +98,7 @@ fun HomeScreen(
     onOpenPlaces: () -> Unit,
     onOpenSettings: () -> Unit,
     onFixProblem: (dev.antomanc.ameki.core.data.sync.SyncError) -> Unit,
-    onNeedHours: (Long, java.time.Instant) -> Unit = { _, _ -> },
+    onNeedHours: suspend (Long, java.time.Instant) -> Unit = { _, _ -> },
     requestId: Long = 0,
     requestedDay: Long? = null,
     requestedHour: Long? = null,

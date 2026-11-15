@@ -14,6 +14,10 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.launch
 
 data class HomeUiState(
@@ -59,20 +63,35 @@ class HomeViewModel(
     /** A day page needs hours up to [until]: fetch the missing ones (Google only; Open-Meteo has them). */
     private val pendingHours = mutableMapOf<Long, java.time.Instant>()
 
-    fun ensureHours(id: Long, until: java.time.Instant) {
+    private val hourJobs = mutableMapOf<Long, Job>()
+
+    suspend fun ensureHours(id: Long, until: java.time.Instant) {
         pendingHours[id] = maxOf(pendingHours[id] ?: until, until)
-        if (id in loadingHours.value) return
-        loadingHours.value += id
-        viewModelScope.launch {
+        val job = hourJobs[id]?.takeIf { it.isActive } ?: viewModelScope.launch(start = CoroutineStart.LAZY) {
             try {
+                hoursError.value = null
                 while (true) {
                     val target = pendingHours.remove(id) ?: break
                     hoursError.value = weather.ensureHourlyUntil(id, target)
+                    // Keep the placeholder until Room's result has reached the displayed state.
+                    val latest = weather.get(id)?.snapshot ?: continue
+                    val lastHour = latest.hourly.lastOrNull()?.time
+                    if (lastHour != null) withTimeoutOrNull(5_000) { state.first { ui ->
+                        val visible = ui.places.firstOrNull { it.place.id == id }
+                        ui.settings.source != latest.source || visible == null || visible.snapshot?.daily.isNullOrEmpty() ||
+                            visible.snapshot?.hourly?.lastOrNull()?.time?.let { it >= lastHour } == true
+                    } }
                 }
             } finally {
                 loadingHours.value -= id
+                if (hourJobs[id] === coroutineContext[Job]) hourJobs.remove(id)
             }
+        }.also {
+            hourJobs[id] = it
+            loadingHours.value += id
+            it.start()
         }
+        job.join()
     }
 
     fun refresh(id: Long, force: Boolean = true) {

@@ -3,6 +3,7 @@ package dev.antomanc.ameki.feature.home
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.assertIsDisplayed
@@ -242,6 +243,81 @@ class HomeScreenshotTest {
         org.junit.Assert.assertEquals(1, compose.onAllNodesWithText("Sunrise", substring = true)
             .fetchSemanticsNodes().count { it.boundsInRoot.overlaps(compose.onRoot().fetchSemanticsNode().boundsInRoot) })
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/day_page_dark.png")
+    }
+
+    @Config(qualifiers = "w411dp-h891dp-night-xxhdpi")
+    @Test fun dayRequestStartsBeforeTheChipStripFinishesScrolling() {
+        val base = sampleState()
+        var requested = false
+        compose.setContent {
+            AmekiTheme(dynamicColor = false) {
+                DayPage(base.places.first(), base, DayTarget(7), {}, {
+                    requested = true
+                    kotlinx.coroutines.awaitCancellation()
+                }, {})
+            }
+        }
+        compose.mainClock.advanceTimeByFrame()
+        compose.runOnIdle { org.junit.Assert.assertTrue("The request must start independently of chip scrolling", requested) }
+    }
+
+    @Config(qualifiers = "w411dp-h1100dp-night-xxhdpi")
+    @Test fun dayLoadingReservesTheChartBeforeHoursArrive() {
+        val sample = sampleState()
+        val base = sample.copy(settings = sample.settings.copy(timeFormat = dev.antomanc.ameki.core.model.TimeFormat.H12))
+        val response = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val original = base.places.first()
+        val snapshot = original.snapshot!!
+        val day = snapshot.daily[3]
+        val state = androidx.compose.runtime.mutableStateOf(base.copy(
+            places = listOf(original.copy(snapshot = snapshot.copy(hourly = emptyList()))),
+            loadingHours = setOf(original.place.id),
+        ))
+        compose.setContent {
+            AmekiTheme(themeMode = ThemeMode.DARK, dynamicColor = false) {
+                androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.surface)) {
+                    DayPage(state.value.places.first(), state.value, DayTarget(3), {}, { response.await() }, {})
+                }
+            }
+        }
+        compose.mainClock.advanceTimeBy(500)
+        fun visibleChartBounds() = compose.onAllNodesWithText("TEMPERATURE THROUGH THE DAY").fetchSemanticsNodes()
+            .single { it.boundsInRoot.overlaps(compose.onRoot().fetchSemanticsNode().boundsInRoot) }.boundsInRoot
+        val before = visibleChartBounds()
+        val firstHourTag = "day-hour-${day.date.atStartOfDay(snapshot.timeZone).toEpochSecond()}"
+        fun visibleFirstHourBounds() = compose.onNodeWithTag(firstHourTag).fetchSemanticsNode().boundsInRoot
+        val firstHourBefore = visibleFirstHourBounds()
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/day_loading_reserved.png")
+        compose.runOnIdle {
+            val hours = snapshot.hourly.take(24).mapIndexed { index, hour ->
+                hour.copy(time = day.date.atStartOfDay(snapshot.timeZone).plusHours(index.toLong()).toInstant())
+            }
+            state.value = base.copy(places = listOf(original.copy(snapshot = snapshot.copy(hourly = hours))))
+            response.complete(Unit)
+        }
+        compose.mainClock.advanceTimeBy(500)
+        val after = visibleChartBounds()
+        org.junit.Assert.assertEquals("The chart must not jump when hours arrive", before, after)
+        org.junit.Assert.assertEquals("The first hour must keep its position", firstHourBefore, visibleFirstHourBounds())
+        compose.onRoot().captureRoboImage("build/outputs/roborazzi/day_loading_resolved.png")
+    }
+
+    @Config(qualifiers = "w411dp-h1100dp-night-xxhdpi")
+    @Test fun failedDayRequestKeepsItsPartialHoursAndOffersRetry() {
+        val base = sampleState()
+        val place = base.places.first()
+        val snapshot = place.snapshot!!
+        val time = snapshot.daily[3].date.atStartOfDay(snapshot.timeZone).toInstant()
+        val state = base.copy(places = listOf(place.copy(snapshot = snapshot.copy(hourly = listOf(snapshot.hourly.first().copy(time = time))))),
+            hoursError = dev.antomanc.ameki.core.data.sync.SyncError.NETWORK)
+        compose.setContent {
+            AmekiTheme(themeMode = ThemeMode.DARK, dynamicColor = false) {
+                DayPage(state.places.first(), state, DayTarget(3), {}, {}, {})
+            }
+        }
+        compose.mainClock.advanceTimeBy(500)
+        compose.onNodeWithTag("day-hour-${time.epochSecond}").assertIsDisplayed()
+        compose.onNodeWithText("Try again").assertIsDisplayed()
     }
 
     @Config(qualifiers = "w411dp-h891dp-night-xxhdpi")
