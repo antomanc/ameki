@@ -10,7 +10,7 @@ import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.updateAll
-import dev.antomanc.ameki.core.data.db.WidgetDao
+import dev.antomanc.ameki.core.data.widget.WidgetInstances
 import dev.antomanc.ameki.core.data.sync.RefreshScheduler
 import dev.antomanc.ameki.core.data.sync.WeatherUpdateListener
 import kotlinx.coroutines.CoroutineScope
@@ -34,7 +34,7 @@ abstract class AmekiReceiver : GlanceAppWidgetReceiver(), KoinComponent {
 
     override fun onDeleted(context: Context, appWidgetIds: IntArray) {
         super.onDeleted(context, appWidgetIds)
-        scope.launch { get<WidgetDao>().delete(appWidgetIds.toList()) }
+        scope.launch { get<WidgetInstances>().delete(appWidgetIds.toList()) }
     }
 }
 
@@ -56,20 +56,6 @@ internal val allWidgets: List<Pair<KClass<out GlanceAppWidgetReceiver>, () -> Gl
 class RefreshAction : ActionCallback, KoinComponent {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         get<RefreshScheduler>().refreshNow(force = true)
-    }
-}
-
-/** Tap on an hour or a day: opens that detail in the app, with a fresh request id per tap. */
-class OpenDetailAction : ActionCallback {
-    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        val day = parameters[dayKey] ?: return
-        context.startActivity(detailIntent(context, parameters[placeKey], day, parameters[hourKey]))
-    }
-
-    companion object {
-        val placeKey = ActionParameters.Key<Long>("placeId")
-        val dayKey = ActionParameters.Key<Long>("dayEpochDay")
-        val hourKey = ActionParameters.Key<Long>("hourEpochSecond")
     }
 }
 

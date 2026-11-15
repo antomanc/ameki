@@ -52,8 +52,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import dev.antomanc.ameki.core.data.PlaceRepository
-import dev.antomanc.ameki.core.data.db.WidgetConfigEntity
-import dev.antomanc.ameki.core.data.db.WidgetDao
+import dev.antomanc.ameki.core.data.widget.WidgetConfig
+import dev.antomanc.ameki.core.data.widget.WidgetInstances
+import dev.antomanc.ameki.core.data.widget.WidgetStyle
 import dev.antomanc.ameki.core.data.settings.SettingsRepository
 import dev.antomanc.ameki.core.data.sync.RefreshScheduler
 import dev.antomanc.ameki.core.model.AppSettings
@@ -64,7 +65,7 @@ import kotlin.math.roundToInt
 
 /** Per-instance setup: place, style, background opacity. Also reachable later via long-press "Reconfigure". */
 class WidgetConfigActivity : ComponentActivity() {
-    private val widgets: WidgetDao by inject()
+    private val widgets: WidgetInstances by inject()
     private val places: PlaceRepository by inject()
     private val settings: SettingsRepository by inject()
     private val updater: WidgetUpdater by inject()
@@ -81,8 +82,8 @@ class WidgetConfigActivity : ComponentActivity() {
         if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) { finish(); return }
 
         lifecycleScope.launch {
-            val entity = widgets.get(appWidgetId)
-            val existing = WidgetConfig.from(entity)
+            val saved = widgets.config(appWidgetId)
+            val existing = saved ?: WidgetConfig.Default
             val previewLayout = previewLayoutFor(appWidgetId)
             setContent {
                 val s by settings.settings.collectAsStateWithLifecycle(AppSettings())
@@ -179,10 +180,10 @@ class WidgetConfigActivity : ComponentActivity() {
                                 Button(
                                     onClick = {
                                         lifecycleScope.launch {
-                                            widgets.upsert(WidgetConfigEntity(appWidgetId, placeId, style.name, opacity))
+                                            widgets.save(appWidgetId, WidgetConfig(placeId, style, opacity))
                                             updater.update(appWidgetId)
                                             // A style change is local; only a new widget or a new place needs weather.
-                                            if (entity == null || placeId != existing.placeId) scheduler.refreshNow()
+                                            if (saved == null || placeId != existing.placeId) scheduler.refreshNow()
                                             setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId))
                                             finish()
                                         }

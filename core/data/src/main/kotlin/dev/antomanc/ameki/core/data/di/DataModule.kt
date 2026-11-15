@@ -16,6 +16,7 @@ import dev.antomanc.ameki.core.data.settings.SettingsRepository
 import dev.antomanc.ameki.core.data.sync.RefreshScheduler
 import dev.antomanc.ameki.core.data.sync.RefreshWorker
 import dev.antomanc.ameki.core.data.sync.WeatherUpdateListener
+import dev.antomanc.ameki.core.data.widget.WidgetInstances
 import dev.antomanc.ameki.source.api.PlaceSearch
 import dev.antomanc.ameki.source.google.GoogleWeatherSource
 import dev.antomanc.ameki.source.openmeteo.OpenMeteoPlaceSearch
@@ -83,6 +84,7 @@ val dataModule = module {
         )
     }
     single { RefreshScheduler(androidContext()) }
+    single { WidgetInstances(get(), get(), get(), get()) }
     single {
         GoogleKeyCheck(
             source = if (BuildConfig.GOOGLE_SOURCE_ENABLED) get<GoogleWeatherSource>() else null,

@@ -11,8 +11,8 @@
     <string name="section_updates">Aggiornamenti</string>
     <string name="refresh_interval">Aggiorna ogni</string>
     <string name="every_n_minutes">%1$d minuti</string>
-    <string name="google_estimate">Circa %1$s chiamate Google al mese per %3$d località. La fascia gratuita ne copre %2$s.</string>
-    <string name="google_estimate_over">Circa %1$s chiamate Google al mese per %3$d località: più delle %2$s gratuite. Aggiorna meno spesso o togli una località per restare gratis.</string>
+    <string name="google_estimate">Circa %1$s chiamate Google al mese per %3$d località. La fascia gratuita ne copre %2$s. Aprire i giorni più avanti ne aggiunge qualcuna.</string>
+    <string name="google_estimate_over">Circa %1$s chiamate Google al mese per %3$d località: più delle %2$s gratuite. Aggiorna meno spesso o togli una località per restare gratis. Aprire i giorni più avanti ne aggiunge qualcuna.</string>
     <string name="background_location">Seguimi con i widget</string>
     <string name="background_location_hint">I widget sulla posizione attuale si aggiornano anche in viaggio. Serve l\'accesso alla posizione \"sempre\".</string>
     <string name="background_location_on">Attivo. I widget seguono la tua posizione.</string>

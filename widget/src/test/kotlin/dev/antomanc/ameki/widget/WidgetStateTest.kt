@@ -1,5 +1,8 @@
 package dev.antomanc.ameki.widget
 
+import dev.antomanc.ameki.core.data.widget.WidgetConfig
+import dev.antomanc.ameki.core.data.widget.WidgetData
+import dev.antomanc.ameki.core.data.widget.WidgetStyle
 import dev.antomanc.ameki.core.data.sync.PlaceWeather
 import dev.antomanc.ameki.core.data.sync.SyncError
 import dev.antomanc.ameki.core.model.AppSettings
@@ -88,8 +91,8 @@ class WidgetStateTest {
             SourceId.OPEN_METEO, ZoneId.of("Europe/Rome"), current(),
             fetchedAt = mapOf(DataPart.CURRENT to now),
         )
-        assertTrue(s.currentFresh(now.plusSeconds(3600)))
-        assertFalse(s.currentFresh(now.plusSeconds(3 * 3600)))
+        assertTrue(s.currentIsFresh(now.plusSeconds(3600)))
+        assertFalse(s.currentIsFresh(now.plusSeconds(3 * 3600)))
     }
 
     @Test

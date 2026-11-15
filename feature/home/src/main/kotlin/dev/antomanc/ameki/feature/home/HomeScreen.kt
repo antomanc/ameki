@@ -49,6 +49,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.antomanc.ameki.core.data.sync.PlaceWeather
+import dev.antomanc.ameki.core.ui.AppRequest
+import dev.antomanc.ameki.core.ui.PendingRequest
 import dev.antomanc.ameki.core.ui.components.WeatherIcon
 import dev.antomanc.ameki.core.ui.label
 import kotlinx.coroutines.launch
@@ -59,32 +61,28 @@ fun HomeRoute(
     onOpenPlaces: () -> Unit,
     onOpenSettings: () -> Unit,
     onFixProblem: (dev.antomanc.ameki.core.data.sync.SyncError) -> Unit,
-    initialPlaceId: Long? = null,
-    requestId: Long = 0,
-    requestedDay: Long? = null,
-    requestedHour: Long? = null,
-    onRequestApplied: () -> Unit = {},
-    refreshRequestId: Long? = null,
-    onRefreshRequestHandled: () -> Unit = {},
+    /** A request from a widget, a shortcut or the places list, until [onRequestHandled] reports it. */
+    request: PendingRequest? = null,
+    onRequestHandled: (Long) -> Unit = {},
     viewModel: HomeViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    LaunchedEffect(refreshRequestId, state.loading) {
-        if (refreshRequestId != null && !state.loading) {
-            (state.places.firstOrNull { it.place.id == state.settings.selectedPlaceId } ?: state.places.firstOrNull())?.let { viewModel.refresh(it.place.id) }
-            onRefreshRequestHandled()
-        }
-    }
+    LaunchedEffect(request?.id) { request?.let(viewModel::handle) }
     HomeScreen(
         state = state,
-        initialPlaceId = initialPlaceId ?: state.settings.selectedPlaceId,
+        // A cold start from a widget opens on the requested place, not the last one.
+        initialPlaceId = (request?.request as? AppRequest.Show)?.placeId ?: state.settings.selectedPlaceId,
         onPlaceShown = viewModel::onPlaceShown,
         onRefresh = { viewModel.refresh(it) },
         onOpenPlaces = onOpenPlaces,
         onOpenSettings = onOpenSettings,
         onFixProblem = onFixProblem,
-        onNeedHours = viewModel::ensureHours,
-        requestId = requestId, requestedDay = requestedDay, requestedHour = requestedHour, onRequestApplied = onRequestApplied,
+        onNeedHours = viewModel::loadDayHours,
+        requestPending = request != null,
+        onNavigationApplied = { id ->
+            viewModel.navigationApplied(id)
+            onRequestHandled(id)
+        },
     )
 }
 
@@ -98,59 +96,50 @@ fun HomeScreen(
     onOpenPlaces: () -> Unit,
     onOpenSettings: () -> Unit,
     onFixProblem: (dev.antomanc.ameki.core.data.sync.SyncError) -> Unit,
-    onNeedHours: suspend (Long, java.time.Instant) -> Unit = { _, _ -> },
-    requestId: Long = 0,
-    requestedDay: Long? = null,
-    requestedHour: Long? = null,
-    onRequestApplied: () -> Unit = {},
+    onNeedHours: (Long, java.time.LocalDate) -> Unit = { _, _ -> },
+    /** A request is on its way: don't mark the page that happens to be visible as chosen. */
+    requestPending: Boolean = false,
+    onNavigationApplied: (Long) -> Unit = {},
 ) {
     val places = state.places
     val initialPage = places.indexOfFirst { it.place.id == initialPlaceId }.coerceAtLeast(0)
     val currentPlaces by androidx.compose.runtime.rememberUpdatedState(places)
     val pager = rememberPagerState(initialPage = initialPage) { currentPlaces.size }
-    // An open day page, saved across rotation and folding as [day, hour or -1].
+    // An open day page, saved across rotation and folding as [epoch day, epoch second or -1, place].
     var openDay by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf<List<Long>?>(null) }
-    val dayTarget = openDay?.let { DayTarget(it[0].toInt(), it[1].takeIf { h -> h >= 0 }) }
+    val dayTarget = openDay?.let { DayTarget(java.time.LocalDate.ofEpochDay(it[0]), it[1].takeIf { h -> h >= 0 }?.let(java.time.Instant::ofEpochSecond)) }
+    fun openDayOf(owner: Long, target: DayTarget?) {
+        openDay = target?.let { listOf(it.date.toEpochDay(), it.hour?.epochSecond ?: -1L, owner) }
+    }
     val open: (DayTarget) -> Unit = { target ->
-        places.getOrNull(pager.currentPage)?.place?.id?.let { owner -> openDay = listOf(target.day.toLong(), target.hour ?: -1L, owner) }
+        places.getOrNull(pager.currentPage)?.place?.id?.let { owner -> openDayOf(owner, target) }
     }
     val scope = rememberCoroutineScope()
-
-    var selectionReady by remember { mutableStateOf(false) }
-    var appliedRequest by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<Long?>(null) }
-    var positionedRequest by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<Long?>(null) }
-    var requestedRefresh by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<Long?>(null) }
     val ids = places.map { it.place.id }
-    val requestedDayIndex = places.firstOrNull { it.place.id == initialPlaceId }?.snapshot?.daily?.indexOfFirst { it.date.toEpochDay() == requestedDay } ?: -1
-    val requestedAttempt = places.firstOrNull { it.place.id == initialPlaceId }?.lastAttemptAt
-    LaunchedEffect(initialPlaceId, requestId, ids, requestedDayIndex, requestedAttempt, state.refreshing) {
-        if (places.isEmpty()) return@LaunchedEffect
-        if (appliedRequest == requestId) { selectionReady = true; return@LaunchedEffect }
-        selectionReady = false
-        val index = places.indexOfFirst { it.place.id == initialPlaceId }
-        if (index >= 0 && positionedRequest != requestId) {
-            pager.requestScrollToPage(index)
-            positionedRequest = requestId
-        }
-        val targetPlace = if (requestedDay != null) places.getOrNull(index) else places.getOrNull(index.takeIf { it >= 0 } ?: pager.currentPage)
-        val day = targetPlace?.snapshot?.daily?.indexOfFirst { it.date.toEpochDay() == requestedDay } ?: -1
-        if (requestedDay != null && day < 0) {
-            selectionReady = true
-            val awaitingData = index >= 0 && targetPlace?.snapshot?.daily.isNullOrEmpty()
-            if (awaitingData && requestedRefresh != requestId) {
-                requestedRefresh = requestId
-                onRefresh(targetPlace!!.place.id)
-            } else if (!awaitingData || (targetPlace!!.place.id !in state.refreshing && targetPlace.lastAttemptAt != null)) {
-                appliedRequest = requestId
-                onRequestApplied()
-            }
-            return@LaunchedEffect
-        }
-        openDay = if (day >= 0 && targetPlace != null) listOf(day.toLong(), requestedHour ?: -1L, targetPlace.place.id) else null
-        appliedRequest = requestId
-        selectionReady = true
-        onRequestApplied()
+
+    // First load: start on the place chosen last time.
+    var positioned by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(places.isEmpty(), requestPending) {
+        // A pending request positions the pager itself once it knows where it leads.
+        if (positioned || places.isEmpty() || requestPending) return@LaunchedEffect
+        places.indexOfFirst { it.place.id == initialPlaceId }.takeIf { it >= 0 }?.let { pager.requestScrollToPage(it) }
+        positioned = true
     }
+    // A request moves to its place once; a later swipe by the user is not undone.
+    val navigation = state.navigation
+    LaunchedEffect(navigation?.requestId, navigation?.placeId) {
+        val target = navigation?.placeId ?: return@LaunchedEffect
+        places.indexOfFirst { it.place.id == target }.takeIf { it >= 0 }?.let { pager.requestScrollToPage(it) }
+        positioned = true
+    }
+    LaunchedEffect(navigation?.requestId, navigation?.done) {
+        val n = navigation?.takeIf { it.done } ?: return@LaunchedEffect
+        // Showing a place closes any open day unless the request opens one; no place: stay put.
+        n.placeId?.let { openDayOf(it, n.day) }
+        positioned = true
+        onNavigationApplied(n.requestId)
+    }
+    val selectionReady = positioned && !requestPending
     LaunchedEffect(pager, ids, selectionReady, openDay?.getOrNull(2)) {
         if (selectionReady && openDay?.getOrNull(2) != null) onPlaceShown(openDay!![2])
         else if (selectionReady) snapshotFlow { pager.currentPage }.collect { page ->
@@ -161,7 +150,7 @@ fun HomeScreen(
     val shown = places.getOrNull(pager.currentPage)?.snapshot
     val dayOwner = places.firstOrNull { it.place.id == openDay?.getOrNull(2) }
     LaunchedEffect(dayOwner?.snapshot?.daily, dayTarget, ids) {
-        if (places.isNotEmpty() && dayTarget != null && (dayOwner?.snapshot?.daily.isNullOrEmpty() || dayTarget.day !in dayOwner!!.snapshot!!.daily.indices)) openDay = null
+        if (places.isNotEmpty() && dayTarget != null && dayOwner?.snapshot?.daily.orEmpty().none { it.date == dayTarget.date }) openDay = null
     }
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) { Atmosphere(shown) }
     Scaffold(
@@ -193,8 +182,9 @@ fun HomeScreen(
             if (dayOwner != null && dayTarget != null) {
                 DayPage(
                     dayOwner, state, dayTarget,
-                    onDayChange = { d -> openDay = listOf(d.toLong(), if (d == dayTarget.day) dayTarget.hour ?: -1L else -1L, dayOwner.place.id) },
-                    onNeedHours = { until -> onNeedHours(dayOwner.place.id, until) },
+                    onDayChange = { d -> openDayOf(dayOwner.place.id, DayTarget(d, dayTarget.hour.takeIf { d == dayTarget.date })) },
+                    onNeedHours = { date -> onNeedHours(dayOwner.place.id, date) },
+                    onFixProblem = onFixProblem,
                     onBack = { openDay = null },
                     modifier = m,
                 )

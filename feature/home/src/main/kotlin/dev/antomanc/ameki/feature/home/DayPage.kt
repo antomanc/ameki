@@ -60,11 +60,14 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import dev.antomanc.ameki.core.data.sync.DayHours
+import dev.antomanc.ameki.core.data.sync.SyncError
 import dev.antomanc.ameki.core.data.sync.PlaceWeather
 import dev.antomanc.ameki.core.model.DailyForecast
 import dev.antomanc.ameki.core.model.HourlyForecast
 import dev.antomanc.ameki.core.model.Units
 import dev.antomanc.ameki.core.model.WeatherSnapshot
+import dev.antomanc.ameki.core.ui.ForecastView
 import dev.antomanc.ameki.core.ui.TimeFormatter
 import dev.antomanc.ameki.core.ui.components.RainDot
 import dev.antomanc.ameki.core.ui.components.WeatherIcon
@@ -75,12 +78,9 @@ import java.time.Instant
 import kotlin.math.roundToInt
 import dev.antomanc.ameki.core.ui.R as UiR
 
-/** Which day page is open, and optionally the hour to scroll to. */
-data class DayTarget(val day: Int, val hour: Long? = null)
-
 /**
  * One full page per day, swiped sideways: no sheet to fight with while scrolling the hours.
- * Hours missing from the cache (Google, beyond 24 h) are fetched on arrival.
+ * Each page shows its [DayHours] status; a page whose hours are still needed asks for them.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,42 +88,32 @@ internal fun DayPage(
     pw: PlaceWeather,
     state: HomeUiState,
     target: DayTarget,
-    onDayChange: (Int) -> Unit,
-    onNeedHours: suspend (Instant) -> Unit,
+    onDayChange: (java.time.LocalDate) -> Unit,
+    onNeedHours: (java.time.LocalDate) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onFixProblem: (SyncError) -> Unit = {},
 ) {
     val s = pw.snapshot ?: return
-    if (s.daily.isEmpty()) return
+    val view = ForecastView(s, rememberWeatherTime(), state.settings.refreshIntervalMinutes)
+    val days = view.days
+    if (days.isEmpty()) return
     val context = LocalContext.current
     val fmt = remember(state.settings.timeFormat) { TimeFormatter(context, state.settings.timeFormat) }
     val units = state.settings.units
-    val pager = rememberPagerState(initialPage = target.day.coerceIn(0, s.daily.lastIndex)) { s.daily.size }
+    val targetPage = days.indexOfFirst { it.date == target.date }.coerceAtLeast(0)
+    val pager = rememberPagerState(initialPage = targetPage) { days.size }
     val chips = rememberLazyListState()
     val scope = rememberCoroutineScope()
     BackHandler(onBack = onBack)
-    LaunchedEffect(target.day) {
-        val page = target.day.coerceIn(0, s.daily.lastIndex)
-        if (pager.currentPage != page) pager.scrollToPage(page)
+    LaunchedEffect(targetPage) {
+        if (pager.currentPage != targetPage) pager.scrollToPage(targetPage)
     }
-    var requestedDays by remember(pw.place.id, s.source) { mutableStateOf(emptySet<java.time.LocalDate>()) }
-    var pendingDay by remember(pw.place.id, s.source) { mutableStateOf<java.time.LocalDate?>(null) }
-    suspend fun requestHours(page: Int) {
-        val day = s.daily.getOrNull(page) ?: return
-        pendingDay = day.date
-        try {
-            onNeedHours(day.date.plusDays(1).atStartOfDay(s.timeZone).toInstant())
-            requestedDays = requestedDays + day.date
-        } finally {
-            if (pendingDay == day.date) pendingDay = null
-        }
-    }
-    val currentDay = s.daily.getOrNull(pager.currentPage)
-    val currentDayHasHours = s.hourly.any { it.time.atZone(s.timeZone).toLocalDate() == currentDay?.date }
-    LaunchedEffect(pw.place.id, s.source, pager.currentPage, currentDay?.date, currentDayHasHours) {
-        if (currentDay == null || (currentDayHasHours && currentDay.date in requestedDays)) return@LaunchedEffect
-        onDayChange(pager.currentPage)
-        requestHours(pager.currentPage)
+    val currentDay = days.getOrNull(pager.currentPage)
+    val currentStatus = currentDay?.let { pw.dayHours(it.date) }
+    LaunchedEffect(currentDay?.date) { currentDay?.let { onDayChange(it.date) } }
+    LaunchedEffect(pw.place.id, currentDay?.date, currentStatus) {
+        if (currentDay != null && currentStatus == DayHours.NEEDED) onNeedHours(currentDay.date)
     }
     // Scrolling the chip strip must never delay or cancel the network request.
     LaunchedEffect(pager.currentPage) { chips.animateScrollToItem((pager.currentPage - 1).coerceAtLeast(0)) }
@@ -143,22 +133,24 @@ internal fun DayPage(
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             LazyRow(state = chips, contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                itemsIndexed(s.daily) { i, d ->
+                itemsIndexed(days) { i, d ->
                     FilterChip(
                         selected = i == pager.currentPage,
                         onClick = { scope.launch { pager.animateScrollToPage(i) } },
-                        label = { Text(if (d.date == java.time.LocalDate.now(s.timeZone)) stringResource(UiR.string.today) else "${fmt.weekdayShort(d.date)} ${d.date.dayOfMonth}") },
+                        label = { Text(if (view.isToday(d.date)) stringResource(UiR.string.today) else "${fmt.weekdayShort(d.date)} ${d.date.dayOfMonth}") },
                     )
                 }
             }
             HorizontalPager(pager, Modifier.fillMaxSize(), beyondViewportPageCount = 1) { page ->
-                val day = s.daily.getOrNull(page) ?: return@HorizontalPager
+                val day = days.getOrNull(page) ?: return@HorizontalPager
+                val status = pw.dayHours(day.date)
                 DayContent(
-                    s, page, units, fmt,
-                    focusHour = target.hour.takeIf { page == target.day },
-                    loading = day.date !in requestedDays || pendingDay == day.date,
-                    failed = state.hoursError != null,
-                    onRetry = { scope.launch { requestHours(page) } },
+                    view, day, units, fmt,
+                    focusHour = target.hour.takeIf { day.date == target.date },
+                    loading = status == DayHours.LOADING || status == DayHours.NEEDED,
+                    failure = pw.hourRequests.failed[day.date].takeIf { status == DayHours.FAILED },
+                    onRetry = { onNeedHours(day.date) },
+                    onFixProblem = onFixProblem,
                 )
             }
         }
@@ -166,15 +158,14 @@ internal fun DayPage(
 }
 
 @Composable
-private fun DayContent(s: WeatherSnapshot, index: Int, units: Units, fmt: TimeFormatter, focusHour: Long?, loading: Boolean, failed: Boolean, onRetry: () -> Unit) {
-    val day = s.daily[index]
-    val now = Instant.now()
-    val dayHours = s.hourly.filter { it.time.atZone(s.timeZone).toLocalDate() == day.date }
-    val hours = dayHours
-        .let { list -> if (day.date == java.time.LocalDate.now(s.timeZone)) list.filter { it.time.plusSeconds(3600) > now } else list }
+private fun DayContent(view: ForecastView, day: DailyForecast, units: Units, fmt: TimeFormatter, focusHour: Instant?, loading: Boolean, failure: SyncError?, onRetry: () -> Unit, onFixProblem: (SyncError) -> Unit) {
+    val s = view.snapshot
+    val failed = failure != null
+    val dayHours = view.allHoursOn(day.date)
+    val hours = view.hoursOn(day.date)
     val list = rememberLazyListState()
     LaunchedEffect(focusHour, hours.size) {
-        val i = hours.indexOfFirst { it.time.epochSecond == focusHour }
+        val i = hours.indexOfFirst { it.time == focusHour }
         if (i >= 0) list.scrollToItem(i + 4)
     }
     LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 32.dp)) {
@@ -184,21 +175,23 @@ private fun DayContent(s: WeatherSnapshot, index: Int, units: Units, fmt: TimeFo
         if (hours.isNotEmpty() || loading) {
             item { HourHeaderRow() }
             val byTime = hours.associateBy { it.time }
-            val times = if (loading) {
-                val start = day.date.atStartOfDay(s.timeZone).toInstant()
-                val end = day.date.plusDays(1).atStartOfDay(s.timeZone).toInstant()
-                generateSequence(start) { it.plusSeconds(3600) }.takeWhile { it < end }
-                    .filter { day.date != java.time.LocalDate.now(s.timeZone) || it.plusSeconds(3600) > now }.toList()
-            } else hours.map { it.time }
+            val times = if (loading) view.hourSlotsOn(day.date) else hours.map { it.time }
             items(times, key = { it.epochSecond }) { time ->
                 Crossfade(targetState = byTime[time], modifier = Modifier.testTag("day-hour-${time.epochSecond}"), animationSpec = tween(220), label = "hour-data") { hour ->
-                    HourRow(hour, time, s, units, fmt, highlighted = time.epochSecond == focusHour)
+                    HourRow(hour, time, s, units, fmt, highlighted = time == focusHour)
                 }
             }
         }
-        if (!loading && (hours.isEmpty() || failed)) item {
-            if (hours.isNotEmpty()) Text(stringResource(R.string.day_hours_failed), style = MaterialTheme.typography.bodyMedium)
-            androidx.compose.material3.Button(onClick = onRetry) { Text(stringResource(R.string.retry)) }
+        if (failure != null) item {
+            // A problem the user can fix (key, access) says so; anything else is worth a retry.
+            Text(stringResource(if (failure.needsUserAction) errorText(failure) else R.string.day_hours_failed), style = MaterialTheme.typography.bodyMedium)
+            if (failure.needsUserAction) androidx.compose.material3.Button(onClick = { onFixProblem(failure) }) { Text(stringResource(R.string.fix)) }
+            else androidx.compose.material3.Button(onClick = onRetry) { Text(stringResource(R.string.retry)) }
+        } else if (!loading && hours.isEmpty()) item {
+            Text(stringResource(R.string.day_hours_unavailable), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else if (!loading && view.hoursEndEarly(day.date)) item {
+            Text(stringResource(R.string.day_hours_partial), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 12.dp))
         }
     }
 }

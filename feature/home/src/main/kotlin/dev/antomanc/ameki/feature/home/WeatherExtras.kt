@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import dev.antomanc.ameki.core.model.*
+import dev.antomanc.ameki.core.ui.ForecastView
 import dev.antomanc.ameki.core.ui.TimeFormatter
 import dev.antomanc.ameki.core.ui.theme.LocalInstrumentColors
 import kotlinx.coroutines.delay
@@ -37,16 +38,9 @@ internal fun rememberWeatherTime(): Instant {
 }
 
 @Composable
-internal fun RainOutlookSummary(snapshot: WeatherSnapshot, now: Instant, fmt: TimeFormatter) {
-    val text = when (val outlook = Nowcast.outlook(snapshot, now)) {
-        RainOutlook.NoneSoon -> stringResource(R.string.rain_none)
-        RainOutlook.RainingNow -> stringResource(R.string.rain_now)
-        is RainOutlook.StartsIn -> stringResource(R.string.rain_starts, outlook.minutes)
-        is RainOutlook.StopsIn -> stringResource(R.string.rain_stops, outlook.minutes)
-        is RainOutlook.LikelyAround -> stringResource(R.string.rain_likely, fmt.time(outlook.at, snapshot.timeZone))
-        else -> stringResource(R.string.rain_unavailable)
-    }
-    Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+internal fun RainOutlookSummary(view: ForecastView, fmt: TimeFormatter) {
+    Text(view.rainText(androidx.compose.ui.platform.LocalContext.current, fmt, short = false),
+        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(top = 4.dp, bottom = 8.dp))
 }
 

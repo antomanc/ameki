@@ -44,6 +44,56 @@ class ModelTest {
         assertThat(merged.updatedAt).isEqualTo(t0.plusSeconds(1800)) // current was refreshed
     }
 
+    private fun hours(from: Instant, count: Int) = (0 until count).map { i ->
+        HourlyForecast(time = from.plusSeconds(3600L * i), temperature = 10.0, condition = WeatherCondition.CLEAR, isDaytime = true,
+            precipitationProbability = 0, precipitation = 0.0, windSpeed = null, windDirection = null, humidity = null, uvIndex = null)
+    }
+
+    @Test
+    fun `a regular hourly refresh keeps extra hours with their own fetch time`() {
+        val until = t0.plusSeconds(72 * 3600)
+        val extended = WeatherSnapshot(
+            SourceId.GOOGLE, rome, null, hourly = hours(t0, 72), fetchedAt = mapOf(DataPart.HOURLY to t0),
+            hourlyExtension = HourlyExtension(t0, until),
+        )
+        val refreshedAt = t0.plusSeconds(1800)
+        val merged = extended.mergedWith(
+            WeatherSnapshot(SourceId.GOOGLE, rome, null, hourly = hours(refreshedAt, 24), fetchedAt = mapOf(DataPart.HOURLY to refreshedAt)),
+        )
+        assertThat(merged.hourly.last().time).isEqualTo(t0.plusSeconds(71 * 3600))
+        assertThat(merged.hourlyExtension!!.fetchedAt).isEqualTo(t0)
+        assertThat(merged.hoursCover(until)).isTrue()
+
+        // After Google's hour the extra hours go; the refreshed 24 stay.
+        val kept = merged.retainedAt(t0.plusSeconds(3601))!!
+        assertThat(kept.hourly).hasSize(24)
+        assertThat(kept.hourlyExtension).isNull()
+        assertThat(kept.hoursCover(until)).isFalse()
+        assertThat(merged.nextChange(t0.plusSeconds(1801))).isEqualTo(t0.plusSeconds(3600))
+    }
+
+    @Test
+    fun `hours fetched together on demand expire together`() {
+        val s = WeatherSnapshot(
+            SourceId.GOOGLE, rome, null, hourly = hours(t0, 72), fetchedAt = mapOf(DataPart.HOURLY to t0),
+            hourlyExtension = HourlyExtension(t0, t0.plusSeconds(72 * 3600)),
+        )
+        assertThat(s.retainedAt(t0.plusSeconds(3599))!!.hourly).hasSize(72)
+        // Nothing may outlive Google's hour: every hour came with the one fetch.
+        assertThat(s.retainedAt(t0.plusSeconds(3600))).isNull()
+    }
+
+    @Test
+    fun `hours count as covered once the source was asked and had no more`() {
+        val asked = t0.plusSeconds(300 * 3600)
+        val s = WeatherSnapshot(
+            SourceId.GOOGLE, rome, null, hourly = hours(t0, 240), fetchedAt = mapOf(DataPart.HOURLY to t0),
+            hourlyExtension = HourlyExtension(t0, asked),
+        )
+        assertThat(s.hoursCover(asked)).isTrue()
+        assertThat(s.copy(hourlyExtension = null).hoursCover(asked)).isFalse()
+    }
+
     @Test
     fun `merge with another source replaces everything`() {
         val old = WeatherSnapshot(SourceId.GOOGLE, rome, current(10.0), fetchedAt = mapOf(DataPart.CURRENT to t0))

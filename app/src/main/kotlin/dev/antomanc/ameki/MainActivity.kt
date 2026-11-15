@@ -16,6 +16,8 @@ import androidx.navigation.compose.rememberNavController
 import dev.antomanc.ameki.core.data.settings.SettingsRepository
 import dev.antomanc.ameki.core.data.sync.SyncError
 import dev.antomanc.ameki.core.model.AppSettings
+import dev.antomanc.ameki.core.ui.AppRequest
+import dev.antomanc.ameki.core.ui.PendingRequest
 import dev.antomanc.ameki.core.ui.theme.AmekiTheme
 import dev.antomanc.ameki.feature.home.HomeRoute
 import dev.antomanc.ameki.feature.locations.LocationsRoute
@@ -28,25 +30,18 @@ import org.koin.android.ext.android.inject
 
 class MainActivity : ComponentActivity() {
     private val settingsRepo: SettingsRepository by inject()
-    private val refreshRequest = mutableStateOf<Long?>(null)
-    /** Place requested by a widget tap; consumed by the home screen. */
-    private val requestedPlace = mutableStateOf<Long?>(null)
-    private val requestId = mutableStateOf(0L)
-    private var requestedDay: Long? = null
-    private var requestedHour: Long? = null
-    private val requestedAction = mutableStateOf<String?>(null)
+    /** The request from the launching intent or the places list, until a screen has handled it. */
+    private val pending = mutableStateOf<PendingRequest?>(null)
+    private var nextRequestId = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        if (savedInstanceState == null) readRequest(intent) else {
-            requestId.value = savedInstanceState.getLong("requestId")
-            requestedPlace.value = savedInstanceState.getLong("pendingPlace", -1).takeIf { it >= 0 }
-            requestedDay = savedInstanceState.getLong("pendingDay", Long.MIN_VALUE).takeIf { it != Long.MIN_VALUE }
-            requestedHour = savedInstanceState.getLong("pendingHour", Long.MIN_VALUE).takeIf { it != Long.MIN_VALUE }
-            requestedAction.value = savedInstanceState.getString("pendingAction")
-            refreshRequest.value = savedInstanceState.getLong("pendingRefresh", -1).takeIf { it >= 0 }
+        if (savedInstanceState == null) receive(intent) else {
+            nextRequestId = savedInstanceState.getLong(KEY_NEXT_ID)
+            pending.value = AppRequest.from(savedInstanceState.getBundle(KEY_PENDING))
+                ?.let { PendingRequest(savedInstanceState.getLong(KEY_PENDING_ID), it) }
         }
         var ready = false
         splash.setKeepOnScreenCondition { !ready }
@@ -57,24 +52,22 @@ class MainActivity : ComponentActivity() {
             ready = true
             AmekiTheme(themeMode = s.theme, dynamicColor = s.dynamicColor) {
                 val nav = rememberNavController()
-                val request by requestId
-                LaunchedEffect(request, s.onboardingDone) {
-                    if (!s.onboardingDone) {
-                        requestedAction.value = null
-                        clearLaunchExtras()
-                        return@LaunchedEffect
-                    }
-                    when (requestedAction.value) {
-                        "places" -> nav.navigate(PLACES) { launchSingleTop = true }
-                        "widget" -> WidgetPins.pinCompact(this@MainActivity)?.invoke()
-                        "refresh" -> {
-                            refreshRequest.value = request
-                            nav.popBackStack(HOME, false)
+                val request = pending.value
+                LaunchedEffect(request?.id, s.onboardingDone) {
+                    request ?: return@LaunchedEffect
+                    if (!s.onboardingDone) return@LaunchedEffect handled(request.id)
+                    when (request.request) {
+                        AppRequest.OpenPlaces -> {
+                            nav.navigate(PLACES) { launchSingleTop = true }
+                            handled(request.id)
                         }
-                        else -> if (requestedPlace.value != null) nav.popBackStack(HOME, false)
+                        AppRequest.PinWidget -> {
+                            WidgetPins.pinCompact(this@MainActivity)?.invoke()
+                            handled(request.id)
+                        }
+                        // The home screen handles these and reports back.
+                        is AppRequest.Show, AppRequest.Refresh -> nav.popBackStack(HOME, false)
                     }
-                    requestedAction.value = null
-                    if (requestedPlace.value == null) clearLaunchExtras()
                 }
                 NavHost(nav, startDestination = if (s.onboardingDone) HOME else ONBOARDING) {
                     composable(ONBOARDING) {
@@ -87,36 +80,21 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable(HOME) {
-                        val requested by requestedPlace
                         HomeRoute(
                             onOpenPlaces = { nav.navigate(PLACES) },
                             onOpenSettings = { nav.navigate(SETTINGS) },
                             onFixProblem = { err ->
                                 nav.navigate(if (err == SyncError.NO_LOCATION) PLACES else SETTINGS)
                             },
-                            initialPlaceId = requested,
-                            requestId = request,
-                            requestedDay = requestedDay,
-                            requestedHour = requestedHour,
-                            refreshRequestId = refreshRequest.value,
-                            onRefreshRequestHandled = { refreshRequest.value = null },
-                            onRequestApplied = {
-                                requestedPlace.value = null
-                                requestedDay = null
-                                requestedHour = null
-                                clearLaunchExtras()
-                            },
+                            request = pending.value?.takeIf { it.request is AppRequest.Show || it.request is AppRequest.Refresh },
+                            onRequestHandled = ::handled,
                         )
                     }
                     composable(PLACES) {
                         LocationsRoute(
                             onBack = { nav.popBackStack() },
                             onOpenPlace = { id ->
-                                requestedDay = null
-                                requestedHour = null
-                                requestedPlace.value = id
-                                requestedAction.value = null
-                                requestId.value++
+                                submit(AppRequest.Show(id))
                                 nav.popBackStack(HOME, inclusive = false)
                             },
                         )
@@ -128,12 +106,11 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        outState.putLong("requestId", requestId.value)
-        requestedPlace.value?.let { outState.putLong("pendingPlace", it) }
-        requestedDay?.let { outState.putLong("pendingDay", it) }
-        requestedHour?.let { outState.putLong("pendingHour", it) }
-        requestedAction.value?.let { outState.putString("pendingAction", it) }
-        refreshRequest.value?.let { outState.putLong("pendingRefresh", it) }
+        outState.putLong(KEY_NEXT_ID, nextRequestId)
+        pending.value?.let {
+            outState.putBundle(KEY_PENDING, it.request.toBundle())
+            outState.putLong(KEY_PENDING_ID, it.id)
+        }
         super.onSaveInstanceState(outState)
     }
 
@@ -144,33 +121,34 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun clearLaunchExtras() {
-        listOf(EXTRA_PLACE_ID, "dev.antomanc.ameki.DAY_EPOCH_DAY", "dev.antomanc.ameki.HOUR_EPOCH_SECOND",
-            "dev.antomanc.ameki.REQUEST_ID", "dev.antomanc.ameki.OPEN_PLACES", "dev.antomanc.ameki.ACTION").forEach { intent?.removeExtra(it) }
-    }
-
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        readRequest(intent)
+        receive(intent)
     }
 
-    private fun readRequest(intent: Intent?) {
-        requestedPlace.value = placeFrom(intent)
-        requestedDay = intent?.takeIf { it.hasExtra("dev.antomanc.ameki.DAY_EPOCH_DAY") }?.getLongExtra("dev.antomanc.ameki.DAY_EPOCH_DAY", 0)
-        requestedHour = intent?.takeIf { it.hasExtra("dev.antomanc.ameki.HOUR_EPOCH_SECOND") }?.getLongExtra("dev.antomanc.ameki.HOUR_EPOCH_SECOND", 0)
-        requestedAction.value = if (intent?.getBooleanExtra("dev.antomanc.ameki.OPEN_PLACES", false) == true) "places" else intent?.getStringExtra("dev.antomanc.ameki.ACTION")
-        requestId.value++
+    private fun receive(intent: Intent?) {
+        AppRequest.from(intent?.extras)?.let(::submit)
     }
 
-    private fun placeFrom(intent: Intent?): Long? =
-        intent?.getLongExtra(EXTRA_PLACE_ID, -1L)?.takeIf { it >= 0 }
+    private fun submit(request: AppRequest) {
+        pending.value = PendingRequest(++nextRequestId, request)
+    }
+
+    private fun handled(id: Long) {
+        if (pending.value?.id != id) return
+        pending.value = null
+        // Recreating the activity from its intent must not replay a request already handled.
+        AppRequest.clear(intent)
+    }
 
     companion object {
-        const val EXTRA_PLACE_ID = "dev.antomanc.ameki.PLACE_ID"
         private const val ONBOARDING = "onboarding"
         private const val HOME = "home"
         private const val PLACES = "places"
         private const val SETTINGS = "settings"
+        private const val KEY_PENDING = "pendingRequest"
+        private const val KEY_PENDING_ID = "pendingRequestId"
+        private const val KEY_NEXT_ID = "nextRequestId"
     }
 }

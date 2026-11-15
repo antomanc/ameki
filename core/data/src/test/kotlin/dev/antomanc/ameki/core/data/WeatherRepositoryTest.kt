@@ -9,11 +9,13 @@ import dev.antomanc.ameki.core.data.db.AmekiDatabase
 import dev.antomanc.ameki.core.data.location.DeviceLocation
 import dev.antomanc.ameki.core.data.settings.SecretCipher
 import dev.antomanc.ameki.core.data.settings.SettingsRepository
+import dev.antomanc.ameki.core.data.sync.DayHours
 import dev.antomanc.ameki.core.data.sync.SyncError
 import dev.antomanc.ameki.core.model.Capability
 import dev.antomanc.ameki.core.model.CurrentWeather
 import dev.antomanc.ameki.core.model.DataPart
 import dev.antomanc.ameki.core.model.GeoPoint
+import dev.antomanc.ameki.core.model.HourlyForecast
 import dev.antomanc.ameki.core.model.PlaceSearchResult
 import dev.antomanc.ameki.core.model.SourceId
 import dev.antomanc.ameki.core.model.WeatherCondition
@@ -22,6 +24,7 @@ import dev.antomanc.ameki.source.api.PlaceSearch
 import dev.antomanc.ameki.source.api.SourceException
 import dev.antomanc.ameki.source.api.WeatherSource
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -36,8 +39,28 @@ import java.time.ZoneId
 private class FakeSource(override val id: SourceId, private val clock: () -> Instant) : WeatherSource {
     override val capabilities = if (id == SourceId.GOOGLE) Capability.entries.toSet() - Capability.NOWCAST else Capability.entries.toSet() - Capability.ALERTS
     val calls = mutableListOf<Set<DataPart>>()
+    val hourCalls = mutableListOf<Int>()
     var failWith: Exception? = null
+    var hoursFailWith: Exception? = null
+    var emptyHours = false
+    var hoursGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
     var temperature = 20.0
+
+    override val fetchesHoursOnDemand = id == SourceId.GOOGLE
+
+    private fun hours(from: Instant, count: Int) = (0 until count).map { i ->
+        HourlyForecast(time = from.plusSeconds(3600L * i), temperature = temperature, condition = WeatherCondition.CLEAR, isDaytime = true,
+            precipitationProbability = 0, precipitation = 0.0, windSpeed = null, windDirection = null, humidity = null, uvIndex = null)
+    }
+
+    override suspend fun fetchHours(location: GeoPoint, language: String, hours: Int): WeatherSnapshot {
+        check(fetchesHoursOnDemand)
+        hourCalls += hours
+        hoursGate?.await()
+        hoursFailWith?.let { throw it }
+        val now = clock()
+        return WeatherSnapshot(id, ZoneId.of("Europe/Rome"), null, hourly = if (emptyHours) emptyList() else hours(now, minOf(hours, 240)), fetchedAt = mapOf(DataPart.HOURLY to now))
+    }
 
     override suspend fun fetch(location: GeoPoint, language: String, parts: Set<DataPart>): WeatherSnapshot {
         calls += parts
@@ -50,6 +73,7 @@ private class FakeSource(override val id: SourceId, private val clock: () -> Ins
                 now, temperature, null, WeatherCondition.CLEAR, null, true,
                 null, null, null, null, null, null, null, null, null,
             ) else null,
+            hourly = if (DataPart.HOURLY in parts) hours(now, if (id == SourceId.GOOGLE) 24 else 240) else emptyList(),
             fetchedAt = parts.associateWith { now },
         )
     }
@@ -133,9 +157,9 @@ class WeatherRepositoryTest {
             SourceId.GOOGLE, ZoneId.of("Europe/Rome"), null,
             fetchedAt = mapOf(DataPart.CURRENT to now, DataPart.DAILY to now),
         )
-        assertThat(nextExpiry(s, now)).isEqualTo(now.plusSeconds(3600))
-        assertThat(nextExpiry(s, now.plusSeconds(2 * 3600))).isEqualTo(Instant.parse("2026-11-14T23:00:00Z"))
-        assertThat(nextExpiry(s, now.plusSeconds(25 * 3600))).isNull()
+        assertThat(s.nextChange(now)).isEqualTo(now.plusSeconds(3600))
+        assertThat(s.nextChange(now.plusSeconds(2 * 3600))).isEqualTo(Instant.parse("2026-11-14T23:00:00Z"))
+        assertThat(s.nextChange(now.plusSeconds(25 * 3600))).isNull()
     }
 
     @Test
@@ -224,11 +248,111 @@ class WeatherRepositoryTest {
     @Test
     fun `missing key is reported as needing user action`() = runTest {
         settings.setSource(SourceId.GOOGLE)
-        google.failWith = SourceException.InvalidApiKey("No API key")
+        google.failWith = SourceException.MissingApiKey()
         val id = addRome()
         val error = repo.refresh(id)
         assertThat(error).isEqualTo(SyncError.MISSING_KEY)
         assertThat(error!!.needsUserAction).isTrue()
+    }
+
+    @Test
+    fun `a rejected key is not mistaken for a missing one`() = runTest {
+        settings.setSource(SourceId.GOOGLE)
+        google.failWith = SourceException.InvalidApiKey("No API key")
+        assertThat(repo.refresh(addRome())).isEqualTo(SyncError.INVALID_KEY)
+    }
+
+    private val later = java.time.LocalDate.of(2026, 11, 17)
+
+    @Test
+    fun `a later day's hours are fetched once and survive the next refresh`() = runTest {
+        settings.setSource(SourceId.GOOGLE)
+        val id = addRome()
+        repo.refresh(id)
+        assertThat(repo.get(id)!!.dayHours(later)).isEqualTo(DayHours.NEEDED)
+
+        repo.loadDayHours(id, later)
+        assertThat(google.hourCalls).hasSize(1)
+        assertThat(repo.get(id)!!.dayHours(later)).isEqualTo(DayHours.READY)
+
+        now = now.plusSeconds(30 * 60)
+        repo.refresh(id)
+        assertThat(google.calls.last()).contains(DataPart.HOURLY)
+        assertThat(repo.get(id)!!.dayHours(later)).isEqualTo(DayHours.READY)
+        repo.loadDayHours(id, later)
+        assertThat(google.hourCalls).hasSize(1)
+
+        // Google's one-hour limit runs from the extra hours' own fetch, not from the later refresh.
+        now = now.plusSeconds(31 * 60)
+        val expired = repo.get(id)!!
+        assertThat(expired.dayHours(later)).isEqualTo(DayHours.NEEDED)
+        assertThat(expired.snapshot!!.hourly.last().time).isLessThan(now.plusSeconds(24 * 3600))
+    }
+
+    @Test
+    fun `a failed day request is reported for that place only`() = runTest {
+        settings.setSource(SourceId.GOOGLE)
+        val rome = addRome()
+        val milan = places.add(PlaceSearchResult("Milano", "Lombardia", "Italia", GeoPoint(45.46, 9.19), "Europe/Rome"))
+        repo.refresh(rome)
+        repo.refresh(milan)
+
+        google.hoursFailWith = SourceException.Network(java.io.IOException("offline"))
+        repo.loadDayHours(rome, later)
+
+        val all = repo.all.first().associateBy { it.place.id }
+        assertThat(all.getValue(rome).dayHours(later)).isEqualTo(DayHours.FAILED)
+        assertThat(all.getValue(rome).hourRequests.failed[later]).isEqualTo(SyncError.NETWORK)
+        assertThat(all.getValue(milan).dayHours(later)).isEqualTo(DayHours.NEEDED)
+        // A nearer day that was never asked for is not reported as failed.
+        assertThat(all.getValue(rome).dayHours(later.minusDays(1))).isEqualTo(DayHours.NEEDED)
+
+        google.hoursFailWith = null
+        repo.loadDayHours(rome, later)
+        assertThat(repo.get(rome)!!.dayHours(later)).isEqualTo(DayHours.READY)
+        assertThat(repo.get(rome)!!.hourRequests.failed).isEmpty()
+    }
+
+    @Test
+    fun `a cancelled day request keeps the last failure and stops loading`() = runTest {
+        settings.setSource(SourceId.GOOGLE)
+        val id = addRome()
+        repo.refresh(id)
+        google.hoursFailWith = SourceException.Network(java.io.IOException("offline"))
+        repo.loadDayHours(id, later)
+
+        google.hoursGate = kotlinx.coroutines.CompletableDeferred()
+        val job = launch { repo.loadDayHours(id, later) }
+        // DataStore and Room run on real threads: wait for the request to reach the source.
+        while (google.hourCalls.size < 2) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { kotlinx.coroutines.delay(10) }
+        assertThat(repo.get(id)!!.dayHours(later)).isEqualTo(DayHours.LOADING)
+        job.cancel()
+        job.join()
+
+        val w = repo.get(id)!!
+        assertThat(w.hourRequests.loadingUntil).isNull()
+        assertThat(w.dayHours(later)).isEqualTo(DayHours.FAILED)
+    }
+
+    @Test
+    fun `an answer without hours keeps the stored ones and reports a failure`() = runTest {
+        settings.setSource(SourceId.GOOGLE)
+        val id = addRome()
+        repo.refresh(id)
+        google.emptyHours = true
+        repo.loadDayHours(id, later)
+        val w = repo.get(id)!!
+        assertThat(w.snapshot!!.hourly).hasSize(24)
+        assertThat(w.dayHours(later)).isEqualTo(DayHours.FAILED)
+    }
+
+    @Test
+    fun `open-meteo days never fetch extra hours`() = runTest {
+        val id = addRome()
+        repo.refresh(id)
+        repo.loadDayHours(id, later)
+        assertThat(openMeteo.hourCalls).isEmpty()
+        assertThat(repo.get(id)!!.dayHours(later)).isEqualTo(DayHours.READY)
     }
 
     @Test
@@ -241,6 +365,27 @@ class WeatherRepositoryTest {
         val results = repo.refreshActive(widgetPlaceIds = setOf(milan))
         assertThat(results.keys).containsExactly(milan, oslo)
         assertThat(results.keys).doesNotContain(rome)
+    }
+
+    @Test
+    fun `widget instances resolve their place once, for drawing and for refresh`() = runTest {
+        val widgets = dev.antomanc.ameki.core.data.widget.WidgetInstances(db.widgets(), repo, places, settings)
+        val rome = addRome()
+        val milan = places.add(PlaceSearchResult("Milano", "Lombardia", "Italia", GeoPoint(45.46, 9.19), null))
+        val style = dev.antomanc.ameki.core.data.widget.WidgetStyle.DARK
+        widgets.save(1, dev.antomanc.ameki.core.data.widget.WidgetConfig(null, style, 0.5f))
+        widgets.save(2, dev.antomanc.ameki.core.data.widget.WidgetConfig(milan, style, 0.5f))
+
+        assertThat(widgets.shownPlaces()).containsExactly(rome, milan)
+        assertThat(widgets.load(1).weather!!.place.id).isEqualTo(rome)
+        assertThat(widgets.observe(2).first().weather!!.place.id).isEqualTo(milan)
+        assertThat(widgets.config(3)).isNull()
+
+        // A deleted place is reported, never replaced by another city.
+        places.remove(milan)
+        assertThat(widgets.load(2).placeExists).isFalse()
+        assertThat(widgets.observe(2).first().weather).isNull()
+        assertThat(widgets.shownPlaces()).containsExactly(rome)
     }
 
     @Test

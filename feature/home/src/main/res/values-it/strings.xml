@@ -59,6 +59,8 @@
     <string name="col_wind">Vento</string>
     <string name="back">Indietro</string>
     <string name="day_loading_hours">Sto prendendo le ore…</string>
+    <string name="day_hours_unavailable">Per questo giorno non c\'è ancora la previsione ora per ora.</string>
+    <string name="day_hours_partial">La previsione ora per ora finisce qui.</string>
     <string name="day_hours_failed">Non riesco a prendere le ore di questo giorno. Riprova tra poco.</string>
     <string name="day_night">Notte: %1$s</string>
     <string name="tomorrow">Domani</string>
@@ -68,12 +70,6 @@
     <string name="current_unavailable">Le condizioni attuali non sono disponibili. Puoi consultare le previsioni qui sotto.</string>
     <string name="temperature_range">Min %1$s · max %2$s</string>
     <string name="rain_next">Pioggia nelle prossime due ore</string>
-    <string name="rain_none">Non è prevista pioggia nelle prossime due ore</string>
-    <string name="rain_now">Sta piovendo</string>
-    <string name="rain_starts">Pioggia tra circa %1$d min</string>
-    <string name="rain_stops">La pioggia termina tra circa %1$d min</string>
-    <string name="rain_likely">Pioggia probabile verso le %1$s</string>
-    <string name="rain_unavailable">Previsione pioggia a breve non disponibile</string>
     <string name="rain_steps">Intervalli di 15 minuti</string>
     <string name="weather_alerts">Avvisi meteo</string>
     <string name="alert_from">Dalle %1$s</string>

@@ -122,7 +122,7 @@ class GoogleWeatherSourceTest {
     @Test
     fun `missing key fails without a call`() = runTest {
         val e = runCatching { source(key = " ").fetch(rome, "en") }.exceptionOrNull()
-        assertThat(e).isInstanceOf(SourceException.InvalidApiKey::class.java)
+        assertThat(e).isInstanceOf(SourceException.MissingApiKey::class.java)
         assertThat(requests).isEmpty()
     }
 

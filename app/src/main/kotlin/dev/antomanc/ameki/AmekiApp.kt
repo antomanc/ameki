@@ -6,6 +6,7 @@ import androidx.work.WorkManager
 import dev.antomanc.ameki.core.data.di.dataModule
 import dev.antomanc.ameki.core.data.settings.SettingsRepository
 import dev.antomanc.ameki.core.data.sync.RefreshScheduler
+import dev.antomanc.ameki.core.ui.AppRequest
 import dev.antomanc.ameki.feature.home.homeModule
 import dev.antomanc.ameki.feature.locations.locationsModule
 import dev.antomanc.ameki.feature.settings.settingsModule
@@ -54,22 +55,21 @@ class AmekiApp : Application() {
         val shortcuts = getSystemService(android.content.pm.ShortcutManager::class.java)
         if (shortcuts.isRateLimitingActive) return
         val entries = listOf(
-            "places" to getString(R.string.shortcut_places),
-            "refresh" to getString(R.string.shortcut_refresh),
-            "widget" to getString(R.string.shortcut_widget),
-        ).filter { (action, _) -> action != "widget" || android.appwidget.AppWidgetManager.getInstance(this).isRequestPinAppWidgetSupported }.map { (action, label) ->
+            Triple(AppRequest.ACTION_PLACES, AppRequest.OpenPlaces, getString(R.string.shortcut_places)),
+            Triple(AppRequest.ACTION_REFRESH, AppRequest.Refresh, getString(R.string.shortcut_refresh)),
+            Triple(AppRequest.ACTION_WIDGET, AppRequest.PinWidget, getString(R.string.shortcut_widget)),
+        ).filter { (_, request, _) -> request != AppRequest.PinWidget || android.appwidget.AppWidgetManager.getInstance(this).isRequestPinAppWidgetSupported }.map { (action, request, label) ->
             android.content.pm.ShortcutInfo.Builder(this, action)
                 .setShortLabel(label)
                 .setLongLabel(label)
-                .setIcon(android.graphics.drawable.Icon.createWithResource(this, when (action) {
-                    "places" -> android.R.drawable.ic_menu_mylocation
-                    "refresh" -> android.R.drawable.ic_popup_sync
+                .setIcon(android.graphics.drawable.Icon.createWithResource(this, when (request) {
+                    AppRequest.OpenPlaces -> android.R.drawable.ic_menu_mylocation
+                    AppRequest.Refresh -> android.R.drawable.ic_popup_sync
                     else -> android.R.drawable.ic_input_add
                 }))
-                .setIntent(android.content.Intent(this, MainActivity::class.java)
+                .setIntent(request.writeTo(android.content.Intent(this, MainActivity::class.java)
                     .setAction(android.content.Intent.ACTION_VIEW)
-                    .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                    .putExtra("dev.antomanc.ameki.ACTION", action))
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)))
                 .build()
         }
         shortcuts.setDynamicShortcuts(entries)
