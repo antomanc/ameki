@@ -3,7 +3,7 @@
 AI-first generic project configured with `aginit` (Native mobile, kotlin).
 
 ## Core Invariants
-- Keep changes small, focused, and test-verified.
+- Keep changes small, focused, and test-verified: define the success check before writing code, and state assumptions you could not verify.
 - Prefer native language & platform capabilities over heavy external frameworks.
 - Never commit broken builds, failed typechecks, or unverified changes.
 
@@ -18,12 +18,6 @@ When the user asks to "bootstrap this project" or kicks off a new initiative:
 2. Draft or refine canonical context in `PRODUCT.md` and `DESIGN.md` (or `docs/adr/`).
 3. Plan in small verifiable increments and implement test-first using installed skills.
 
-## Guardrails (karpathy-guidelines)
-- **Think before coding**: state assumptions and trade-offs; ask instead of guessing.
-- **Simplicity first**: minimum code that solves the problem; no speculative features or abstractions.
-- **Surgical changes**: touch only what the task needs; no silent scope creep or drive-by refactors.
-- **Goal-driven execution**: define a verifiable success check first, then loop until it passes.
-
 ## Task Routing
 Load only what the task needs. Skills live in `.agents/skills/` (linked into `.claude/skills/` for Claude Code).
 
@@ -34,7 +28,6 @@ Load only what the task needs. Skills live in `.agents/skills/` (linked into `.c
 | Automated unit & E2E testing | `docs/agents/testing.md` |
 | Live UI verification (Web / Mobile) | `docs/agents/ui-verification.md` |
 | Engineering workflow & skills | `docs/agents/workflows.md` |
-| Scoping or simplifying a change | `ponytail` skill |
 | Prose & Copy (docs, README, UI text) | `humanizer` skill |
 
 ## Anti-Rationalization
