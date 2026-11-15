@@ -27,7 +27,6 @@
           "prototype",
           "research",
           "retro",
-          "setup-matt-pocock-skills",
           "tdd",
           "to-spec",
           "to-tickets",
@@ -41,18 +40,6 @@
           "to-questionnaire",
           "wait-what",
           "writing-for-agents"
-        ]
-      },
-      {
-        "package": "dietrichgebert/ponytail",
-        "skills": [
-          "ponytail"
-        ]
-      },
-      {
-        "package": "multica-ai/andrej-karpathy-skills",
-        "skills": [
-          "karpathy-guidelines"
         ]
       },
       {
@@ -90,11 +77,12 @@
   },
   "capabilities": [
     "pocock",
-    "ponytail",
-    "karpathy-guidelines",
     "humanizer",
     "impeccable",
     "agent-device",
     "native"
+  ],
+  "disabledCapabilities": [
+    "karpathy-guidelines"
   ]
 }
