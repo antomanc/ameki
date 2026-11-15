@@ -69,12 +69,6 @@
     <string name="current_unavailable">Current conditions are unavailable. The forecasts below are still available.</string>
     <string name="temperature_range">Min %1$s · max %2$s</string>
     <string name="rain_next">Rain in the next two hours</string>
-    <string name="rain_none">No rain expected in the next two hours</string>
-    <string name="rain_now">It is raining now</string>
-    <string name="rain_starts">Rain starts in about %1$d min</string>
-    <string name="rain_stops">Rain stops in about %1$d min</string>
-    <string name="rain_likely">Rain likely around %1$s</string>
-    <string name="rain_unavailable">Short-term rain forecast unavailable</string>
     <string name="rain_steps">15-minute intervals</string>
     <string name="weather_alerts">Weather alerts</string>
     <string name="alert_from">From %1$s</string>

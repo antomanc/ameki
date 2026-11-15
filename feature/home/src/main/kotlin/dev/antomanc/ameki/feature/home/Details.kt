@@ -44,6 +44,7 @@ import dev.antomanc.ameki.core.model.MoonPhase
 import dev.antomanc.ameki.core.model.Units
 import dev.antomanc.ameki.core.model.WeatherSnapshot
 import dev.antomanc.ameki.core.model.compassPoint
+import dev.antomanc.ameki.core.ui.ForecastView
 import dev.antomanc.ameki.core.ui.TimeFormatter
 import dev.antomanc.ameki.core.ui.theme.LocalInstrumentColors
 import java.time.Instant
@@ -121,9 +122,10 @@ internal fun HourlyCharts(hours: List<HourlyForecast>, s: WeatherSnapshot, units
 }
 
 @Composable
-internal fun DetailGrid(s: WeatherSnapshot, units: Units, fmt: TimeFormatter, caps: Set<Capability>) {
+internal fun DetailGrid(view: ForecastView, units: Units, fmt: TimeFormatter, caps: Set<Capability>) {
+    val s = view.snapshot
     val c = s.current
-    val today = s.today(java.time.Instant.now())
+    val today = view.today
     val tiles = buildList<@Composable (Modifier) -> Unit> {
         c?.windSpeed?.let { speed -> add { m -> WindTile(speed, c.windGust, c.windDirection, units, m) } }
         c?.humidity?.let { h -> add { m -> SimpleTile(stringResource(R.string.humidity), "$h%", c.dewPoint?.let { stringResource(R.string.dew_point, units.temp(it)) }, m) } }

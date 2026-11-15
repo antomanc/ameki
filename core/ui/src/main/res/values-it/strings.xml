@@ -35,9 +35,17 @@
     <string name="attribution_open_meteo">Dati meteo di Open-Meteo.com (CC BY 4.0)</string>
     <string name="attribution_google">Source: Includes weather data from Google</string>
 
-    <string name="rain_none_2h">Niente pioggia nelle prossime 2 ore</string>
+    <string name="rain_none_short">Niente pioggia nelle prossime 2 ore</string>
+    <string name="rain_now_short">Sta piovendo</string>
+    <string name="rain_stops_short">Smette tra %1$d min</string>
+    <string name="rain_starts_short">Pioggia tra %1$d min</string>
+    <string name="rain_likely_short">Pioggia verso le %1$s</string>
+    <!-- Rain outlook: short for widgets, full sentences for the app (ForecastView.rainText). -->
+    <string name="rain_unavailable_short">Dati pioggia non disponibili</string>
+    <string name="rain_none">Non è prevista pioggia nelle prossime due ore</string>
     <string name="rain_now">Sta piovendo</string>
-    <string name="rain_stops_in">Smette tra %1$d min</string>
-    <string name="rain_in">Pioggia tra %1$d min</string>
-    <string name="rain_in_hours">Pioggia verso le %1$s</string>
+    <string name="rain_starts">Pioggia tra circa %1$d min</string>
+    <string name="rain_stops">La pioggia termina tra circa %1$d min</string>
+    <string name="rain_likely">Pioggia probabile verso le %1$s</string>
+    <string name="rain_unavailable">Previsione pioggia a breve non disponibile</string>
 </resources>

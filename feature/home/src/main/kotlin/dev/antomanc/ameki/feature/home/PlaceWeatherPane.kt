@@ -48,6 +48,8 @@ import dev.antomanc.ameki.core.model.HourlyForecast
 import dev.antomanc.ameki.core.model.SourceId
 import dev.antomanc.ameki.core.model.Units
 import dev.antomanc.ameki.core.model.WeatherSnapshot
+import dev.antomanc.ameki.core.ui.ForecastView
+import dev.antomanc.ameki.core.ui.HourView
 import dev.antomanc.ameki.core.ui.TimeFormatter
 import dev.antomanc.ameki.core.ui.components.AnimatedWeatherIcon
 import dev.antomanc.ameki.core.ui.components.RainDot
@@ -83,19 +85,20 @@ internal fun PlaceWeatherPane(
             NoData(pw, refreshing, onFixProblem, onRefresh)
             return@PullToRefreshBox
         }
+        val view = ForecastView(snapshot, now, state.settings.refreshIntervalMinutes)
         val primary: List<@Composable () -> Unit> = buildList {
-            add { Hero(pw, snapshot, units, fmt, now, state.settings.refreshIntervalMinutes) {
+            add { Hero(pw, view, units, fmt) {
                 Freshness(pw, snapshot, fmt, now, refreshing, onFixProblem, onRefresh)
-                if (snapshot.nowcast.isNotEmpty() || snapshot.hourly.isNotEmpty()) RainOutlookSummary(snapshot, now, fmt)
+                if (snapshot.nowcast.isNotEmpty() || snapshot.hourly.isNotEmpty()) RainOutlookSummary(view, fmt)
             } }
             if (snapshot.alerts.isNotEmpty()) add { AlertsCard(snapshot, fmt) }
             // 48 hours: Open-Meteo has them already; Google refreshes 24 (each extra page is a call).
-            if (snapshot.hoursFrom(now).isNotEmpty()) add { HourlyCard(snapshot.hoursFrom(now).take(48), snapshot, units, fmt, onOpenDay) }
-            if (snapshot.hoursFrom(now).isNotEmpty()) add { HourlyCharts(snapshot.hoursFrom(now).take(24), snapshot, units, fmt) }
+            if (view.hours.isNotEmpty()) add { HourlyCard(view.hours.take(48), view, units, fmt, onOpenDay) }
+            if (view.hours.isNotEmpty()) add { HourlyCharts(view.hours.take(24).map { it.forecast }, snapshot, units, fmt) }
         }
         val secondary: List<@Composable () -> Unit> = buildList {
-            if (snapshot.daily.isNotEmpty()) add { DailyCard(snapshot.daily, snapshot, units, fmt) { onOpenDay(DayTarget(snapshot.daily[it].date)) } }
-            add { DetailGrid(snapshot, units, fmt, state.capabilities) }
+            if (view.days.isNotEmpty()) add { DailyCard(view, units, fmt) { onOpenDay(DayTarget(it)) } }
+            add { DetailGrid(view, units, fmt, state.capabilities) }
             add { Attribution(snapshot, fmt) }
         }
         if (twoColumns) {
@@ -130,9 +133,10 @@ internal fun Atmosphere(snapshot: WeatherSnapshot?) {
 }
 
 @Composable
-private fun Hero(pw: PlaceWeather, s: WeatherSnapshot, units: Units, fmt: TimeFormatter, now: Instant, intervalMin: Int, stamp: @Composable () -> Unit) {
+private fun Hero(pw: PlaceWeather, view: ForecastView, units: Units, fmt: TimeFormatter, stamp: @Composable () -> Unit) {
+    val s = view.snapshot
     val c = s.current
-    val today = s.daily.firstOrNull { it.date == java.time.LocalDate.now(s.timeZone) }
+    val today = view.today
     val largeText = LocalDensity.current.fontScale > 1.3f
     Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -141,9 +145,8 @@ private fun Hero(pw: PlaceWeather, s: WeatherSnapshot, units: Units, fmt: TimeFo
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.weight(1f).semantics { heading() },
             )
-            s.updatedAt?.let { updated ->
-                val stale = (s.current != null && !s.currentIsFresh(now)) || Duration.between(updated, now) > Duration.ofMinutes(maxOf(120L, intervalMin * 3L))
-                Text(stringResource(if (stale) UiR.string.updated_stale else UiR.string.updated_at, fmt.timestamp(updated, s.timeZone, now)),
+            view.updatedAt?.let { updated ->
+                Text(stringResource(if (view.stale) UiR.string.updated_stale else UiR.string.updated_at, fmt.timestamp(updated, s.timeZone, view.now)),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.End, modifier = Modifier.widthIn(max = 140.dp).padding(top = 4.dp))
             }
@@ -215,16 +218,17 @@ internal fun Card(title: String?, modifier: Modifier = Modifier, contentPadding:
 private val HourItemHeight = 140.dp
 
 @Composable
-private fun HourlyCard(hours: List<HourlyForecast>, s: WeatherSnapshot, units: Units, fmt: TimeFormatter, onOpenDay: (DayTarget) -> Unit) {
+private fun HourlyCard(hours: List<HourView>, view: ForecastView, units: Units, fmt: TimeFormatter, onOpenDay: (DayTarget) -> Unit) {
+    val s = view.snapshot
     val colors = LocalInstrumentColors.current
     val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
     val rowState = androidx.compose.foundation.lazy.rememberLazyListState()
-    val today = java.time.LocalDate.now(s.timeZone)
+    val today = view.todayDate
     // The title names the day under the first visible hour, so you always know where you are.
     val firstVisible by androidx.compose.runtime.remember {
         androidx.compose.runtime.derivedStateOf { rowState.firstVisibleItemIndex }
     }
-    val visibleDate = hours.getOrNull(firstVisible)?.time?.atZone(s.timeZone)?.toLocalDate() ?: today
+    val visibleDate = hours.getOrNull(firstVisible)?.forecast?.time?.atZone(s.timeZone)?.toLocalDate() ?: today
     val dayName = when (visibleDate) {
         today -> stringResource(UiR.string.today)
         today.plusDays(1) -> stringResource(R.string.tomorrow)
@@ -232,8 +236,9 @@ private fun HourlyCard(hours: List<HourlyForecast>, s: WeatherSnapshot, units: U
     }
     Card("${stringResource(R.string.next_hours)} · $dayName") {
         LazyRow(state = rowState, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            items(hours.size, key = { hours[it].time.epochSecond }) { i ->
-                val h = hours[i]
+            items(hours.size, key = { hours[it].forecast.time.epochSecond }) { i ->
+                val hv = hours[i]
+                val h = hv.forecast
                 val local = h.time.atZone(s.timeZone)
                 val date = local.toLocalDate()
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -255,14 +260,14 @@ private fun HourlyCard(hours: List<HourlyForecast>, s: WeatherSnapshot, units: U
                         },
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        val isNow = i == 0 && s.currentIsFresh(Instant.now())
+                        val isNow = hv.isNow
                         Text(
                             if (isNow) stringResource(UiR.string.now) else fmt.hour(h.time, s.timeZone),
                             style = MaterialTheme.typography.labelMedium,
                             color = if (isNow) colors.now else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         WeatherIcon(h.condition, h.isDaytime, Modifier.padding(vertical = 4.dp), size = 34.dp)
-                        Text(units.temp(if (isNow) s.current?.temperature ?: h.temperature else h.temperature), style = MaterialTheme.typography.titleMedium)
+                        Text(units.temp(hv.temperature), style = MaterialTheme.typography.titleMedium)
                         Box(Modifier.height(30.dp), contentAlignment = Alignment.Center) { RainDot(h.precipitationProbability, max = 22.dp) }
                         Text(h.precipitationProbability?.let { "$it%" } ?: "", style = MaterialTheme.typography.labelMedium, color = colors.rain)
                     }
@@ -273,25 +278,27 @@ private fun HourlyCard(hours: List<HourlyForecast>, s: WeatherSnapshot, units: U
 }
 
 @Composable
-private fun DailyCard(days: List<DailyForecast>, s: WeatherSnapshot, units: Units, fmt: TimeFormatter, onDay: (Int) -> Unit) {
+private fun DailyCard(view: ForecastView, units: Units, fmt: TimeFormatter, onDay: (java.time.LocalDate) -> Unit) {
+    val days = view.days
+    val s = view.snapshot
     val min = days.minOf { it.temperatureMin }
     val max = days.maxOf { it.temperatureMax }
     val current = s.current?.temperature
     Card(stringResource(R.string.ten_days)) {
         days.forEachIndexed { i, d ->
             if (LocalDensity.current.fontScale > 1.3f) {
-                Column(Modifier.fillMaxWidth().clickable { onDay(i) }.padding(vertical = 12.dp)) {
-                    Text(if (d.date == java.time.LocalDate.now(s.timeZone)) stringResource(UiR.string.today) else fmt.dateMedium(d.date), style = MaterialTheme.typography.titleMedium)
+                Column(Modifier.fillMaxWidth().clickable { onDay(d.date) }.padding(vertical = 12.dp)) {
+                    Text(if (view.isToday(d.date)) stringResource(UiR.string.today) else fmt.dateMedium(d.date), style = MaterialTheme.typography.titleMedium)
                     Text(stringResource(d.condition.label()), style = MaterialTheme.typography.bodyMedium)
                     Text(stringResource(R.string.temperature_range, units.temp(d.temperatureMin), units.temp(d.temperatureMax)))
                     d.precipitationProbability?.let { Text(stringResource(R.string.day_rain, it, d.precipitation?.let(units::precipitation) ?: "")) }
                 }
             } else Row(
-                Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(MaterialTheme.shapes.small).clickable { onDay(i) },
+                Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(MaterialTheme.shapes.small).clickable { onDay(d.date) },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    if (d.date == java.time.LocalDate.now(s.timeZone)) stringResource(UiR.string.today) else fmt.weekdayShort(d.date),
+                    if (view.isToday(d.date)) stringResource(UiR.string.today) else fmt.weekdayShort(d.date),
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.width(56.dp),
                 )
@@ -306,7 +313,7 @@ private fun DailyCard(days: List<DailyForecast>, s: WeatherSnapshot, units: Unit
                 RangeBar(
                     d.temperatureMin, d.temperatureMax, min, max,
                     modifier = Modifier.weight(1f).padding(horizontal = 10.dp).height(6.dp),
-                    current = if (i == 0) current else null,
+                    current = if (view.isToday(d.date)) current else null,
                 )
                 Text(units.temp(d.temperatureMax), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.width(36.dp))
             }

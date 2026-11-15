@@ -21,7 +21,10 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.provideContent
+import dev.antomanc.ameki.core.model.Place
+import dev.antomanc.ameki.core.ui.ForecastView
 import dev.antomanc.ameki.core.ui.TimeFormatter
+import java.time.Instant
 import dev.antomanc.ameki.core.ui.label
 
 /**
@@ -57,56 +60,55 @@ abstract class AmekiWidget(sizes: Set<DpSize>) : GlanceAppWidget() {
     private fun Render(context: Context, data: WidgetData) {
         val palette = rememberPalette(data.config)
         val fmt = TimeFormatter(context, data.settings.timeFormat)
-        // Dense tiles get a smaller inset: leave room for the content instead of clipping it.
-        val pad = when {
-            LocalSize.current.height < 90.dp -> 0.dp
-            LocalSize.current.height < 150.dp -> 0.dp
-            LocalSize.current.height < 200.dp -> 8.dp
-            else -> 12.dp
-        }
-        WidgetFrame(data, palette, padding = pad) {
-            if (!WidgetMessage(data, palette, need)) {
-                if (context.resources.configuration.fontScale > 1.3f) LargeFontContent(context, data, palette, fmt)
-                else Content(data, palette, fmt)
+        WidgetFrame(data, palette, padding = WidgetLayout.padding(LocalSize.current)) {
+            val weather = data.weather
+            val snapshot = weather?.snapshot
+            if (!WidgetMessage(data, palette, need) && weather != null && snapshot != null) {
+                val w = ReadyWidget(data, weather.place, ForecastView(snapshot, Instant.now(), data.settings.refreshIntervalMinutes))
+                if (context.resources.configuration.fontScale > 1.3f) LargeFontContent(context, w, palette, fmt)
+                else Content(w, palette, fmt)
             }
         }
     }
 
     /** At large fonts prioritise the reading and show fewer, full-size forecast targets. */
     @Composable
-    private fun LargeFontContent(context: Context, data: WidgetData, palette: WidgetPalette, fmt: TimeFormatter) {
-        val weather = data.weather ?: return
-        val snapshot = weather.snapshot ?: return
-        val now = java.time.Instant.now()
-        val units = data.settings.units
-        val small = LocalSize.current.height < 90.dp
-        val dense = LocalSize.current.height < 150.dp
+    private fun LargeFontContent(context: Context, w: ReadyWidget, palette: WidgetPalette, fmt: TimeFormatter) {
+        val units = w.units
+        val zone = w.snapshot.timeZone
+        val layout = WidgetLayout.largeFont(LocalSize.current)
         Column(GlanceModifier.fillMaxSize()) {
-            val temperature = snapshot.current?.let { units.temp(it.temperature) }.orEmpty()
-            Text("${weather.place.name} $temperature", style = textStyle(palette.onSurface, if (dense) 11.sp else 14.sp), maxLines = 1)
-            val count = ((LocalSize.current.height.value - if (dense) 50 else 75) / 48).toInt().coerceAtLeast(0)
-            if (!small) when (need) {
-                WidgetNeed.HOURLY -> snapshot.hoursFrom(now).take(count).forEach { hour ->
-                    val label = "${fmt.hour(hour.time, snapshot.timeZone)} · ${units.temp(hour.temperature)}"
-                    Box(GlanceModifier.fillMaxWidth().height(48.dp).clickable(actionStartActivity(detailIntent(context, weather.place.id, hour.time.atZone(snapshot.timeZone).toLocalDate(), hour.time)))) {
+            val temperature = w.snapshot.current?.let { units.temp(it.temperature) }.orEmpty()
+            Text("${w.place.name} $temperature", style = textStyle(palette.onSurface, if (layout.dense) 11.sp else 14.sp), maxLines = 1)
+            when (need) {
+                WidgetNeed.HOURLY -> w.view.hours.take(layout.rows).forEach { hv ->
+                    val hour = hv.forecast
+                    val label = "${fmt.hour(hour.time, zone)} · ${units.temp(hv.temperature)}"
+                    Box(GlanceModifier.fillMaxWidth().height(WidgetLayout.ROW).clickable(actionStartActivity(detailIntent(context, w.place.id, hour.time.atZone(zone).toLocalDate(), hour.time)))) {
                         Text(label, style = textStyle(palette.onSurface, 12.sp), maxLines = 1)
                     }
                 }
-                WidgetNeed.RAIN -> Text(rainSummary(context, snapshot, now, fmt), style = textStyle(palette.onSurface, if (dense) 10.sp else 12.sp), maxLines = 2)
-                WidgetNeed.DAILY -> snapshot.daily.filter { !it.date.isBefore(java.time.LocalDate.now(snapshot.timeZone)) }.take(count).forEach { day ->
+                WidgetNeed.RAIN -> if (layout.rows > 0) Text(w.view.rainText(context, fmt, short = true), style = textStyle(palette.onSurface, if (layout.dense) 10.sp else 12.sp), maxLines = 2)
+                WidgetNeed.DAILY -> w.view.days.take(layout.rows).forEach { day ->
                     val label = "${fmt.weekdayShort(day.date)} · ${units.temp(day.temperatureMin)} / ${units.temp(day.temperatureMax)}"
-                    Box(GlanceModifier.fillMaxWidth().height(48.dp).clickable(actionStartActivity(detailIntent(context, weather.place.id, day.date)))) {
+                    Box(GlanceModifier.fillMaxWidth().height(WidgetLayout.ROW).clickable(actionStartActivity(detailIntent(context, w.place.id, day.date)))) {
                         Text(label, style = textStyle(palette.onSurface, 12.sp), maxLines = 1)
                     }
                 }
-                else -> snapshot.current?.let { current ->
+                else -> if (layout.rows > 0) w.snapshot.current?.let { current ->
                     Text(context.getString(current.condition.label(current.isDaytime)), style = textStyle(palette.onSurfaceVariant, 12.sp), maxLines = 1)
                 }
             }
-            Freshness(data, palette, fmt, compact = dense)
+            Freshness(w.view, w.data.settings, palette, fmt, compact = layout.dense)
         }
     }
 
     @Composable
-    abstract fun Content(data: WidgetData, palette: WidgetPalette, fmt: TimeFormatter)
+    abstract fun Content(w: ReadyWidget, palette: WidgetPalette, fmt: TimeFormatter)
+}
+
+/** A widget with something to draw: its place and the snapshot as shown now. */
+class ReadyWidget internal constructor(val data: WidgetData, val place: Place, val view: ForecastView) {
+    val snapshot get() = view.snapshot
+    val units get() = data.settings.units
 }

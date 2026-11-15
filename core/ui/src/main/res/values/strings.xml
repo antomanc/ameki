@@ -40,9 +40,17 @@
     <string name="attribution_google">Source: Includes weather data from Google</string>
 
     <!-- Rain nowcast -->
-    <string name="rain_none_2h">No rain in the next 2 hours</string>
-    <string name="rain_now">Raining now</string>
-    <string name="rain_stops_in">Rain stops in %1$d min</string>
-    <string name="rain_in">Rain in %1$d min</string>
-    <string name="rain_in_hours">Rain around %1$s</string>
+    <string name="rain_none_short">No rain in the next 2 hours</string>
+    <string name="rain_now_short">Raining now</string>
+    <string name="rain_stops_short">Rain stops in %1$d min</string>
+    <string name="rain_starts_short">Rain in %1$d min</string>
+    <string name="rain_likely_short">Rain around %1$s</string>
+    <!-- Rain outlook: short for widgets, full sentences for the app (ForecastView.rainText). -->
+    <string name="rain_unavailable_short">Rain data not available</string>
+    <string name="rain_none">No rain expected in the next two hours</string>
+    <string name="rain_now">It is raining now</string>
+    <string name="rain_starts">Rain starts in about %1$d min</string>
+    <string name="rain_stops">Rain stops in about %1$d min</string>
+    <string name="rain_likely">Rain likely around %1$s</string>
+    <string name="rain_unavailable">Short-term rain forecast unavailable</string>
 </resources>

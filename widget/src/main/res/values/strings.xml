@@ -41,9 +41,6 @@
     <string name="config_cancel">Cancel</string>
     <string name="widget_rain_name">Rain</string>
     <string name="widget_rain_desc">Will it rain in the next two hours?</string>
-    <string name="widget_rain_unavailable">Rain data not available</string>
-    <string name="widget_stale">Data from %1$s</string>
-    <string name="widget_updated">Updated %1$s</string>
     <!-- Illustrative text in the static widget-picker previews. -->
     <string name="preview_condition">Partly cloudy</string>
     <string name="preview_rain_soon">Rain in 30 min</string>

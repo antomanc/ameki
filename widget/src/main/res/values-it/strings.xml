@@ -41,9 +41,6 @@
     <string name="config_cancel">Annulla</string>
     <string name="widget_rain_name">Pioggia</string>
     <string name="widget_rain_desc">Piove nelle prossime due ore?</string>
-    <string name="widget_rain_unavailable">Dati pioggia non disponibili</string>
-    <string name="widget_stale">Dati delle %1$s</string>
-    <string name="widget_updated">Aggiornato %1$s</string>
     <!-- Testo illustrativo nelle anteprime statiche del selettore widget. -->
     <string name="preview_condition">Parzialmente nuvoloso</string>
     <string name="preview_rain_soon">Piove tra 30 min</string>

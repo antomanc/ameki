@@ -39,9 +39,11 @@ import androidx.glance.semantics.contentDescription
 import androidx.glance.semantics.semantics
 import androidx.glance.unit.ColorProvider
 import dev.antomanc.ameki.core.model.WeatherCondition
+import dev.antomanc.ameki.core.model.AppSettings
+import dev.antomanc.ameki.core.ui.ForecastView
 import dev.antomanc.ameki.core.ui.TimeFormatter
+import dev.antomanc.ameki.core.ui.R as UiR
 import dev.antomanc.ameki.core.ui.WeatherIcons
-import java.time.Duration
 import java.time.Instant
 
 /** Resolved palette for one widget instance. Instrument colours stay fixed; the ground follows the style. */
@@ -171,18 +173,14 @@ internal fun RainDot(probability: Int?, max: Dp, palette: WidgetPalette) {
 
 /**
  * Honest data: every size shows when the weather was fetched. The stamp also refreshes the
- * shared worker when tapped, and says so to TalkBack. Old current readings are marked as such.
+ * shared worker when tapped, and says so to TalkBack. Old readings are marked as such.
  */
 @Composable
-internal fun Freshness(data: WidgetData, palette: WidgetPalette, fmt: TimeFormatter, compact: Boolean = false) {
-    val s = data.weather?.snapshot ?: return
-    val updated = s.updatedAt ?: return
-    val now = Instant.now()
-    val limit = Duration.ofMinutes(maxOf(120L, data.settings.refreshIntervalMinutes * 3L))
-    val stale = (s.current != null && !s.currentIsFresh(now)) || Duration.between(updated, now) > limit
-    val time = fmt.timestamp(updated, s.timeZone, now)
+internal fun Freshness(view: ForecastView, settings: AppSettings, palette: WidgetPalette, fmt: TimeFormatter, compact: Boolean = false) {
+    val updated = view.updatedAt ?: return
+    val time = fmt.timestamp(updated, view.snapshot.timeZone, view.now)
     val context = LocalContext.current
-    val full = context.getString(if (stale) R.string.widget_stale else R.string.widget_updated, time)
+    val full = context.getString(if (view.stale) UiR.string.updated_stale else UiR.string.updated_at, time)
     val action = if (compact) GlanceModifier.semantics { contentDescription = full }
         else GlanceModifier.height(48.dp).clickable(actionRunCallback<RefreshAction>()).semantics { contentDescription = context.getString(R.string.widget_refresh_cd, full) }
     Box(
@@ -191,7 +189,7 @@ internal fun Freshness(data: WidgetData, palette: WidgetPalette, fmt: TimeFormat
     ) {
         Text(
             if (compact) time else full,
-            style = textStyle(if (stale) palette.now else palette.onSurfaceVariant, if (compact) 9.sp else 10.sp),
+            style = textStyle(if (view.stale) palette.now else palette.onSurfaceVariant, if (compact) 9.sp else 10.sp),
             maxLines = 1,
         )
     }
@@ -225,7 +223,9 @@ internal fun WidgetMessage(data: WidgetData, palette: WidgetPalette, need: Widge
             style = textStyle(palette.onSurfaceVariant, 12.sp).copy(textAlign = androidx.glance.text.TextAlign.Center),
             maxLines = 3,
         )
-        if (data.weather?.snapshot != null) Freshness(data, palette, TimeFormatter(context, data.settings.timeFormat), compact = true)
+        data.weather?.snapshot?.let {
+            Freshness(ForecastView(it, Instant.now(), data.settings.refreshIntervalMinutes), data.settings, palette, TimeFormatter(context, data.settings.timeFormat), compact = true)
+        }
     }
     return true
 }

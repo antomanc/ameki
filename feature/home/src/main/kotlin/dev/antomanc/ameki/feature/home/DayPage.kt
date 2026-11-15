@@ -66,6 +66,7 @@ import dev.antomanc.ameki.core.model.DailyForecast
 import dev.antomanc.ameki.core.model.HourlyForecast
 import dev.antomanc.ameki.core.model.Units
 import dev.antomanc.ameki.core.model.WeatherSnapshot
+import dev.antomanc.ameki.core.ui.ForecastView
 import dev.antomanc.ameki.core.ui.TimeFormatter
 import dev.antomanc.ameki.core.ui.components.RainDot
 import dev.antomanc.ameki.core.ui.components.WeatherIcon
@@ -92,19 +93,21 @@ internal fun DayPage(
     modifier: Modifier = Modifier,
 ) {
     val s = pw.snapshot ?: return
-    if (s.daily.isEmpty()) return
+    val view = ForecastView(s, rememberWeatherTime(), state.settings.refreshIntervalMinutes)
+    val days = view.days
+    if (days.isEmpty()) return
     val context = LocalContext.current
     val fmt = remember(state.settings.timeFormat) { TimeFormatter(context, state.settings.timeFormat) }
     val units = state.settings.units
-    val targetPage = s.daily.indexOfFirst { it.date == target.date }.coerceAtLeast(0)
-    val pager = rememberPagerState(initialPage = targetPage) { s.daily.size }
+    val targetPage = days.indexOfFirst { it.date == target.date }.coerceAtLeast(0)
+    val pager = rememberPagerState(initialPage = targetPage) { days.size }
     val chips = rememberLazyListState()
     val scope = rememberCoroutineScope()
     BackHandler(onBack = onBack)
     LaunchedEffect(targetPage) {
         if (pager.currentPage != targetPage) pager.scrollToPage(targetPage)
     }
-    val currentDay = s.daily.getOrNull(pager.currentPage)
+    val currentDay = days.getOrNull(pager.currentPage)
     val currentStatus = currentDay?.let { pw.dayHours(it.date) }
     LaunchedEffect(currentDay?.date) { currentDay?.let { onDayChange(it.date) } }
     LaunchedEffect(pw.place.id, currentDay?.date, currentStatus) {
@@ -128,19 +131,19 @@ internal fun DayPage(
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             LazyRow(state = chips, contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                itemsIndexed(s.daily) { i, d ->
+                itemsIndexed(days) { i, d ->
                     FilterChip(
                         selected = i == pager.currentPage,
                         onClick = { scope.launch { pager.animateScrollToPage(i) } },
-                        label = { Text(if (d.date == java.time.LocalDate.now(s.timeZone)) stringResource(UiR.string.today) else "${fmt.weekdayShort(d.date)} ${d.date.dayOfMonth}") },
+                        label = { Text(if (view.isToday(d.date)) stringResource(UiR.string.today) else "${fmt.weekdayShort(d.date)} ${d.date.dayOfMonth}") },
                     )
                 }
             }
             HorizontalPager(pager, Modifier.fillMaxSize(), beyondViewportPageCount = 1) { page ->
-                val day = s.daily.getOrNull(page) ?: return@HorizontalPager
+                val day = days.getOrNull(page) ?: return@HorizontalPager
                 val status = pw.dayHours(day.date)
                 DayContent(
-                    s, page, units, fmt,
+                    view, day, units, fmt,
                     focusHour = target.hour.takeIf { day.date == target.date },
                     loading = status == DayHours.LOADING || status == DayHours.NEEDED,
                     failed = status == DayHours.FAILED,
@@ -152,12 +155,12 @@ internal fun DayPage(
 }
 
 @Composable
-private fun DayContent(s: WeatherSnapshot, index: Int, units: Units, fmt: TimeFormatter, focusHour: Instant?, loading: Boolean, failed: Boolean, onRetry: () -> Unit) {
-    val day = s.daily[index]
-    val now = Instant.now()
+private fun DayContent(view: ForecastView, day: DailyForecast, units: Units, fmt: TimeFormatter, focusHour: Instant?, loading: Boolean, failed: Boolean, onRetry: () -> Unit) {
+    val s = view.snapshot
+    val now = view.now
     val dayHours = s.hourly.filter { it.time.atZone(s.timeZone).toLocalDate() == day.date }
     val hours = dayHours
-        .let { list -> if (day.date == java.time.LocalDate.now(s.timeZone)) list.filter { it.time.plusSeconds(3600) > now } else list }
+        .let { list -> if (view.isToday(day.date)) list.filter { it.time.plusSeconds(3600) > now } else list }
     val list = rememberLazyListState()
     LaunchedEffect(focusHour, hours.size) {
         val i = hours.indexOfFirst { it.time == focusHour }
@@ -174,7 +177,7 @@ private fun DayContent(s: WeatherSnapshot, index: Int, units: Units, fmt: TimeFo
                 val start = day.date.atStartOfDay(s.timeZone).toInstant()
                 val end = day.date.plusDays(1).atStartOfDay(s.timeZone).toInstant()
                 generateSequence(start) { it.plusSeconds(3600) }.takeWhile { it < end }
-                    .filter { day.date != java.time.LocalDate.now(s.timeZone) || it.plusSeconds(3600) > now }.toList()
+                    .filter { !view.isToday(day.date) || it.plusSeconds(3600) > now }.toList()
             } else hours.map { it.time }
             items(times, key = { it.epochSecond }) { time ->
                 Crossfade(targetState = byTime[time], modifier = Modifier.testTag("day-hour-${time.epochSecond}"), animationSpec = tween(220), label = "hour-data") { hour ->
