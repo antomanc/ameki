@@ -10,4 +10,15 @@
     <string name="move_down">Move down</string>
     <string name="remove">Remove</string>
     <string name="locating">Finding your location…</string>
+    <string name="place_removed">Place removed</string>
+    <string name="undo">Undo</string>
+    <string name="rename">Rename place</string>
+    <string name="place_label">Name (for example, Home)</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="retry_location">Update my location</string>
+    <string name="location_permission_denied">Location access is off. Search for a city, or enable location in Android settings.</string>
+    <string name="location_failed">Your location is unavailable. Check that location is on, then try again or search for a city.</string>
+    <string name="open_settings">Open settings</string>
+    <string name="place_actions">Actions for %1$s</string>
 </resources>

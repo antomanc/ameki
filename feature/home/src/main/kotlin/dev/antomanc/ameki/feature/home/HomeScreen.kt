@@ -36,6 +36,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,9 +60,21 @@ fun HomeRoute(
     onOpenSettings: () -> Unit,
     onFixProblem: (dev.antomanc.ameki.core.data.sync.SyncError) -> Unit,
     initialPlaceId: Long? = null,
+    requestId: Long = 0,
+    requestedDay: Long? = null,
+    requestedHour: Long? = null,
+    onRequestApplied: () -> Unit = {},
+    refreshRequestId: Long? = null,
+    onRefreshRequestHandled: () -> Unit = {},
     viewModel: HomeViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    LaunchedEffect(refreshRequestId, state.loading) {
+        if (refreshRequestId != null && !state.loading) {
+            (state.places.firstOrNull { it.place.id == state.settings.selectedPlaceId } ?: state.places.firstOrNull())?.let { viewModel.refresh(it.place.id) }
+            onRefreshRequestHandled()
+        }
+    }
     HomeScreen(
         state = state,
         initialPlaceId = initialPlaceId ?: state.settings.selectedPlaceId,
@@ -67,6 +84,7 @@ fun HomeRoute(
         onOpenSettings = onOpenSettings,
         onFixProblem = onFixProblem,
         onNeedHours = viewModel::ensureHours,
+        requestId = requestId, requestedDay = requestedDay, requestedHour = requestedHour, onRequestApplied = onRequestApplied,
     )
 }
 
@@ -80,22 +98,71 @@ fun HomeScreen(
     onOpenPlaces: () -> Unit,
     onOpenSettings: () -> Unit,
     onFixProblem: (dev.antomanc.ameki.core.data.sync.SyncError) -> Unit,
-    onNeedHours: (Long, java.time.Instant) -> Unit = { _, _ -> },
+    onNeedHours: suspend (Long, java.time.Instant) -> Unit = { _, _ -> },
+    requestId: Long = 0,
+    requestedDay: Long? = null,
+    requestedHour: Long? = null,
+    onRequestApplied: () -> Unit = {},
 ) {
     val places = state.places
     val initialPage = places.indexOfFirst { it.place.id == initialPlaceId }.coerceAtLeast(0)
-    val pager = rememberPagerState(initialPage = initialPage) { places.size }
+    val currentPlaces by androidx.compose.runtime.rememberUpdatedState(places)
+    val pager = rememberPagerState(initialPage = initialPage) { currentPlaces.size }
     // An open day page, saved across rotation and folding as [day, hour or -1].
     var openDay by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf<List<Long>?>(null) }
     val dayTarget = openDay?.let { DayTarget(it[0].toInt(), it[1].takeIf { h -> h >= 0 }) }
-    val open: (DayTarget) -> Unit = { openDay = listOf(it.day.toLong(), it.hour ?: -1L) }
+    val open: (DayTarget) -> Unit = { target ->
+        places.getOrNull(pager.currentPage)?.place?.id?.let { owner -> openDay = listOf(target.day.toLong(), target.hour ?: -1L, owner) }
+    }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(pager, places.size) {
-        snapshotFlow { pager.currentPage }.collect { page -> places.getOrNull(page)?.let { onPlaceShown(it.place.id) } }
+    var selectionReady by remember { mutableStateOf(false) }
+    var appliedRequest by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<Long?>(null) }
+    var positionedRequest by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<Long?>(null) }
+    var requestedRefresh by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<Long?>(null) }
+    val ids = places.map { it.place.id }
+    val requestedDayIndex = places.firstOrNull { it.place.id == initialPlaceId }?.snapshot?.daily?.indexOfFirst { it.date.toEpochDay() == requestedDay } ?: -1
+    val requestedAttempt = places.firstOrNull { it.place.id == initialPlaceId }?.lastAttemptAt
+    LaunchedEffect(initialPlaceId, requestId, ids, requestedDayIndex, requestedAttempt, state.refreshing) {
+        if (places.isEmpty()) return@LaunchedEffect
+        if (appliedRequest == requestId) { selectionReady = true; return@LaunchedEffect }
+        selectionReady = false
+        val index = places.indexOfFirst { it.place.id == initialPlaceId }
+        if (index >= 0 && positionedRequest != requestId) {
+            pager.requestScrollToPage(index)
+            positionedRequest = requestId
+        }
+        val targetPlace = if (requestedDay != null) places.getOrNull(index) else places.getOrNull(index.takeIf { it >= 0 } ?: pager.currentPage)
+        val day = targetPlace?.snapshot?.daily?.indexOfFirst { it.date.toEpochDay() == requestedDay } ?: -1
+        if (requestedDay != null && day < 0) {
+            selectionReady = true
+            val awaitingData = index >= 0 && targetPlace?.snapshot?.daily.isNullOrEmpty()
+            if (awaitingData && requestedRefresh != requestId) {
+                requestedRefresh = requestId
+                onRefresh(targetPlace!!.place.id)
+            } else if (!awaitingData || (targetPlace!!.place.id !in state.refreshing && targetPlace.lastAttemptAt != null)) {
+                appliedRequest = requestId
+                onRequestApplied()
+            }
+            return@LaunchedEffect
+        }
+        openDay = if (day >= 0 && targetPlace != null) listOf(day.toLong(), requestedHour ?: -1L, targetPlace.place.id) else null
+        appliedRequest = requestId
+        selectionReady = true
+        onRequestApplied()
+    }
+    LaunchedEffect(pager, ids, selectionReady, openDay?.getOrNull(2)) {
+        if (selectionReady && openDay?.getOrNull(2) != null) onPlaceShown(openDay!![2])
+        else if (selectionReady) snapshotFlow { pager.currentPage }.collect { page ->
+            places.getOrNull(page)?.let { onPlaceShown(it.place.id) }
+        }
     }
 
     val shown = places.getOrNull(pager.currentPage)?.snapshot
+    val dayOwner = places.firstOrNull { it.place.id == openDay?.getOrNull(2) }
+    LaunchedEffect(dayOwner?.snapshot?.daily, dayTarget, ids) {
+        if (places.isNotEmpty() && dayTarget != null && (dayOwner?.snapshot?.daily.isNullOrEmpty() || dayTarget.day !in dayOwner!!.snapshot!!.daily.indices)) openDay = null
+    }
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) { Atmosphere(shown) }
     Scaffold(
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
@@ -116,16 +183,18 @@ fun HomeScreen(
         },
     ) { padding ->
         if (places.isEmpty()) {
-            EmptyPlaces(Modifier.padding(padding), onOpenPlaces)
+            if (state.loading) Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                androidx.compose.material3.CircularProgressIndicator()
+            } else EmptyPlaces(Modifier.padding(padding), onOpenPlaces)
             return@Scaffold
         }
         val current = places.getOrNull(pager.currentPage.coerceIn(0, places.lastIndex))
         val dayPage: @Composable (Modifier) -> Unit = { m ->
-            if (current != null && dayTarget != null) {
+            if (dayOwner != null && dayTarget != null) {
                 DayPage(
-                    current, state, dayTarget,
-                    onDayChange = { d -> openDay = listOf(d.toLong(), if (d == dayTarget.day) dayTarget.hour ?: -1L else -1L) },
-                    onNeedHours = { until -> onNeedHours(current.place.id, until) },
+                    dayOwner, state, dayTarget,
+                    onDayChange = { d -> openDay = listOf(d.toLong(), if (d == dayTarget.day) dayTarget.hour ?: -1L else -1L, dayOwner.place.id) },
+                    onNeedHours = { until -> onNeedHours(dayOwner.place.id, until) },
                     onBack = { openDay = null },
                     modifier = m,
                 )
@@ -133,7 +202,7 @@ fun HomeScreen(
         }
         BoxWithConstraints(Modifier.fillMaxSize().padding(padding)) {
             val width = maxWidth
-            val expanded = width >= 840.dp
+            val expanded = width >= 600.dp
             if (expanded) {
                 // Unfolded Fold / tablet: list of places beside the detail.
                 Row(Modifier.fillMaxSize()) {
@@ -141,8 +210,8 @@ fun HomeScreen(
                         places = places,
                         selected = pager.currentPage,
                         state = state,
-                        onSelect = { scope.launch { pager.scrollToPage(it) } },
-                        modifier = Modifier.width(320.dp).fillMaxHeight(),
+                        onSelect = { openDay = null; pager.requestScrollToPage(it) },
+                        modifier = Modifier.width(if (width < 840.dp) 200.dp else 280.dp).fillMaxHeight(),
                     )
                     val pw = places[pager.currentPage.coerceIn(0, places.lastIndex)]
                     if (dayTarget != null) {
@@ -151,7 +220,7 @@ fun HomeScreen(
                         PlaceWeatherPane(
                             pw = pw, state = state, refreshing = pw.place.id in state.refreshing,
                             onRefresh = { onRefresh(pw.place.id) }, onFixProblem = onFixProblem,
-                            twoColumns = width - 320.dp >= 600.dp, onOpenDay = open,
+                            twoColumns = width - 280.dp >= 600.dp, onOpenDay = open,
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -160,8 +229,8 @@ fun HomeScreen(
                 dayPage(Modifier.fillMaxSize())
             } else {
                 Column(Modifier.fillMaxSize()) {
-                    HorizontalPager(pager, Modifier.weight(1f), key = { places[it].place.id }) { page ->
-                        val pw = places[page]
+                    HorizontalPager(pager, Modifier.weight(1f), key = { currentPlaces.getOrNull(it)?.place?.id ?: "missing-$it" }) { page ->
+                        val pw = currentPlaces.getOrNull(page) ?: return@HorizontalPager
                         PlaceWeatherPane(
                             pw = pw, state = state, refreshing = pw.place.id in state.refreshing,
                             onRefresh = { onRefresh(pw.place.id) }, onFixProblem = onFixProblem,
@@ -177,7 +246,8 @@ fun HomeScreen(
 
 @Composable
 private fun PageDots(count: Int, current: Int) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalArrangement = Arrangement.Center) {
+    val pageLabel = stringResource(R.string.page_position, current + 1, count)
+    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp).semantics { contentDescription = pageLabel }, horizontalArrangement = Arrangement.Center) {
         repeat(count) { i ->
             Box(
                 Modifier.padding(horizontal = 4.dp).size(if (i == current) 8.dp else 6.dp).clip(CircleShape)
@@ -192,10 +262,16 @@ private fun PlaceList(places: List<PlaceWeather>, selected: Int, state: HomeUiSt
     LazyColumn(modifier.padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         itemsIndexed(places, key = { _, it -> it.place.id }) { i, pw ->
             val bg = if (i == selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerLow
-            Row(
-                Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(bg).clickable { onSelect(i) }.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+            val rowModifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(bg).clickable { onSelect(i) }.padding(16.dp)
+            if (androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f) {
+                Column(rowModifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(pw.place.name, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    pw.snapshot?.current?.let { current ->
+                        Text(state.settings.units.temp(current.temperature), style = MaterialTheme.typography.titleLarge)
+                        Text(stringResource(current.condition.label(current.isDaytime)), style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            } else Row(rowModifier, verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(pw.place.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     pw.snapshot?.current?.let {

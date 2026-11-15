@@ -38,7 +38,7 @@ fun WeatherCondition.label(isDay: Boolean = true): Int = when (this) {
 }
 
 /** Time and date formatting that honours the user's 12/24 h choice and the place's time zone. */
-class TimeFormatter(private val context: Context, private val format: TimeFormat, private val locale: Locale = Locale.getDefault()) {
+class TimeFormatter(private val context: Context, private val format: TimeFormat, private val locale: Locale = context.resources.configuration.locales[0]) {
     private val is24 get() = when (format) {
         TimeFormat.H24 -> true
         TimeFormat.H12 -> false
@@ -46,15 +46,19 @@ class TimeFormatter(private val context: Context, private val format: TimeFormat
     }
 
     fun time(instant: Instant, zone: ZoneId): String =
-        DateTimeFormatter.ofPattern(if (is24) "HH:mm" else "h:mm a", locale).format(instant.atZone(zone))
+        DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, if (is24) "Hm" else "hm"), locale).format(instant.atZone(zone))
 
     /** "14" or "2 PM": compact hour labels for timelines. */
     fun hour(instant: Instant, zone: ZoneId): String =
-        DateTimeFormatter.ofPattern(if (is24) "HH" else "h a", locale).format(instant.atZone(zone))
+        DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, if (is24) "H" else "ha"), locale).format(instant.atZone(zone))
+
+    fun timestamp(instant: Instant, zone: ZoneId, now: Instant = Instant.now()): String =
+        if (instant.atZone(zone).toLocalDate() == now.atZone(zone).toLocalDate()) time(instant, zone)
+        else "${dateMedium(instant.atZone(zone).toLocalDate())} ${time(instant, zone)}"
 
     fun weekdayShort(date: LocalDate): String =
         date.dayOfWeek.getDisplayName(TextStyle.SHORT, locale).replaceFirstChar { it.titlecase(locale) }
 
     fun dateMedium(date: LocalDate): String =
-        DateTimeFormatter.ofPattern("EEE d MMM", locale).format(date).replaceFirstChar { it.titlecase(locale) }
+        DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, "EEE d MMM"), locale).format(date).replaceFirstChar { it.titlecase(locale) }
 }

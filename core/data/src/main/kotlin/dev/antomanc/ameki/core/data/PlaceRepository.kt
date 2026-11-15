@@ -10,12 +10,13 @@ import dev.antomanc.ameki.source.api.PlaceSearch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Instant
-import kotlin.math.abs
 
 class PlaceRepository(
     private val dao: PlaceDao,
     private val search: PlaceSearch,
     private val device: DeviceLocation,
+    /** Called after an undo restores a place, so the missing snapshot is fetched again. */
+    private val onRestored: suspend () -> Unit = {},
     private val clock: () -> Instant = Instant::now,
 ) {
     val places: Flow<List<Place>> = dao.observeAll().map { list -> list.map { it.toModel() } }
@@ -28,7 +29,7 @@ class PlaceRepository(
 
     suspend fun add(result: PlaceSearchResult): Long {
         val existing = dao.all().firstOrNull {
-            !it.isCurrentLocation && abs(it.latitude - result.point.latitude) < 0.01 && abs(it.longitude - result.point.longitude) < 0.01
+            !it.isCurrentLocation && it.toModel().point.isNear(result.point)
         }
         if (existing != null) return existing.id
         return dao.insert(
@@ -43,6 +44,33 @@ class PlaceRepository(
 
     suspend fun remove(id: Long) = dao.delete(id)
 
+    /**
+     * Undo a delete: same id and position in the list, so widgets and the selection keep pointing
+     * at it. The snapshot was cascaded away, hence the refresh.
+     */
+    suspend fun restore(place: Place) {
+        if (place.isCurrentLocation && dao.currentLocation()?.id?.let { it != place.id } == true) return
+        dao.upsert(
+            PlaceEntity(
+                id = place.id, name = place.name, region = place.region, country = place.country,
+                latitude = place.point.latitude, longitude = place.point.longitude,
+                timeZone = place.timeZone, isCurrentLocation = place.isCurrentLocation,
+                sortOrder = place.sortOrder, lastOpenedAt = clock().epochSecond,
+                originalName = place.originalName,
+            ),
+        )
+        onRestored()
+    }
+
+    /** Personal label for a place; the real city name is kept once for the subtitle. */
+    suspend fun rename(id: Long, name: String) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+        val entry = dao.byId(id) ?: return
+        if (trimmed == entry.name) return
+        dao.upsert(entry.copy(name = trimmed, originalName = entry.originalName ?: entry.name))
+    }
+
     suspend fun reorder(ids: List<Long>) = dao.reorder(ids)
 
     suspend fun markOpened(id: Long) = dao.markOpened(id, clock().epochSecond)
@@ -50,7 +78,7 @@ class PlaceRepository(
     /** Turn the "current location" entry on: it is created even before the first fix arrives. */
     suspend fun enableCurrentLocation(fallbackName: String): Long {
         dao.currentLocation()?.let { return it.id }
-        val fix = device.locate()
+        val fix = device.locate() ?: error("Location is unavailable")
         return dao.insert(
             PlaceEntity(
                 // The city name arrives on the first refresh: never make the user wait for the Geocoder.
@@ -75,7 +103,8 @@ class PlaceRepository(
         val entry = dao.currentLocation() ?: return false
         val fix: GeoPoint? = device.locate()
         if (fix == null) return entry.latitude != 0.0 || entry.longitude != 0.0
-        val moved = abs(fix.latitude - entry.latitude) > 0.01 || abs(fix.longitude - entry.longitude) > 0.01
+        val entryPoint = GeoPoint(entry.latitude, entry.longitude)
+        val moved = !fix.isNear(entryPoint)
         // Never named (Geocoder unavailable or slow the first time): try again.
         val unnamed = entry.region == null
         if (moved || unnamed) {

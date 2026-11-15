@@ -23,6 +23,7 @@ import androidx.glance.background
 import androidx.glance.color.ColorProvider
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
+import androidx.glance.layout.height
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
@@ -34,8 +35,9 @@ import androidx.glance.text.FontFamily
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.glance.semantics.contentDescription
+import androidx.glance.semantics.semantics
 import androidx.glance.unit.ColorProvider
-import dev.antomanc.ameki.core.data.sync.SyncError
 import dev.antomanc.ameki.core.model.WeatherCondition
 import dev.antomanc.ameki.core.ui.TimeFormatter
 import dev.antomanc.ameki.core.ui.WeatherIcons
@@ -79,7 +81,7 @@ internal fun rememberPalette(config: WidgetConfig): WidgetPalette = when (config
     WidgetStyle.DYNAMIC -> {
         val ctx = LocalContext.current
         val bg = GlanceTheme.colors.widgetBackground
-        val alpha = config.opacity.coerceIn(0f, 1f)
+        val alpha = (0.95f + config.opacity.coerceIn(0f, 1f) * 0.05f)
         val background = if (alpha >= 0.999f) bg else ColorProvider(
             day = Color(bg.getColor(ctx.lightContext()).value).copy(alpha = alpha),
             night = Color(bg.getColor(ctx.darkContext()).value).copy(alpha = alpha),
@@ -87,14 +89,18 @@ internal fun rememberPalette(config: WidgetConfig): WidgetPalette = when (config
         WidgetPalette(background, GlanceTheme.colors.onSurface, GlanceTheme.colors.onSurfaceVariant, GlanceTheme.colors.outline, dark = null)
     }
     WidgetStyle.DARK -> WidgetPalette(
-        ColorProvider(Color(0xFF171816).copy(alpha = config.opacity.coerceIn(0f, 1f))),
+        // Keep a minimum dark ground: white text must stay readable even at 0%.
+        ColorProvider(Color(0xFF171816).copy(alpha = (0.8f + config.opacity.coerceIn(0f, 1f) * 0.2f))),
         ColorProvider(Color(0xFFF2F0EA)), ColorProvider(Color(0xFFB3B2AA)), ColorProvider(Color(0x40FFFFFF)), dark = true,
     )
-    WidgetStyle.TRANSPARENT -> WidgetPalette(
-        // A light scrim keeps white text readable on bright wallpapers without hiding them.
-        ColorProvider(Color.Black.copy(alpha = (config.opacity * 0.45f).coerceIn(0f, 0.45f))),
-        ColorProvider(Color.White), ColorProvider(Color(0xE6FFFFFF)), ColorProvider(Color(0x55FFFFFF)), dark = true,
-    )
+    WidgetStyle.TRANSPARENT -> {
+        // Even at 0% the minimum scrim keeps white text legible on a bright wallpaper.
+        val alpha = (0.65f + config.opacity.coerceIn(0f, 1f) * 0.35f)
+        WidgetPalette(
+            ColorProvider(Color.Black.copy(alpha = alpha)),
+            ColorProvider(Color.White), ColorProvider(Color(0xE6FFFFFF)), ColorProvider(Color(0x55FFFFFF)), dark = true,
+        )
+    }
 }
 
 private fun Context.lightContext(): Context = createConfigurationContext(
@@ -123,8 +129,18 @@ internal fun WidgetFrame(data: WidgetData, palette: WidgetPalette, padding: Dp =
     Box(m.padding(padding)) { content() }
 }
 
-internal fun textStyle(color: ColorProvider, size: TextUnit, weight: FontWeight = FontWeight.Normal, light: Boolean = false) =
-    TextStyle(color = color, fontSize = size, fontWeight = weight, fontFamily = if (light) FontFamily("sans-serif-light") else FontFamily.SansSerif)
+@Composable
+internal fun textStyle(color: ColorProvider, size: TextUnit, weight: FontWeight = FontWeight.Normal, light: Boolean = false): TextStyle {
+    // Widgets have fixed cells: respect large fonts but adapt the information density to avoid clipping.
+    val scale = LocalContext.current.resources.configuration.fontScale.coerceIn(1f, 2f)
+    val actual = LocalContext.current.resources.configuration.fontScale
+    return TextStyle(
+        color = color,
+        fontSize = (size.value * scale / actual).sp,
+        fontWeight = weight,
+        fontFamily = if (light) FontFamily("sans-serif-light") else FontFamily.SansSerif,
+    )
+}
 
 @Composable
 internal fun ConditionIcon(condition: WeatherCondition, isDay: Boolean, size: Dp, palette: WidgetPalette) {
@@ -154,39 +170,62 @@ internal fun RainDot(probability: Int?, max: Dp, palette: WidgetPalette) {
 }
 
 /**
- * Widgets are expected to be current, so normally they show no time at all. Only data older
- * than two hours (offline, refresh failing) gets a quiet "data from 09:10", so nobody trusts old weather.
+ * Honest data: every size shows when the weather was fetched. The stamp also refreshes the
+ * shared worker when tapped, and says so to TalkBack. Old current readings are marked as such.
  */
 @Composable
-internal fun Freshness(data: WidgetData, palette: WidgetPalette, fmt: TimeFormatter) {
+internal fun Freshness(data: WidgetData, palette: WidgetPalette, fmt: TimeFormatter, compact: Boolean = false) {
     val s = data.weather?.snapshot ?: return
     val updated = s.updatedAt ?: return
+    val now = Instant.now()
     val limit = Duration.ofMinutes(maxOf(120L, data.settings.refreshIntervalMinutes * 3L))
-    if (Duration.between(updated, Instant.now()) <= limit) return
-    Text(
-        LocalContext.current.getString(R.string.widget_stale, fmt.time(updated, s.timeZone)),
-        style = textStyle(palette.onSurfaceVariant, 11.sp),
-        modifier = GlanceModifier.clickable(actionRunCallback<RefreshAction>()),
-    )
+    val stale = (s.current != null && !s.currentIsFresh(now)) || Duration.between(updated, now) > limit
+    val time = fmt.timestamp(updated, s.timeZone, now)
+    val context = LocalContext.current
+    val full = context.getString(if (stale) R.string.widget_stale else R.string.widget_updated, time)
+    val action = if (compact) GlanceModifier.semantics { contentDescription = full }
+        else GlanceModifier.height(48.dp).clickable(actionRunCallback<RefreshAction>()).semantics { contentDescription = context.getString(R.string.widget_refresh_cd, full) }
+    Box(
+        action
+            .padding(vertical = if (compact) 1.dp else 2.dp),
+    ) {
+        Text(
+            if (compact) time else full,
+            style = textStyle(if (stale) palette.now else palette.onSurfaceVariant, if (compact) 9.sp else 10.sp),
+            maxLines = 1,
+        )
+    }
 }
 
-/** The non-weather states: no place yet, first load, a problem only the user can fix. */
+/** The non-weather states: no place, a deleted place, first load, a problem only the user can fix. */
 @Composable
-internal fun WidgetMessage(data: WidgetData, palette: WidgetPalette): Boolean {
+internal fun WidgetMessage(data: WidgetData, palette: WidgetPalette, need: WidgetNeed): Boolean {
+    val state = widgetState(data, need)
+    if (state == WidgetState.READY) return false
     val context = LocalContext.current
-    val w = data.weather
-    val text = when {
-        w == null -> context.getString(R.string.widget_no_place)
-        w.hasData -> return false
-        w.error == SyncError.MISSING_KEY || w.error == SyncError.INVALID_KEY -> context.getString(R.string.widget_key_problem)
-        w.error == SyncError.NO_LOCATION -> context.getString(R.string.widget_no_location)
-        w.error == SyncError.NETWORK -> context.getString(R.string.widget_offline)
-        else -> context.getString(R.string.widget_loading)
+    val text = when (state) {
+        WidgetState.READY -> return false
+        WidgetState.NO_PLACE -> context.getString(R.string.widget_no_place)
+        WidgetState.PLACE_GONE -> context.getString(R.string.widget_place_gone)
+        WidgetState.KEY_PROBLEM -> context.getString(R.string.widget_key_problem)
+        WidgetState.NO_LOCATION -> context.getString(R.string.widget_no_location)
+        WidgetState.ACCESS_DENIED -> context.getString(R.string.widget_access_denied)
+        WidgetState.QUOTA -> context.getString(R.string.widget_quota)
+        WidgetState.UNSUPPORTED -> context.getString(R.string.widget_unsupported)
+        WidgetState.OFFLINE -> context.getString(R.string.widget_offline)
+        WidgetState.FAILED -> context.getString(R.string.widget_failed)
+        WidgetState.PARTIAL -> context.getString(R.string.widget_partial)
+        WidgetState.LOADING -> context.getString(R.string.widget_loading)
     }
     Column(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(w?.place?.name ?: "Ameki", style = textStyle(palette.onSurface, 14.sp, FontWeight.Medium))
+        Text(data.weather?.place?.name ?: "Ameki", style = textStyle(palette.onSurface, 14.sp, FontWeight.Medium), maxLines = 1)
         Spacer(GlanceModifier.size(4.dp))
-        Text(text, style = textStyle(palette.onSurfaceVariant, 12.sp).copy(textAlign = androidx.glance.text.TextAlign.Center))
+        Text(
+            text,
+            style = textStyle(palette.onSurfaceVariant, 12.sp).copy(textAlign = androidx.glance.text.TextAlign.Center),
+            maxLines = 3,
+        )
+        if (data.weather?.snapshot != null) Freshness(data, palette, TimeFormatter(context, data.settings.timeFormat), compact = true)
     }
     return true
 }

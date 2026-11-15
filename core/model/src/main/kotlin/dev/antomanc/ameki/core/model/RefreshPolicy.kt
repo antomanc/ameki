@@ -46,6 +46,20 @@ object RefreshPolicy {
         SourceId.OPEN_METEO -> Duration.ofDays(7)
     }
 
+    /**
+     * How long a part still describes the weather it claims to. [maxAge] is retention: offline
+     * we may keep a current reading much longer, but after this it must not look like "now".
+     */
+    fun weatherFreshness(source: SourceId, part: DataPart): Duration {
+        val weather = when (part) {
+            DataPart.CURRENT, DataPart.NOWCAST -> Duration.ofHours(2)
+            DataPart.HOURLY -> Duration.ofHours(6)
+            DataPart.DAILY -> Duration.ofHours(24)
+            DataPart.ALERTS -> Duration.ofHours(1)
+        }
+        return minOf(weather, maxAge(source, part))
+    }
+
     /** Small slack so a refresh scheduled "every 30 min" isn't skipped for being 29 min old. */
     val tolerance: Duration = Duration.ofMinutes(5)
 

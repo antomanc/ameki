@@ -1,0 +1,5 @@
+<resources>
+<string name="shortcut_places">Località</string>
+<string name="shortcut_refresh">Aggiorna il meteo</string>
+<string name="shortcut_widget">Aggiungi widget compatto</string>
+</resources>

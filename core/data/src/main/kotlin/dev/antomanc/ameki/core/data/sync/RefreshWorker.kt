@@ -37,3 +37,12 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         private const val MAX_RETRIES = 4
     }
 }
+
+/** Redraws retained weather without requiring a network connection. */
+class CacheExpiryWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params), KoinComponent {
+    private val weather: WeatherRepository by inject()
+    override suspend fun doWork(): Result {
+        weather.refreshCachedState()
+        return Result.success()
+    }
+}

@@ -17,7 +17,7 @@ OWN-WORLD: Material You roles on a warm neutral ground (static fallback: warm gr
 
 STORY: In one look you know the temperature now, where it sits in today's range, and when it will rain. Tapping opens the detail.
 
-FIRST VIEWPORT: Place name and condition at the top left, date at the top right. In the center is the dial: an arc from today's min to max, the orange marker on the current temperature, a large numeral inside, and feels-like plus min/max below it. Next comes the "updated at" stamp, then the hourly card with rain dots, then the 10-day card with range bars.
+FIRST VIEWPORT: Place name and condition at the top left, the update time at the top right and the date below the condition. In the center is the dial: an arc from today's min to max, the orange marker on the current temperature, a large numeral inside, and feels-like plus min/max below it. A plain short-term rain sentence follows the dial, then the hourly card with rain dots and the 10-day card with range bars.
 
 FORM: candidate 4 of 7 (household instrument, industrial design), seed:1625770f749424ee. Signature: the temperature dial, shared by the main screen and the Compact widget. Raises: from datamatics, tabular figures everywhere; from the ticket wallet, stale data is stamped, never hidden; from the star atlas, rain probability on a fixed dot-diameter ramp.
 

@@ -35,6 +35,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import dev.antomanc.ameki.feature.locations.LocationPermissionHelp
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -61,7 +64,7 @@ private enum class Step { WELCOME, SOURCE, LOCATION, WIDGET }
 
 /**
  * Three screens (four when the build has more than one source): welcome, where, widget.
- * Everything but the place is skippable.
+ * Setup can be completed offline and the place added later.
  */
 @Composable
 fun OnboardingRoute(
@@ -74,6 +77,8 @@ fun OnboardingRoute(
     val keyState by settingsVm.keyState.collectAsStateWithLifecycle()
     val search by placesVm.search.collectAsStateWithLifecycle()
     val places by placesVm.list.collectAsStateWithLifecycle()
+    var permissionDenied by rememberSaveable { mutableStateOf(false) }
+    val locationFailed by placesVm.locationFailed.collectAsStateWithLifecycle()
     val locating by placesVm.locating.collectAsStateWithLifecycle()
     val steps = buildList {
         add(Step.WELCOME)
@@ -88,7 +93,8 @@ fun OnboardingRoute(
 
     val currentName = stringResource(UiR.string.current_location)
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) placesVm.useCurrentLocation(currentName) { next() }
+        if (granted) { permissionDenied = false; placesVm.useCurrentLocation(currentName) { next() } }
+        else permissionDenied = true
     }
 
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
@@ -125,7 +131,7 @@ fun OnboardingRoute(
                                     else permission.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
                                 },
                                 enabled = !locating,
-                                modifier = Modifier.fillMaxWidth().height(56.dp),
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
                             ) {
                                 if (locating) {
                                     androidx.compose.material3.CircularProgressIndicator(
@@ -137,6 +143,7 @@ fun OnboardingRoute(
                                     Text(stringResource(R.string.ob_use_location))
                                 }
                             }
+                            if (permissionDenied || locationFailed) LocationPermissionHelp(locationFailed)
                             Text(
                                 stringResource(R.string.ob_location_privacy),
                                 style = MaterialTheme.typography.bodySmall,
@@ -145,8 +152,8 @@ fun OnboardingRoute(
                             )
                             Text(stringResource(R.string.ob_or_search), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(vertical = 8.dp))
                             PlaceSearch(search, placesVm::onQuery, { placesVm.add(it) { next() } })
-                            if (places.isNotEmpty()) {
-                                TextButton(onClick = ::next, modifier = Modifier.align(Alignment.End)) { Text(stringResource(R.string.ob_continue)) }
+                            TextButton(onClick = if (places.isNotEmpty()) ::next else onDone, modifier = Modifier.align(Alignment.End)) {
+                                Text(stringResource(if (places.isNotEmpty()) R.string.ob_continue else R.string.ob_choose_later))
                             }
                         }
                         Step.WIDGET -> {
@@ -154,7 +161,7 @@ fun OnboardingRoute(
                             WidgetPreview(Modifier.align(Alignment.CenterHorizontally))
                             Spacer(Modifier.height(28.dp))
                             if (onPinWidget != null) {
-                                Button(onClick = { onPinWidget(); onDone() }, modifier = Modifier.fillMaxWidth().height(56.dp)) { Text(stringResource(R.string.ob_add_widget)) }
+                                Button(onClick = { onPinWidget(); onDone() }, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) { Text(stringResource(R.string.ob_add_widget)) }
                                 Spacer(Modifier.height(8.dp))
                                 OutlinedButton(onClick = onDone, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.ob_later)) }
                             } else {
@@ -184,7 +191,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.Welcome(onNext: () ->
     Spacer(Modifier.height(12.dp))
     Text(stringResource(R.string.ob_welcome_body), style = MaterialTheme.typography.bodyLarge)
     Spacer(Modifier.height(32.dp))
-    Button(onClick = onNext, modifier = Modifier.fillMaxWidth().height(56.dp)) { Text(stringResource(R.string.ob_start)) }
+    Button(onClick = onNext, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) { Text(stringResource(R.string.ob_start)) }
 }
 
 @Composable

@@ -22,4 +22,5 @@
     <string name="ob_widget_manual">Tieni premuto sulla Home, tocca Widget e cerca Ameki.</string>
     <string name="ob_finish">Fatto</string>
     <string name="ob_locating">Sto cercando la tua posizione…</string>
+    <string name="ob_choose_later">Scegli una città più tardi</string>
 </resources>

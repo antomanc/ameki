@@ -5,8 +5,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -16,6 +14,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -62,7 +65,7 @@ import java.text.NumberFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsRoute(onBack: () -> Unit, onOpenLicenses: () -> Unit = {}, viewModel: SettingsViewModel = koinViewModel()) {
+fun SettingsRoute(onBack: () -> Unit, viewModel: SettingsViewModel = koinViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val key by viewModel.keyState.collectAsStateWithLifecycle()
     val s = state.settings
@@ -119,10 +122,16 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicenses: () -> Unit = {}, viewModel
             ListItem(
                 headlineContent = { Text(stringResource(R.string.dynamic_color)) },
                 supportingContent = { Text(stringResource(R.string.dynamic_color_hint)) },
-                trailingContent = { Switch(s.dynamicColor, onCheckedChange = viewModel::setDynamicColor) },
+                trailingContent = { Switch(s.dynamicColor, onCheckedChange = null) },
+                modifier = Modifier.toggleable(s.dynamicColor, role = Role.Switch, onValueChange = viewModel::setDynamicColor),
             )
 
             Section(R.string.section_about)
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.app_information)) },
+                supportingContent = { Text(stringResource(R.string.version_licenses)) },
+                modifier = Modifier.clickable { dialog = "about" },
+            )
             ListItem(
                 headlineContent = { Text(stringResource(R.string.data_sources)) },
                 supportingContent = { Text(stringResource(R.string.data_sources_body)) },
@@ -142,6 +151,35 @@ fun SettingsRoute(onBack: () -> Unit, onOpenLicenses: () -> Unit = {}, viewModel
     }
 
     when (dialog) {
+        "notices" -> AlertDialog(
+            onDismissRequest = { dialog = null },
+            title = { Text(stringResource(R.string.third_party_notices)) },
+            text = {
+                val notices = remember { context.resources.openRawResource(R.raw.third_party_notices).bufferedReader().use { it.readText() } }
+                Text(notices, Modifier.verticalScroll(rememberScrollState()))
+            },
+            confirmButton = { TextButton(onClick = { dialog = "about" }) { Text(stringResource(R.string.close)) } },
+        )
+        "about" -> {
+            val info = remember { context.packageManager.getPackageInfo(context.packageName, 0) }
+            AlertDialog(
+                onDismissRequest = { dialog = null },
+                title = { Text("Ameki ${info.versionName} (${info.longVersionCode})") },
+                text = {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        TextButton(onClick = { dialog = "notices" }) { Text(stringResource(R.string.third_party_notices)) }
+                        listOf(
+                            "Ameki · GPL-3.0" to "https://github.com/antomanc/ameki/blob/main/LICENSE",
+                            "Meteocons · Bas Milius · MIT" to "https://github.com/basmilius/meteocons",
+                            "Hanken Grotesk · OFL" to "https://github.com/marcologous/hanken-grotesk",
+                        ).forEach { (label, url) ->
+                            TextButton(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }) { Text(label) }
+                        }
+                    }
+                },
+                confirmButton = { TextButton(onClick = { dialog = null }) { Text(stringResource(R.string.close)) } },
+            )
+        }
         "source" -> Choice(R.string.source, state.sources, s.source, { stringResource(sourceName(it)) }, { viewModel.setSource(it) }) { dialog = null }
         "interval" -> Choice(
             R.string.refresh_interval, RefreshPolicy.intervalOptions(s.source), s.refreshIntervalMinutes,
@@ -163,17 +201,33 @@ private fun BackgroundLocationRow() {
     val context = LocalContext.current
     fun granted(p: String) = ContextCompat.checkSelfPermission(context, p) == PackageManager.PERMISSION_GRANTED
     var bg by remember { mutableStateOf(granted(Manifest.permission.ACCESS_BACKGROUND_LOCATION)) }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { bg = it }
-    if (!granted(Manifest.permission.ACCESS_COARSE_LOCATION)) return
+    var foreground by remember { mutableStateOf(granted(Manifest.permission.ACCESS_COARSE_LOCATION)) }
+    var explain by rememberSaveable { mutableStateOf(false) }
+    val owner = LocalLifecycleOwner.current
+    DisposableEffect(owner, context) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                bg = granted(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                foreground = granted(Manifest.permission.ACCESS_COARSE_LOCATION)
+            }
+        }
+        owner.lifecycle.addObserver(observer)
+        onDispose { owner.lifecycle.removeObserver(observer) }
+    }
+    if (!foreground) return
+    fun openSettings() = context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)))
     ListItem(
         headlineContent = { Text(stringResource(R.string.background_location)) },
         supportingContent = { Text(stringResource(if (bg) R.string.background_location_on else R.string.background_location_hint)) },
-        trailingContent = {
-            Switch(bg, onCheckedChange = {
-                if (!bg) launcher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-                else context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)))
-            })
-        },
+        trailingContent = { Switch(bg, onCheckedChange = null) },
+        modifier = Modifier.toggleable(bg, role = Role.Switch, onValueChange = { if (bg) openSettings() else explain = true }),
+    )
+    if (explain) AlertDialog(
+        onDismissRequest = { explain = false },
+        title = { Text(stringResource(R.string.background_location)) },
+        text = { Text(stringResource(R.string.background_location_settings)) },
+        confirmButton = { TextButton(onClick = { explain = false; openSettings() }) { Text(stringResource(R.string.open_settings)) } },
+        dismissButton = { TextButton(onClick = { explain = false }) { Text(stringResource(R.string.close)) } },
     )
 }
 
@@ -213,7 +267,7 @@ private fun <T> Choice(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(title)) },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 options.forEach { o ->
                     androidx.compose.foundation.layout.Row(
                         Modifier.fillMaxWidth().selectable(o == selected, role = Role.RadioButton) { onPick(o); onDismiss() }.padding(vertical = 10.dp),

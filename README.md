@@ -50,7 +50,7 @@ Each widget adapts to its size. Choose a place, wallpaper colours, a dark or tra
 
 <p align="center"><img src="docs/screenshots/widget-compact.png" width="320" alt="The Compact widget showing current conditions and the daily temperature range"></p>
 
-Widgets read from a shared local cache. One WorkManager job refreshes the data for the app and widgets, with a default interval of 30 minutes. Open-Meteo builds let you choose from 15 to 180 minutes. Android may defer background work to save battery.
+Widgets read from a shared local cache. One network WorkManager job refreshes the data for the app and widgets, with a default interval of 30 minutes. Open-Meteo builds let you choose from 15 to 180 minutes. A separate local job updates cache-expiry labels without requiring a connection. Android may defer background work to save battery.
 
 Offline, cached forecasts remain available with their update time, within the source's retention limits. Rain coverage and other forecast details depend on the data source and location.
 

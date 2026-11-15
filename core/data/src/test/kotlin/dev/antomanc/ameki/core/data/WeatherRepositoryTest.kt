@@ -128,6 +128,73 @@ class WeatherRepositoryTest {
     }
 
     @Test
+    fun `next expiry includes the local midnight boundary`() {
+        val s = WeatherSnapshot(
+            SourceId.GOOGLE, ZoneId.of("Europe/Rome"), null,
+            fetchedAt = mapOf(DataPart.CURRENT to now, DataPart.DAILY to now),
+        )
+        assertThat(nextExpiry(s, now)).isEqualTo(now.plusSeconds(3600))
+        assertThat(nextExpiry(s, now.plusSeconds(2 * 3600))).isEqualTo(Instant.parse("2026-11-14T23:00:00Z"))
+        assertThat(nextExpiry(s, now.plusSeconds(25 * 3600))).isNull()
+    }
+
+    @Test
+    fun `the flow does not expose expired parts when no refresh happened`() = runTest {
+        settings.setSource(SourceId.GOOGLE)
+        val id = addRome()
+        repo.refresh(id)
+
+        now = now.plusSeconds(61 * 60)
+        val w = repo.all.first().single()
+        assertThat(w.snapshot!!.current).isNull()
+        assertThat(w.snapshot!!.fetchedAt.keys).containsExactly(DataPart.DAILY)
+    }
+
+    @Test
+    fun `a moved place never shows the previous coordinates' snapshot`() = runTest {
+        val id = addRome()
+        repo.refresh(id)
+        assertThat(repo.get(id)!!.snapshot).isNotNull()
+
+        val rome = db.places().byId(id)!!
+        db.places().upsert(rome.copy(name = "Milano", latitude = 45.46, longitude = 9.19))
+
+        val moved = repo.get(id)!!
+        assertThat(moved.place.name).isEqualTo("Milano")
+        assertThat(moved.snapshot).isNull()
+    }
+
+    @Test
+    fun `a failed refresh after a move drops the old place's data`() = runTest {
+        val id = addRome()
+        repo.refresh(id)
+
+        val rome = db.places().byId(id)!!
+        db.places().upsert(rome.copy(name = "Milano", latitude = 45.46, longitude = 9.19))
+        openMeteo.failWith = SourceException.Network(java.io.IOException("offline"))
+        assertThat(repo.refresh(id)).isEqualTo(SyncError.NETWORK)
+
+        assertThat(repo.get(id)!!.snapshot).isNull()
+        assertThat(db.snapshots().get(id)!!.json).isEmpty()
+    }
+
+    @Test
+    fun `a key whose ciphertext cannot be decrypted counts as no key`() = runTest {
+        val broken = SettingsRepository(
+            PreferenceDataStoreFactory.create { tmp.newFile("broken.preferences_pb") },
+            object : SecretCipher {
+                override fun encrypt(plain: String) = "not-really-encrypted"
+                override fun decrypt(encoded: String): String? = null
+            },
+        )
+        broken.setGoogleApiKey("secret")
+        assertThat(broken.current().hasGoogleApiKey).isFalse()
+        assertThat(broken.googleApiKey()).isNull()
+        // The unusable value is removed, so a later read is plain "no key" too.
+        assertThat(broken.current().hasGoogleApiKey).isFalse()
+    }
+
+    @Test
     fun `open-meteo data stays available offline`() = runTest {
         val id = addRome()
         repo.refresh(id)
