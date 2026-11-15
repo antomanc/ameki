@@ -119,8 +119,9 @@ fun HomeScreen(
 
     // First load: start on the place chosen last time.
     var positioned by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(places.isEmpty()) {
-        if (positioned || places.isEmpty()) return@LaunchedEffect
+    LaunchedEffect(places.isEmpty(), requestPending) {
+        // A pending request positions the pager itself once it knows where it leads.
+        if (positioned || places.isEmpty() || requestPending) return@LaunchedEffect
         places.indexOfFirst { it.place.id == initialPlaceId }.takeIf { it >= 0 }?.let { pager.requestScrollToPage(it) }
         positioned = true
     }
@@ -129,11 +130,13 @@ fun HomeScreen(
     LaunchedEffect(navigation?.requestId, navigation?.placeId) {
         val target = navigation?.placeId ?: return@LaunchedEffect
         places.indexOfFirst { it.place.id == target }.takeIf { it >= 0 }?.let { pager.requestScrollToPage(it) }
+        positioned = true
     }
     LaunchedEffect(navigation?.requestId, navigation?.done) {
         val n = navigation?.takeIf { it.done } ?: return@LaunchedEffect
         // Showing a place closes any open day unless the request opens one; no place: stay put.
         n.placeId?.let { openDayOf(it, n.day) }
+        positioned = true
         onNavigationApplied(n.requestId)
     }
     val selectionReady = positioned && !requestPending
@@ -181,6 +184,7 @@ fun HomeScreen(
                     dayOwner, state, dayTarget,
                     onDayChange = { d -> openDayOf(dayOwner.place.id, DayTarget(d, dayTarget.hour.takeIf { d == dayTarget.date })) },
                     onNeedHours = { date -> onNeedHours(dayOwner.place.id, date) },
+                    onFixProblem = onFixProblem,
                     onBack = { openDay = null },
                     modifier = m,
                 )

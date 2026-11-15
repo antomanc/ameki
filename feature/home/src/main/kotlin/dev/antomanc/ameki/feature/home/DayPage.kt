@@ -92,6 +92,7 @@ internal fun DayPage(
     onNeedHours: (java.time.LocalDate) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onFixProblem: (SyncError) -> Unit = {},
 ) {
     val s = pw.snapshot ?: return
     val view = ForecastView(s, rememberWeatherTime(), state.settings.refreshIntervalMinutes)
@@ -149,6 +150,7 @@ internal fun DayPage(
                     loading = status == DayHours.LOADING || status == DayHours.NEEDED,
                     failure = pw.hourRequests.failed[day.date].takeIf { status == DayHours.FAILED },
                     onRetry = { onNeedHours(day.date) },
+                    onFixProblem = onFixProblem,
                 )
             }
         }
@@ -156,7 +158,7 @@ internal fun DayPage(
 }
 
 @Composable
-private fun DayContent(view: ForecastView, day: DailyForecast, units: Units, fmt: TimeFormatter, focusHour: Instant?, loading: Boolean, failure: SyncError?, onRetry: () -> Unit) {
+private fun DayContent(view: ForecastView, day: DailyForecast, units: Units, fmt: TimeFormatter, focusHour: Instant?, loading: Boolean, failure: SyncError?, onRetry: () -> Unit, onFixProblem: (SyncError) -> Unit) {
     val s = view.snapshot
     val failed = failure != null
     val dayHours = view.allHoursOn(day.date)
@@ -183,7 +185,8 @@ private fun DayContent(view: ForecastView, day: DailyForecast, units: Units, fmt
         if (failure != null) item {
             // A problem the user can fix (key, access) says so; anything else is worth a retry.
             Text(stringResource(if (failure.needsUserAction) errorText(failure) else R.string.day_hours_failed), style = MaterialTheme.typography.bodyMedium)
-            androidx.compose.material3.Button(onClick = onRetry) { Text(stringResource(R.string.retry)) }
+            if (failure.needsUserAction) androidx.compose.material3.Button(onClick = { onFixProblem(failure) }) { Text(stringResource(R.string.fix)) }
+            else androidx.compose.material3.Button(onClick = onRetry) { Text(stringResource(R.string.retry)) }
         } else if (!loading && hours.isEmpty()) item {
             Text(stringResource(R.string.day_hours_unavailable), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else if (!loading && view.hoursEndEarly(day.date)) item {

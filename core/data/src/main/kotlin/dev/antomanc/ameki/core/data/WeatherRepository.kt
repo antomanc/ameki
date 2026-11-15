@@ -231,16 +231,23 @@ class WeatherRepository(
             if (hourRequests.compareAndSet(all, all + (placeId to r.copy(loadingUntil = until)))) break
         }
         var error: SyncError? = null
+        var completed = false
         try {
             error = mutex.withLock { extendHoursLocked(placeId, until) }
+            completed = true
         } finally {
             hourRequests.update { all ->
                 val r = all[placeId] ?: HourRequests()
                 all + (placeId to HourRequests(
                     // A longer request queued behind this one is still running.
                     loadingUntil = r.loadingUntil?.takeIf { it.isAfter(until) },
-                    // Success covers every day up to this one; a failure marks only this day.
-                    failed = if (error != null) r.failed + (date to error!!) else r.failed.filterKeys { it.isAfter(date) },
+                    // Success covers every day up to this one; a failure marks only this day;
+                    // a cancelled request proves nothing either way.
+                    failed = when {
+                        !completed -> r.failed
+                        error != null -> r.failed + (date to error!!)
+                        else -> r.failed.filterKeys { it.isAfter(date) }
+                    },
                 ))
             }
         }

@@ -24,6 +24,7 @@ import dev.antomanc.ameki.source.api.PlaceSearch
 import dev.antomanc.ameki.source.api.SourceException
 import dev.antomanc.ameki.source.api.WeatherSource
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -42,6 +43,7 @@ private class FakeSource(override val id: SourceId, private val clock: () -> Ins
     var failWith: Exception? = null
     var hoursFailWith: Exception? = null
     var emptyHours = false
+    var hoursGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
     var temperature = 20.0
 
     override val fetchesHoursOnDemand = id == SourceId.GOOGLE
@@ -54,6 +56,7 @@ private class FakeSource(override val id: SourceId, private val clock: () -> Ins
     override suspend fun fetchHours(location: GeoPoint, language: String, hours: Int): WeatherSnapshot {
         check(fetchesHoursOnDemand)
         hourCalls += hours
+        hoursGate?.await()
         hoursFailWith?.let { throw it }
         val now = clock()
         return WeatherSnapshot(id, ZoneId.of("Europe/Rome"), null, hourly = if (emptyHours) emptyList() else hours(now, minOf(hours, 240)), fetchedAt = mapOf(DataPart.HOURLY to now))
@@ -308,6 +311,27 @@ class WeatherRepositoryTest {
         repo.loadDayHours(rome, later)
         assertThat(repo.get(rome)!!.dayHours(later)).isEqualTo(DayHours.READY)
         assertThat(repo.get(rome)!!.hourRequests.failed).isEmpty()
+    }
+
+    @Test
+    fun `a cancelled day request keeps the last failure and stops loading`() = runTest {
+        settings.setSource(SourceId.GOOGLE)
+        val id = addRome()
+        repo.refresh(id)
+        google.hoursFailWith = SourceException.Network(java.io.IOException("offline"))
+        repo.loadDayHours(id, later)
+
+        google.hoursGate = kotlinx.coroutines.CompletableDeferred()
+        val job = launch { repo.loadDayHours(id, later) }
+        // DataStore and Room run on real threads: wait for the request to reach the source.
+        while (google.hourCalls.size < 2) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { kotlinx.coroutines.delay(10) }
+        assertThat(repo.get(id)!!.dayHours(later)).isEqualTo(DayHours.LOADING)
+        job.cancel()
+        job.join()
+
+        val w = repo.get(id)!!
+        assertThat(w.hourRequests.loadingUntil).isNull()
+        assertThat(w.dayHours(later)).isEqualTo(DayHours.FAILED)
     }
 
     @Test

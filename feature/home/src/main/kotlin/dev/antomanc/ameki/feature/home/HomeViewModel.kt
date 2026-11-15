@@ -105,10 +105,9 @@ class HomeViewModel(
     }
 
     private suspend fun refreshAndWait(placeId: Long) {
-        if (placeId in refreshing.value) {
-            refreshing.first { placeId !in it }
-            return
-        }
+        // A refresh already running may belong to a cancelled request: let it end, then refresh
+        // ourselves. Only due parts are fetched, so this costs nothing after a successful one.
+        refreshing.first { placeId !in it }
         refreshing.value += placeId
         try {
             weather.refresh(placeId, force = false)
