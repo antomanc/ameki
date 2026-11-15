@@ -95,9 +95,9 @@ class WidgetStateTest {
     @Test
     fun `the preview sample can fill every widget type, including rain`() {
         val sample = PreviewData.sample(now)
-        assertTrue(sample.hasData(WidgetNeed.CURRENT))
-        assertTrue(sample.hasData(WidgetNeed.HOURLY))
-        assertTrue(sample.hasData(WidgetNeed.DAILY))
-        assertTrue(sample.hasData(WidgetNeed.RAIN))
+        assertTrue(sample.hasData(WidgetNeed.CURRENT, now))
+        assertTrue(sample.hasData(WidgetNeed.HOURLY, now))
+        assertTrue(sample.hasData(WidgetNeed.DAILY, now))
+        assertTrue(sample.hasData(WidgetNeed.RAIN, now))
     }
 }
