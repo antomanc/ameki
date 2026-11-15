@@ -135,13 +135,13 @@ class WeatherRepository(
     }
 
     /** Refresh every place worth refreshing; used by the background worker. */
-    suspend fun refreshActive(widgetPlaceIds: Set<Long?>): Map<Long, SyncError?> {
+    suspend fun refreshActive(widgetPlaceIds: Set<Long>): Map<Long, SyncError?> {
         val all = placeDao.all()
         val s = settings.current()
         val wanted = buildSet {
             addAll(places.recentlyOpened())
             s.selectedPlaceId?.let(::add)
-            widgetPlaceIds.forEach { id -> if (id != null) add(id) else all.firstOrNull()?.let { add(it.id) } }
+            addAll(widgetPlaceIds)
             if (isEmpty()) all.firstOrNull()?.let { add(it.id) }
         }
         val results = mutex.withLock { wanted.associateWith { refreshLocked(it, force = false) } }

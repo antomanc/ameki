@@ -329,6 +329,27 @@ class WeatherRepositoryTest {
     }
 
     @Test
+    fun `widget instances resolve their place once, for drawing and for refresh`() = runTest {
+        val widgets = dev.antomanc.ameki.core.data.widget.WidgetInstances(db.widgets(), repo, places, settings)
+        val rome = addRome()
+        val milan = places.add(PlaceSearchResult("Milano", "Lombardia", "Italia", GeoPoint(45.46, 9.19), null))
+        val style = dev.antomanc.ameki.core.data.widget.WidgetStyle.DARK
+        widgets.save(1, dev.antomanc.ameki.core.data.widget.WidgetConfig(null, style, 0.5f))
+        widgets.save(2, dev.antomanc.ameki.core.data.widget.WidgetConfig(milan, style, 0.5f))
+
+        assertThat(widgets.shownPlaces()).containsExactly(rome, milan)
+        assertThat(widgets.load(1).weather!!.place.id).isEqualTo(rome)
+        assertThat(widgets.observe(2).first().weather!!.place.id).isEqualTo(milan)
+        assertThat(widgets.config(3)).isNull()
+
+        // A deleted place is reported, never replaced by another city.
+        places.remove(milan)
+        assertThat(widgets.load(2).placeExists).isFalse()
+        assertThat(widgets.observe(2).first().weather).isNull()
+        assertThat(widgets.shownPlaces()).containsExactly(rome)
+    }
+
+    @Test
     fun `flow emits weather for all places`() = runTest {
         val id = addRome()
         repo.refresh(id)

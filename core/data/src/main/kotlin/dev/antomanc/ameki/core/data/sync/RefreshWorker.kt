@@ -4,19 +4,19 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import dev.antomanc.ameki.core.data.WeatherRepository
-import dev.antomanc.ameki.core.data.db.WidgetDao
+import dev.antomanc.ameki.core.data.widget.WidgetInstances
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
 class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params), KoinComponent {
     private val weather: WeatherRepository by inject()
-    private val widgets: WidgetDao by inject()
+    private val widgets: WidgetInstances by inject()
 
     override suspend fun doWork(): Result {
         val force = inputData.getBoolean(KEY_FORCE, false)
-        val widgetPlaces = widgets.all().mapTo(mutableSetOf()) { it.placeId }
+        val widgetPlaces = widgets.shownPlaces()
         val results = if (force) {
-            widgetPlaces.filterNotNull().associateWith { weather.refresh(it, force = true, notify = false) } +
+            widgetPlaces.associateWith { weather.refresh(it, force = true, notify = false) } +
                 weather.refreshActive(widgetPlaces)
         } else {
             weather.refreshActive(widgetPlaces)

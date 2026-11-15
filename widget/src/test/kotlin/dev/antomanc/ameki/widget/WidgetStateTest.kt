@@ -1,5 +1,8 @@
 package dev.antomanc.ameki.widget
 
+import dev.antomanc.ameki.core.data.widget.WidgetConfig
+import dev.antomanc.ameki.core.data.widget.WidgetData
+import dev.antomanc.ameki.core.data.widget.WidgetStyle
 import dev.antomanc.ameki.core.data.sync.PlaceWeather
 import dev.antomanc.ameki.core.data.sync.SyncError
 import dev.antomanc.ameki.core.model.AppSettings

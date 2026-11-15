@@ -1,5 +1,8 @@
 package dev.antomanc.ameki.widget
 
+import dev.antomanc.ameki.core.data.widget.WidgetConfig
+import dev.antomanc.ameki.core.data.widget.WidgetData
+import dev.antomanc.ameki.core.data.widget.WidgetStyle
 import android.content.Context
 import android.os.Build
 import androidx.compose.runtime.Composable

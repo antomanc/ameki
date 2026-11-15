@@ -21,7 +21,11 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.provideContent
+import dev.antomanc.ameki.core.data.widget.WidgetData
+import dev.antomanc.ameki.core.data.widget.WidgetInstances
 import dev.antomanc.ameki.core.model.Place
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 import dev.antomanc.ameki.core.ui.ForecastView
 import dev.antomanc.ameki.core.ui.TimeFormatter
 import java.time.Instant
@@ -31,7 +35,7 @@ import dev.antomanc.ameki.core.ui.label
  * Base for every Ameki widget: loads cached data for its instance, then renders [Content].
  * Responsive sizes let each widget reveal more as it grows.
  */
-abstract class AmekiWidget(sizes: Set<DpSize>) : GlanceAppWidget() {
+abstract class AmekiWidget(sizes: Set<DpSize>) : GlanceAppWidget(), KoinComponent {
     override val sizeMode: SizeMode = SizeMode.Responsive(sizes)
 
     /** The one part this widget cannot render without; a partial cache still serves the others. */
@@ -39,8 +43,9 @@ abstract class AmekiWidget(sizes: Set<DpSize>) : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
-        val initial = WidgetRepository.load(appWidgetId)
-        val updates = WidgetRepository.observe(appWidgetId)
+        val instances = get<WidgetInstances>()
+        val initial = instances.load(appWidgetId)
+        val updates = instances.observe(appWidgetId)
         provideContent {
             // Glance keeps a session alive between updates: observe the cache instead of
             // rendering a one-off snapshot, or a refresh landing mid-session draws old data.
