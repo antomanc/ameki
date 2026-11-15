@@ -39,6 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.antomanc.ameki.core.data.sync.PlaceWeather
 import dev.antomanc.ameki.core.data.sync.SyncError
@@ -194,9 +195,9 @@ private fun Freshness(pw: PlaceWeather, s: WeatherSnapshot, fmt: TimeFormatter, 
 }
 
 @Composable
-internal fun Card(title: String?, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+internal fun Card(title: String?, modifier: Modifier = Modifier, contentPadding: Dp = 16.dp, content: @Composable () -> Unit) {
     Column(
-        modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp),
+        modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).padding(contentPadding),
     ) {
         if (title != null) {
             Text(

@@ -144,7 +144,9 @@ internal fun DayPage(
 private fun DayContent(s: WeatherSnapshot, index: Int, units: Units, fmt: TimeFormatter, focusHour: Long?, loading: Boolean, failed: Boolean, onRetry: () -> Unit) {
     val day = s.daily[index]
     val now = Instant.now()
-    val hours = s.hourly.filter { it.time.atZone(s.timeZone).toLocalDate() == day.date }
+    val dayHours = s.hourly.filter { it.time.atZone(s.timeZone).toLocalDate() == day.date }
+    val hasChart = dayHours.size >= MIN_DAY_CHART_HOURS
+    val hours = dayHours
         .let { list -> if (day.date == java.time.LocalDate.now(s.timeZone)) list.filter { it.time.plusSeconds(3600) > now } else list }
     var waitingForRequest by androidx.compose.runtime.remember(day.date) { androidx.compose.runtime.mutableStateOf(true) }
     LaunchedEffect(day.date) { androidx.compose.runtime.withFrameNanos { }; waitingForRequest = false }
@@ -154,8 +156,8 @@ private fun DayContent(s: WeatherSnapshot, index: Int, units: Units, fmt: TimeFo
         if (i >= 0) list.scrollToItem(i + 4)
     }
     LazyColumn(state = list, contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 32.dp)) {
-        item { DayHeader(day, s, units, fmt) }
-        item { DayTemperatureChart(day, s.hourly.filter { it.time.atZone(s.timeZone).toLocalDate() == day.date }, s, units, fmt) }
+        item { DayHeader(day, s, units, fmt, showSun = !hasChart) }
+        item { DayTemperatureChart(day, dayHours, s, units, fmt) }
         item { HorizontalDivider(Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant) }
         when {
             hours.isNotEmpty() -> {
@@ -210,7 +212,7 @@ private fun SkeletonRow() {
 }
 
 @Composable
-private fun DayHeader(d: DailyForecast, s: WeatherSnapshot, units: Units, fmt: TimeFormatter) {
+private fun DayHeader(d: DailyForecast, s: WeatherSnapshot, units: Units, fmt: TimeFormatter, showSun: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         WeatherIcon(d.condition, true, size = 64.dp)
         Spacer(Modifier.width(12.dp))
@@ -231,7 +233,7 @@ private fun DayHeader(d: DailyForecast, s: WeatherSnapshot, units: Units, fmt: T
         d.precipitationProbability?.let { stringResource(R.string.day_rain, it, d.precipitation?.let(units::precipitation) ?: "") },
         d.windSpeedMax?.let { stringResource(R.string.day_wind, units.wind(it)) },
         d.uvIndexMax?.let { stringResource(R.string.day_uv, it.roundToInt()) },
-        if (d.sunrise != null && d.sunset != null) stringResource(R.string.day_sun, fmt.time(d.sunrise!!, s.timeZone), fmt.time(d.sunset!!, s.timeZone)) else null,
+        if (showSun && d.sunrise != null && d.sunset != null) stringResource(R.string.day_sun, fmt.time(d.sunrise!!, s.timeZone), fmt.time(d.sunset!!, s.timeZone)) else null,
     )
     facts.forEach { Text(it, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = 2.dp)) }
 }

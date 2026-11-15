@@ -8,6 +8,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -92,23 +93,25 @@ private fun severityLabel(severity: AlertSeverity): Int = when (severity) {
     AlertSeverity.UNKNOWN -> R.string.alert_unknown
 }
 
+internal const val MIN_DAY_CHART_HOURS = 2
+
 @Composable
 internal fun DayTemperatureChart(day: DailyForecast, hours: List<HourlyForecast>, s: WeatherSnapshot, units: Units, fmt: TimeFormatter) {
-    if (hours.size < 2) return
+    if (hours.size < MIN_DAY_CHART_HOURS) return
     val min = hours.minOf { it.temperature }
     val max = hours.maxOf { it.temperature }
     val peak = hours.maxBy { it.temperature }
     val summary = stringResource(R.string.day_chart_summary, units.temp(min), units.temp(max), fmt.time(peak.time, s.timeZone))
     val colors = LocalInstrumentColors.current
-    Card(stringResource(R.string.day_temperature)) {
-        Text(summary, style = MaterialTheme.typography.bodyMedium)
-        Canvas(Modifier.fillMaxWidth().height(120.dp).padding(vertical = 8.dp).semantics { contentDescription = summary }) {
+    val sunrise = day.sunrise
+    val sunset = day.sunset
+    Card(stringResource(R.string.day_temperature), Modifier.padding(top = 16.dp, bottom = 8.dp), contentPadding = 20.dp) {
+        Text(summary, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 16.dp))
+        Canvas(Modifier.fillMaxWidth().height(152.dp).padding(vertical = 12.dp).semantics { contentDescription = summary }) {
             val start = day.date.atStartOfDay(s.timeZone).toEpochSecond().toDouble()
             val duration = day.date.plusDays(1).atStartOfDay(s.timeZone).toEpochSecond() - start
             fun x(time: Instant) = ((time.epochSecond - start) / duration).toFloat().coerceIn(0f, 1f) * size.width
-            val sunrise = day.sunrise
-            val sunset = day.sunset
-            if (sunrise != null && sunset != null) {
+            if (sunrise != null && sunset != null && sunset > sunrise) {
                 drawRect(colors.warm.copy(alpha = .12f), Offset(x(sunrise), 0f), androidx.compose.ui.geometry.Size((x(sunset) - x(sunrise)).coerceAtLeast(0f), size.height))
                 listOf(sunrise, sunset).forEach { drawLine(colors.warm, Offset(x(it), 0f), Offset(x(it), size.height), 1.dp.toPx()) }
             }
@@ -119,10 +122,21 @@ internal fun DayTemperatureChart(day: DailyForecast, hours: List<HourlyForecast>
             }
             drawPath(path, colors.mild, style = Stroke(2.dp.toPx()))
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(fmt.hour(hours.first().time, s.timeZone), style = MaterialTheme.typography.labelMedium)
             Text(fmt.hour(hours.last().time, s.timeZone), style = MaterialTheme.typography.labelMedium)
         }
-        if (day.sunrise != null && day.sunset != null) Text(stringResource(R.string.day_sun, fmt.time(day.sunrise!!, s.timeZone), fmt.time(day.sunset!!, s.timeZone)), style = MaterialTheme.typography.bodySmall)
+        if (sunrise != null && sunset != null) {
+            val start = day.date.atStartOfDay(s.timeZone).toEpochSecond()
+            val duration = day.date.plusDays(1).atStartOfDay(s.timeZone).toEpochSecond() - start
+            val middle = if (sunset <= sunrise) .5f else (((sunrise.epochSecond - start) + (sunset.epochSecond - start)) / (2.0 * duration)).toFloat().coerceIn(0f, 1f)
+            BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp)) {
+                val labelWidth = minOf(220.dp, maxWidth)
+                val left = (maxWidth * middle - labelWidth / 2).coerceIn(0.dp, maxWidth - labelWidth)
+                Text(stringResource(R.string.day_sun, fmt.time(sunrise, s.timeZone), fmt.time(sunset, s.timeZone)),
+                    style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center,
+                    modifier = Modifier.offset(x = left).width(labelWidth))
+            }
+        }
     }
 }

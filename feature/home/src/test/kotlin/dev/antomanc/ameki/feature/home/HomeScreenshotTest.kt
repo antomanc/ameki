@@ -1,6 +1,7 @@
 package dev.antomanc.ameki.feature.home
 
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -49,7 +50,7 @@ internal fun sampleState(): HomeUiState {
     val today = LocalDate.now(zone)
     val daily = (0 until 10).map { i ->
         DailyForecast(today.plusDays(i.toLong()), 18.0 - (i % 4), 9.0 - (i % 3), listOf(WeatherCondition.SHOWERS, WeatherCondition.RAIN, WeatherCondition.CLEAR, WeatherCondition.PARTLY_CLOUDY)[i % 4],
-            null, null, listOf(80, 70, 0, 10)[i % 4], 1.0, 20.0, 200, 3.0, now.minusSeconds(3 * 3600), now.plusSeconds(5 * 3600), MoonPhase.WAXING_GIBBOUS)
+            null, null, listOf(80, 70, 0, 10)[i % 4], 1.0, 20.0, 200, 3.0, today.plusDays(i.toLong()).atTime(7, 0).atZone(zone).toInstant(), today.plusDays(i.toLong()).atTime(17, 0).atZone(zone).toInstant(), MoonPhase.WAXING_GIBBOUS)
     }
     val snap = WeatherSnapshot(
         SourceId.OPEN_METEO, zone,
@@ -238,6 +239,8 @@ class HomeScreenshotTest {
                 }
             }
         }
+        org.junit.Assert.assertEquals(1, compose.onAllNodesWithText("Sunrise", substring = true)
+            .fetchSemanticsNodes().count { it.boundsInRoot.overlaps(compose.onRoot().fetchSemanticsNode().boundsInRoot) })
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/day_page_dark.png")
     }
 
@@ -253,6 +256,8 @@ class HomeScreenshotTest {
             }
         }
         compose.mainClock.advanceTimeBy(500)
+        org.junit.Assert.assertEquals(1, compose.onAllNodesWithText("Sunrise", substring = true)
+            .fetchSemanticsNodes().count { it.boundsInRoot.overlaps(compose.onRoot().fetchSemanticsNode().boundsInRoot) })
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/day_page_loading_dark.png")
     }
 }
