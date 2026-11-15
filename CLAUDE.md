@@ -13,3 +13,11 @@ The five default labels: needs-triage, needs-info, ready-for-agent, ready-for-hu
 ### Domain docs
 
 Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+### Live Android check
+
+`scripts/emulator.sh` boots the `ameki_fold` AVD headless, installs the debug build and opens it; `scripts/emulator.sh stop` frees its RAM. For a few minutes after boot SystemUI may show "isn't responding": press Wait. The Fold has two displays, so `adb screencap` fails: use `agent-device screenshot`. Requests from widgets and shortcuts are `AppRequest` extras: `adb shell am start ... --el dev.antomanc.ameki.PLACE_ID 1 --el dev.antomanc.ameki.DAY_EPOCH_DAY <epoch day>`.
+
+### Review
+
+Reviewers apply `CODING_STANDARDS.md`. `scripts/check-conventions.py` (run in CI) enforces the mechanical rules.
