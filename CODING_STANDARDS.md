@@ -1,6 +1,6 @@
 # Coding standards
 
-Judgement rules for review. Mechanical rules live in `scripts/check-conventions.py` and `.ratchet/state.json` (checked by `scripts/ratchet-check.mjs`), not here.
+Judgement rules for review. Mechanical rules live in `scripts/check-conventions.py` and `.wellkept/state.json` (checked by `scripts/wellkept-check.mjs`), not here.
 
 ## Where a decision lives
 

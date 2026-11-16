@@ -9,7 +9,7 @@
       "enforcedBy": "scripts/check-conventions.py rule 3",
       "check": "python3 scripts/check-conventions.py",
       "canary": {
-        "path": "feature/settings/ratchet-canary.gradle.kts",
+        "path": "feature/settings/wellkept-canary.gradle.kts",
         "content": "dependencies {\n    implementation(project(\":source:google\"))\n}\n",
         "expect": "must not depend on source/google"
       },
@@ -23,7 +23,7 @@
       "enforcedBy": "scripts/check-conventions.py rule 3",
       "check": "python3 scripts/check-conventions.py",
       "canary": {
-        "path": "widget/src/main/kotlin/dev/antomanc/ameki/widget/RatchetCanary.kt",
+        "path": "widget/src/main/kotlin/dev/antomanc/ameki/widget/WellkeptCanary.kt",
         "content": "package dev.antomanc.ameki.widget\nimport androidx.room.Room\n",
         "expect": "Room belongs to core/data"
       },
@@ -37,8 +37,8 @@
       "enforcedBy": "scripts/check-conventions.py rule 4",
       "check": "python3 scripts/check-conventions.py",
       "canary": {
-        "path": "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/RatchetCanary.kt",
-        "content": "package dev.antomanc.ameki.feature.home\nfun ratchetCanary() = java.time.Instant.now()\n",
+        "path": "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/WellkeptCanary.kt",
+        "content": "package dev.antomanc.ameki.feature.home\nfun wellkeptCanary() = java.time.Instant.now()\n",
         "expect": "reads the clock"
       },
       "added": "2026-11-16"
@@ -47,9 +47,9 @@
       "id": "compose-effects",
       "kind": "api",
       "message": "Decide in the ViewModel or a pure tested function (like nextStep) and let the composable apply the result; effects that coordinate state are where navigation bugs start.",
-      "source": "ratchet audit: 11 of 15 effects in HomeScreen and DayPage",
-      "enforcedBy": "ratchet-check probe",
-      "check": "node scripts/ratchet-check.mjs",
+      "source": "wellkept audit: 11 of 15 effects in HomeScreen and DayPage",
+      "enforcedBy": "wellkept-check probe",
+      "check": "node scripts/wellkept-check.mjs",
       "probe": {
         "pattern": "\\b(LaunchedEffect|DisposableEffect|SideEffect)\\s*[({]",
         "include": [
@@ -60,8 +60,8 @@
         ]
       },
       "canary": {
-        "path": "feature/settings/src/main/kotlin/dev/antomanc/ameki/feature/settings/RatchetCanary.kt",
-        "content": "package dev.antomanc.ameki.feature.settings\nimport androidx.compose.runtime.*\n@Composable fun RatchetCanary() { LaunchedEffect(Unit) {} }\n",
+        "path": "feature/settings/src/main/kotlin/dev/antomanc/ameki/feature/settings/WellkeptCanary.kt",
+        "content": "package dev.antomanc.ameki.feature.settings\nimport androidx.compose.runtime.*\n@Composable fun WellkeptCanary() { LaunchedEffect(Unit) {} }\n",
         "expect": "[compose-effects]"
       },
       "added": "2026-11-16",
@@ -77,9 +77,9 @@
       "id": "kotlin-escape-hatches",
       "kind": "pattern",
       "message": "Make the value non-null where it is known (a local val, let, a non-null parameter) instead of !!, and fix the warning instead of suppressing it.",
-      "source": "ratchet audit",
-      "enforcedBy": "ratchet-check probe",
-      "check": "node scripts/ratchet-check.mjs",
+      "source": "wellkept audit",
+      "enforcedBy": "wellkept-check probe",
+      "check": "node scripts/wellkept-check.mjs",
       "probe": {
         "pattern": "!!|@Suppress\\(",
         "include": [
@@ -87,8 +87,8 @@
         ]
       },
       "canary": {
-        "path": "feature/settings/src/main/kotlin/dev/antomanc/ameki/feature/settings/RatchetCanary.kt",
-        "content": "package dev.antomanc.ameki.feature.settings\nfun ratchetCanary(x: String?) = x!!\n",
+        "path": "feature/settings/src/main/kotlin/dev/antomanc/ameki/feature/settings/WellkeptCanary.kt",
+        "content": "package dev.antomanc.ameki.feature.settings\nfun wellkeptCanary(x: String?) = x!!\n",
         "expect": "[kotlin-escape-hatches]"
       },
       "added": "2026-11-16",
@@ -116,7 +116,7 @@
     },
     {
       "id": "detekt",
-      "reason": "the existing convention script plus ratchet-check carry the current rules; revisit at three or more rules that need a parser",
+      "reason": "the existing convention script plus wellkept-check carry the current rules; revisit at three or more rules that need a parser",
       "date": "2026-11-16",
       "revisitWhen": "three or more rules need a parser, or a regex rule misfires"
     }
