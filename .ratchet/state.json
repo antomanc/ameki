@@ -431,6 +431,87 @@
           "widget/src/main/kotlin/dev/antomanc/ameki/widget/WidgetChrome.kt 7"
         ]
       }
+    },
+    {
+      "commit": "7dcf85e",
+      "date": "2026-11-16",
+      "metrics": {
+        "sourceFiles": 91,
+        "sourceLines": 8149,
+        "commentLines": 508,
+        "commentRatio": 0.062,
+        "testFiles": 14,
+        "probes": {
+          "timers": {
+            "total": 4,
+            "top": [
+              "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/WeatherExtras.kt 1",
+              "feature/locations/src/main/kotlin/dev/antomanc/ameki/feature/locations/LocationsViewModel.kt 1",
+              "feature/settings/src/main/kotlin/dev/antomanc/ameki/feature/settings/SettingsScreen.kt 1",
+              "feature/settings/src/main/kotlin/dev/antomanc/ameki/feature/settings/SettingsViewModel.kt 1"
+            ]
+          },
+          "clock-reads": {
+            "total": 10,
+            "top": [
+              "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/WeatherExtras.kt 2",
+              "widget/src/main/kotlin/dev/antomanc/ameki/widget/WidgetModel.kt 2",
+              "core/data/src/main/kotlin/dev/antomanc/ameki/core/data/location/DeviceLocation.kt 1",
+              "core/data/src/main/kotlin/dev/antomanc/ameki/core/data/sync/RefreshScheduler.kt 1",
+              "core/data/src/main/kotlin/dev/antomanc/ameki/core/data/sync/SyncState.kt 1",
+              "core/ui/src/main/kotlin/dev/antomanc/ameki/core/ui/Format.kt 1"
+            ]
+          },
+          "escape-hatches": {
+            "total": 5,
+            "top": [
+              "core/data/src/main/kotlin/dev/antomanc/ameki/core/data/WeatherRepository.kt 1",
+              "core/data/src/main/kotlin/dev/antomanc/ameki/core/data/location/DeviceLocation.kt 1",
+              "core/ui/src/main/kotlin/dev/antomanc/ameki/core/ui/ForecastView.kt 1",
+              "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/Details.kt 1",
+              "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/HomeScreen.kt 1"
+            ]
+          },
+          "effects": {
+            "total": 15,
+            "top": [
+              "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/HomeScreen.kt 6",
+              "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/DayPage.kt 5",
+              "app/src/main/kotlin/dev/antomanc/ameki/MainActivity.kt 1",
+              "core/ui/src/main/kotlin/dev/antomanc/ameki/core/ui/components/Instrument.kt 1",
+              "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/WeatherExtras.kt 1",
+              "feature/settings/src/main/kotlin/dev/antomanc/ameki/feature/settings/SettingsScreen.kt 1"
+            ]
+          },
+          "justification-comments": {
+            "total": 0,
+            "top": []
+          },
+          "todos": {
+            "total": 0,
+            "top": []
+          }
+        },
+        "rules": {
+          "compose-effects": 14,
+          "kotlin-escape-hatches": 5
+        }
+      },
+      "git": {
+        "commits": 45,
+        "fixRatio": 0.156,
+        "reverts": 0,
+        "hotspots": [
+          "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/DayPage.kt 10",
+          "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/HomeScreen.kt 10",
+          "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/PlaceWeatherPane.kt 10",
+          "core/data/src/main/kotlin/dev/antomanc/ameki/core/data/WeatherRepository.kt 9",
+          "widget/src/main/kotlin/dev/antomanc/ameki/widget/AmekiWidget.kt 8",
+          "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/HomeViewModel.kt 8",
+          "widget/src/main/kotlin/dev/antomanc/ameki/widget/Widgets.kt 8",
+          "widget/src/main/kotlin/dev/antomanc/ameki/widget/WidgetChrome.kt 7"
+        ]
+      }
     }
   ]
 }
