@@ -29,6 +29,7 @@ import org.koin.core.component.get
 import dev.antomanc.ameki.core.ui.ForecastView
 import dev.antomanc.ameki.core.ui.TimeFormatter
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import dev.antomanc.ameki.core.ui.label
 
 /**
@@ -57,7 +58,7 @@ abstract class AmekiWidget(sizes: Set<DpSize>) : GlanceAppWidget(), KoinComponen
     }
 
     override suspend fun providePreview(context: Context, widgetCategory: Int) {
-        val data = PreviewData.sample()
+        val data = PreviewData.sample(Instant.now().truncatedTo(ChronoUnit.HOURS))
         provideContent { GlanceTheme { Render(context, data) } }
     }
 

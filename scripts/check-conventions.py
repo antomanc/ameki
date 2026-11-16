@@ -74,19 +74,63 @@ for f in root.glob("*/**/src/main/kotlin/**/*.kt"):
             errors.append(f"{rel}:{n}: DAOs and entities stay inside core/data; read stored data through its repositories (WidgetInstances, PlaceRepository)")
 
 # 4. Time comes from one place in UI code, so a screen or widget can be tested at any hour.
-clock = re.compile(r"\b(?:Instant|LocalDate|LocalDateTime|ZonedDateTime|OffsetDateTime)\.now\(|System\.currentTimeMillis\(|Clock\.system")
-default_arg = re.compile(r":\s*[\w.?<>]+\s*=\s*(?:java\.time\.)?\w+\.now\(")
+# Only the bodies of the owner functions below may read the clock, and each owner is defined once in its module,
+# so neither a helper next to an owner nor a second function with the owner's name can hand out the clock.
+clock = re.compile(r"\b(?:Instant|LocalDate|LocalDateTime|LocalTime|ZonedDateTime|OffsetDateTime)(?:\.now\(|::now\b)|System\.currentTimeMillis\b|Clock\.system")
 clock_owners = {
-    "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/WeatherExtras.kt",  # rememberWeatherTime()
-    "widget/src/main/kotlin/dev/antomanc/ameki/widget/AmekiWidget.kt",  # Render: one now per widget update
+    "core/ui": {"rememberWeatherTime"},  # the app's ticking now
+    "widget": {"Render", "providePreview"},  # one now per widget update, and the picker preview
 }
-for f in root.glob("*/**/src/main/kotlin/**/*.kt"):
+
+
+def defines(name, line):
+    return re.search(r"\bfun\s+(?:<[^>]*>\s*)?(?:[\w.]+\.)?" + name + r"\s*\(", line)
+
+
+def body_lines(lines, start):
+    """Line numbers (1-based) of the function declared at lines[start], by brace depth; a one-line expression body is just that line."""
+    if "{" not in lines[start]:
+        return {start + 1}
+    depth, seen = 0, False
+    for i in range(start, len(lines)):
+        for ch in lines[i]:
+            if ch == "{":
+                depth, seen = depth + 1, True
+            elif ch == "}":
+                depth -= 1
+        if seen and depth <= 0:
+            return set(range(start + 1, i + 2))
+    return set(range(start + 1, len(lines) + 1))
+
+
+definitions = {}  # (module, owner) -> [rel:line]
+for f in sorted(root.glob("*/**/src/main/kotlin/**/*.kt")):
     rel = str(f.relative_to(root))
-    if "build" in f.parts or rel in clock_owners or not rel.startswith(("feature/", "widget/", "core/ui/")):
+    if "build" in f.parts or not rel.startswith(("feature/", "widget/", "core/ui/", "app/")):
         continue
-    for n, line in enumerate(f.read_text().splitlines(), 1):
-        if clock.search(line) and not default_arg.search(line):
+    module = rel.split("/src/")[0]
+    lines = f.read_text().splitlines()
+    owned = set()
+    for i, line in enumerate(lines):
+        for owner in clock_owners.get(module, ()):
+            if defines(owner, line):
+                definitions.setdefault((module, owner), []).append(f"{rel}:{i + 1}")
+                owned |= body_lines(lines, i)
+    for n, line in enumerate(lines, 1):
+        if clock.search(line) and n not in owned:
             errors.append(f"{rel}:{n}: reads the clock; take now as a parameter, from rememberWeatherTime() in the app or from Render in widgets, so it can be tested at any hour")
+for (module, owner), where in sorted(definitions.items()):
+    if len(where) > 1:
+        for w in where:
+            errors.append(f"{w}: {owner} is defined {len(where)} times in {module}; only one {owner} may read the clock, so call it instead of adding another")
+
+# 5. Effect helpers live in core/ui/effects, where effects are allowed because each helper has a test beside it
+# that pins its keys, cancellation and cleanup.
+effects = root / "core/ui/src/main/kotlin/dev/antomanc/ameki/core/ui/effects"
+for f in sorted(effects.glob("*.kt")):
+    test = root / "core/ui/src/test/kotlin/dev/antomanc/ameki/core/ui/effects" / (f.stem + "Test.kt")
+    if not test.exists():
+        errors.append(f"{f.relative_to(root)}: effect helper has no test at {test.relative_to(root)}; a helper that owns an effect needs a test for its keys, cancellation and cleanup")
 
 for e in errors:
     print(e, file=sys.stderr)

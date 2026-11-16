@@ -17,11 +17,10 @@ import dev.antomanc.ameki.core.model.WeatherSnapshot
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.temporal.ChronoUnit
 
 /** Illustrative data for the widget picker preview and screenshot tests. Not real weather. */
 object PreviewData {
-    fun sample(now: Instant = Instant.now().truncatedTo(ChronoUnit.HOURS)): WidgetData {
+    fun sample(now: Instant): WidgetData {
         val zone = ZoneId.systemDefault()
         val temps = listOf(15.0, 16.0, 17.0, 17.0, 16.0, 15.0, 13.0, 12.0, 11.0, 11.0, 10.0, 10.0)
         val rain = listOf(5, 10, 20, 60, 80, 40, 10, 0, 0, 0, 5, 10)

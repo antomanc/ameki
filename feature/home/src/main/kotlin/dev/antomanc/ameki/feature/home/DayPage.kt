@@ -77,6 +77,7 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import kotlin.math.roundToInt
 import dev.antomanc.ameki.core.ui.R as UiR
+import dev.antomanc.ameki.core.ui.effects.rememberWeatherTime
 
 /**
  * One full page per day, swiped sideways: no sheet to fight with while scrolling the hours.

@@ -104,20 +104,43 @@
       "kind": "api",
       "message": "Take now as a parameter, from rememberWeatherTime() in the app or from Render in widgets, so it can be tested at any hour.",
       "source": "CODING_STANDARDS.md (Time), removed there",
-      "enforcedBy": "scripts/check-conventions.py rule 4",
+      "enforcedBy": "scripts/check-conventions.py rule 4 (only inside the owner functions; default arguments and Instant::now count)",
       "check": "python3 scripts/check-conventions.py",
       "canary": {
         "path": "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/WellkeptCanary.kt",
-        "content": "package dev.antomanc.ameki.feature.home\nfun wellkeptCanary() = java.time.Instant.now()\n",
+        "content": "package dev.antomanc.ameki.feature.home\n\nfun wellkeptCanary(now: java.time.Instant = java.time.Instant.now()) = now\n",
         "expect": "reads the clock"
       },
       "added": "2026-11-16",
-      "intent": "nuance-apis"
+      "intent": "nuance-apis",
+      "allow": {
+        "path": "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/WellkeptAllow.kt",
+        "content": "package dev.antomanc.ameki.feature.home\n\nimport androidx.compose.material3.Text\nimport androidx.compose.runtime.Composable\nimport dev.antomanc.ameki.core.ui.TimeFormatter\nimport dev.antomanc.ameki.core.ui.effects.rememberWeatherTime\nimport java.time.Instant\nimport java.time.ZoneId\n\n@Composable\ninternal fun WellkeptAllow(updated: Instant, zone: ZoneId, fmt: TimeFormatter) {\n    Text(fmt.timestamp(updated, zone, rememberWeatherTime()))\n}\n"
+      }
+    },
+    {
+      "id": "clock-owner-is-unique",
+      "kind": "api",
+      "intent": "nuance-apis",
+      "message": "Only one rememberWeatherTime (core/ui) and one Render and providePreview (widget) may read the clock; call them, or take now as a parameter, instead of adding another.",
+      "source": "wellkept re-run: the clock owners are exempt by name",
+      "enforcedBy": "scripts/check-conventions.py rule 4",
+      "check": "python3 scripts/check-conventions.py",
+      "canary": {
+        "path": "core/ui/src/main/kotlin/dev/antomanc/ameki/core/ui/WellkeptCanary.kt",
+        "content": "package dev.antomanc.ameki.core.ui\n\nfun rememberWeatherTime(zone: java.time.ZoneId): java.time.Instant = java.time.Instant.now()\n",
+        "expect": "is defined 2 times in core/ui"
+      },
+      "allow": {
+        "path": "widget/src/main/kotlin/dev/antomanc/ameki/widget/WellkeptAllow.kt",
+        "content": "package dev.antomanc.ameki.widget\n\nimport dev.antomanc.ameki.core.ui.ForecastView\n\ninternal fun wellkeptAllow(data: WidgetData, need: WidgetNeed, view: ForecastView) = widgetState(data, need, view.now)\n"
+      },
+      "added": "2026-11-16"
     },
     {
       "id": "compose-effects",
       "kind": "api",
-      "message": "Decide in the ViewModel or a pure tested function (like nextStep) and let the composable apply the result; effects that coordinate state are where navigation bugs start.",
+      "message": "Decide in the ViewModel or a pure tested function (like nextStep) and apply the result with ApplyOnChange, or another tested helper in core/ui/effects; effects written inline in screens are where navigation bugs start.",
       "source": "wellkept audit: 11 of 15 effects in HomeScreen and DayPage",
       "enforcedBy": "wellkept-check probe",
       "check": "node scripts/wellkept-check.mjs",
@@ -127,7 +150,7 @@
           "**/src/main/**/*.kt"
         ],
         "exclude": [
-          "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/WeatherExtras.kt"
+          "core/ui/src/main/kotlin/dev/antomanc/ameki/core/ui/effects/**"
         ]
       },
       "canary": {
@@ -143,7 +166,26 @@
         "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/HomeScreen.kt": 6,
         "feature/settings/src/main/kotlin/dev/antomanc/ameki/feature/settings/SettingsScreen.kt": 1
       },
-      "intent": "nuance-apis"
+      "intent": "nuance-apis",
+      "allow": {
+        "path": "feature/settings/src/main/kotlin/dev/antomanc/ameki/feature/settings/WellkeptAllow.kt",
+        "content": "package dev.antomanc.ameki.feature.settings\n\nimport androidx.compose.runtime.Composable\nimport dev.antomanc.ameki.core.ui.effects.ApplyOnChange\n\n@Composable\ninternal fun WellkeptAllow(requestId: Long?, onApplied: (Long) -> Unit) {\n    ApplyOnChange(requestId) { onApplied(it) }\n}\n"
+      }
+    },
+    {
+      "id": "effect-helpers-have-tests",
+      "kind": "pattern",
+      "intent": "nuance-apis",
+      "message": "An effect helper in core/ui/effects needs a test beside it for its keys, cancellation and cleanup; that test is why effects are allowed there.",
+      "source": "wellkept re-run: core/ui/effects is excluded from compose-effects",
+      "enforcedBy": "scripts/check-conventions.py rule 5",
+      "check": "python3 scripts/check-conventions.py",
+      "canary": {
+        "path": "core/ui/src/main/kotlin/dev/antomanc/ameki/core/ui/effects/WellkeptCanary.kt",
+        "content": "package dev.antomanc.ameki.core.ui.effects\n\nimport androidx.compose.runtime.Composable\nimport androidx.compose.runtime.LaunchedEffect\n\n@Composable\nfun PollEverySecond(onTick: () -> Unit) {\n    LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(1_000); onTick() } }\n}\n",
+        "expect": "effect helper has no test"
+      },
+      "added": "2026-11-16"
     },
     {
       "id": "kotlin-escape-hatches",

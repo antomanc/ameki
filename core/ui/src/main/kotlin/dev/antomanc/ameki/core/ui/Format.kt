@@ -52,7 +52,7 @@ class TimeFormatter(private val context: Context, private val format: TimeFormat
     fun hour(instant: Instant, zone: ZoneId): String =
         DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, if (is24) "H" else "ha"), locale).format(instant.atZone(zone))
 
-    fun timestamp(instant: Instant, zone: ZoneId, now: Instant = Instant.now()): String =
+    fun timestamp(instant: Instant, zone: ZoneId, now: Instant): String =
         if (instant.atZone(zone).toLocalDate() == now.atZone(zone).toLocalDate()) time(instant, zone)
         else "${dateMedium(instant.atZone(zone).toLocalDate())} ${time(instant, zone)}"
 
