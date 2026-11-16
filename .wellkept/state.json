@@ -133,7 +133,7 @@
       },
       "allow": {
         "path": "widget/src/main/kotlin/dev/antomanc/ameki/widget/WellkeptAllow.kt",
-        "content": "package dev.antomanc.ameki.widget\n\nimport dev.antomanc.ameki.core.ui.ForecastView\n\ninternal fun wellkeptAllow(data: WidgetData, need: WidgetNeed, view: ForecastView) = widgetState(data, need, view.now)\n"
+        "content": "package dev.antomanc.ameki.widget\n\nimport dev.antomanc.ameki.core.data.widget.WidgetData\nimport dev.antomanc.ameki.core.ui.ForecastView\n\ninternal fun wellkeptAllow(data: WidgetData, need: WidgetNeed, view: ForecastView) = widgetState(data, need, view.now)\n"
       },
       "added": "2026-11-16"
     },
