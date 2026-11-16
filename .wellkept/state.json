@@ -219,15 +219,34 @@
   "declined": [
     {
       "id": "timers",
-      "reason": "all four are legit: the rememberWeatherTime ticker, a search debounce, a scheduler delay, a settings interval",
+      "reason": "decided again 2026-11-16: the first audit's probe only saw delay(<number>) and missed the cache-expiry ticker in WeatherRepository.expiryTicks (delay until the next retention boundary, scoped by flatMapLatest, tested). The real timers are that ticker, the rememberWeatherTime ticker (core/ui/effects) and the place search debounce (LocationsViewModel); refresh scheduling goes through WorkManager, and the settings hits were setInterval(minutes), a setter",
       "date": "2026-11-16",
-      "revisitWhen": "a timer appears outside the ticker, the search debounce and the scheduler"
+      "revisitWhen": "a timer (delay, postDelayed, debounce, Thread.sleep, java.util.Timer) appears outside those three files",
+      "revisitProbe": {
+        "pattern": "\\b(delay|postDelayed|debounce)\\s*\\(|Thread\\.sleep\\s*\\(|\\bTimer\\s*\\(",
+        "include": [
+          "**/src/main/**/*.kt"
+        ],
+        "exclude": [
+          "core/ui/src/main/kotlin/dev/antomanc/ameki/core/ui/effects/WeatherTime.kt",
+          "feature/locations/src/main/kotlin/dev/antomanc/ameki/feature/locations/LocationsViewModel.kt",
+          "core/data/src/main/kotlin/dev/antomanc/ameki/core/data/WeatherRepository.kt"
+        ]
+      }
     },
     {
       "id": "comment-ban",
       "reason": "comments here explain domain decisions (6% of lines); the clock and boundary rules replace the ones that defended shortcuts",
       "date": "2026-11-16",
-      "revisitWhen": "comments start defending shortcuts (the justification-comments probe goes above 0)"
+      "revisitWhen": "comments start defending shortcuts (a comment says workaround, hack, for now, temporary, quick fix and the like)",
+      "revisitProbe": {
+        "pattern": "^\\s*(\\/\\/|\\*|\\/\\*).*\\b(workaround|hack|for now|temporar|quick fix|band-?aid|not ideal|ugly|kludge|needed because|otherwise .* (breaks|fails))",
+        "flags": "i",
+        "include": [
+          "**/src/main/**/*.kt",
+          "**/*.gradle.kts"
+        ]
+      }
     },
     {
       "id": "detekt",
