@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "id": "module-boundaries",
+      "kind": "boundary",
+      "message": "Features and widgets read weather through core/data, which owns the Sources; Room stays in core/data.",
+      "source": "CODING_STANDARDS.md (Source seam, widget never touches Room)",
+      "enforcedBy": "scripts/check-conventions.py rule 3",
+      "check": "python3 scripts/check-conventions.py",
+      "canary": {
+        "path": "widget/src/main/kotlin/dev/antomanc/ameki/widget/RatchetCanary.kt",
+        "content": "package dev.antomanc.ameki.widget\nimport androidx.room.Room\n"
+      },
+      "added": "2026-11-16"
+    },
+    {
+      "id": "no-direct-clock",
+      "kind": "api",
+      "message": "Take now as a parameter, from rememberWeatherTime() in the app or from Render in widgets, so it can be tested at any hour.",
+      "source": "CODING_STANDARDS.md (Time), removed there",
+      "enforcedBy": "scripts/check-conventions.py rule 4",
+      "check": "python3 scripts/check-conventions.py",
+      "canary": {
+        "path": "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/RatchetCanary.kt",
+        "content": "package dev.antomanc.ameki.feature.home\nfun ratchetCanary() = java.time.Instant.now()\n"
+      },
+      "added": "2026-11-16"
+    },
+    {
+      "id": "compose-effects",
+      "kind": "api",
+      "message": "Decide in the ViewModel or a pure tested function (like nextStep) and let the composable apply the result; effects that coordinate state are where navigation bugs start.",
+      "source": "ratchet audit: 11 of 15 effects in HomeScreen and DayPage",
+      "enforcedBy": "ratchet-check probe",
+      "check": "node scripts/ratchet-check.mjs",
+      "probe": {
+        "pattern": "\\b(LaunchedEffect|DisposableEffect|SideEffect)\\s*[({]",
+        "include": [
+          "**/src/main/**/*.kt"
+        ],
+        "exclude": [
+          "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/WeatherExtras.kt"
+        ]
+      },
+      "canary": {
+        "path": "feature/settings/src/main/kotlin/dev/antomanc/ameki/feature/settings/RatchetCanary.kt",
+        "content": "package dev.antomanc.ameki.feature.settings\nimport androidx.compose.runtime.*\n@Composable fun RatchetCanary() { LaunchedEffect(Unit) {} }\n"
+      },
+      "added": "2026-11-16",
+      "baseline": {
+        "app/src/main/kotlin/dev/antomanc/ameki/MainActivity.kt": 1,
+        "core/ui/src/main/kotlin/dev/antomanc/ameki/core/ui/components/Instrument.kt": 1,
+        "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/DayPage.kt": 5,
+        "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/HomeScreen.kt": 6,
+        "feature/settings/src/main/kotlin/dev/antomanc/ameki/feature/settings/SettingsScreen.kt": 1
+      }
+    },
+    {
+      "id": "kotlin-escape-hatches",
+      "kind": "pattern",
+      "message": "Make the value non-null where it is known (a local val, let, a non-null parameter) instead of !!, and fix the warning instead of suppressing it.",
+      "source": "ratchet audit",
+      "enforcedBy": "ratchet-check probe",
+      "check": "node scripts/ratchet-check.mjs",
+      "probe": {
+        "pattern": "!!|@Suppress\\(",
+        "include": [
+          "**/src/main/**/*.kt"
+        ]
+      },
+      "canary": {
+        "path": "feature/settings/src/main/kotlin/dev/antomanc/ameki/feature/settings/RatchetCanary.kt",
+        "content": "package dev.antomanc.ameki.feature.settings\nfun ratchetCanary(x: String?) = x!!\n"
+      },
+      "added": "2026-11-16",
+      "baseline": {
+        "core/data/src/main/kotlin/dev/antomanc/ameki/core/data/WeatherRepository.kt": 1,
+        "core/data/src/main/kotlin/dev/antomanc/ameki/core/data/location/DeviceLocation.kt": 1,
+        "core/ui/src/main/kotlin/dev/antomanc/ameki/core/ui/ForecastView.kt": 1,
+        "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/Details.kt": 1,
+        "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/HomeScreen.kt": 1
+      }
+    }
+  ],
+  "declined": [
+    {
+      "id": "timers",
+      "reason": "all four are legit: the rememberWeatherTime ticker, a search debounce, a scheduler delay, a settings interval",
+      "date": "2026-11-16"
+    },
+    {
+      "id": "comment-ban",
+      "reason": "comments here explain domain decisions (6% of lines); the clock and boundary rules replace the ones that defended shortcuts",
+      "date": "2026-11-16"
+    },
+    {
+      "id": "detekt",
+      "reason": "the existing convention script plus ratchet-check carry the current rules; revisit at three or more rules that need a parser",
+      "date": "2026-11-16"
+    }
+  ],
+  "history": []
+}
