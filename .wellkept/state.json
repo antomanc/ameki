@@ -1,5 +1,13 @@
 {
   "version": 1,
+  "verify": "scripts/verify.sh",
+  "protected": [
+    ".github/workflows/ci.yml",
+    "scripts/verify.sh",
+    "scripts/check-conventions.py",
+    "scripts/wellkept-check.mjs",
+    "build-logic/src/main/kotlin/Conventions.kt"
+  ],
   "rules": [
     {
       "id": "module-boundaries",
@@ -41,7 +49,8 @@
         "content": "package dev.antomanc.ameki.feature.home\nfun wellkeptCanary() = java.time.Instant.now()\n",
         "expect": "reads the clock"
       },
-      "added": "2026-11-16"
+      "added": "2026-11-16",
+      "intent": "nuance-apis"
     },
     {
       "id": "compose-effects",
@@ -71,7 +80,8 @@
         "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/DayPage.kt": 5,
         "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/HomeScreen.kt": 6,
         "feature/settings/src/main/kotlin/dev/antomanc/ameki/feature/settings/SettingsScreen.kt": 1
-      }
+      },
+      "intent": "nuance-apis"
     },
     {
       "id": "kotlin-escape-hatches",
@@ -98,7 +108,8 @@
         "core/ui/src/main/kotlin/dev/antomanc/ameki/core/ui/ForecastView.kt": 1,
         "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/Details.kt": 1,
         "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/HomeScreen.kt": 1
-      }
+      },
+      "intent": "escape-hatches"
     }
   ],
   "declined": [
