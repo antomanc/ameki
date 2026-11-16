@@ -41,22 +41,24 @@ ALLOWED = {
     "feature/*": ["core/*", "feature/*"],
     "widget": ["core/*"],
 }
-dep = re.compile(r"\bprojects\.([a-zA-Z.]+)")
-for build in sorted(root.glob("**/build.gradle.kts")):
+# Both declaration forms: the typesafe accessor (projects.source.google) and the string path (project(":source:google")).
+dep = re.compile(r"\bprojects\.([a-zA-Z.]+)|\bproject\(\s*\"(:[\w:-]+)\"\s*\)")
+for build in sorted(root.glob("**/*.gradle.kts")):
     module = str(build.parent.relative_to(root))
-    if module in (".", "app", "build-logic") or "build" in build.parent.parts[:-1]:
+    if build.name == "settings.gradle.kts" or module in (".", "app") or module.startswith("build-logic") or "build" in build.parent.parts or ".gradle" in build.parts:
         continue
     key = module if module in ALLOWED else next((k for k in ALLOWED if fnmatch.fnmatch(module, k)), None)
     if key is None:
         errors.append(f"{module}: new module without a boundary; add it to ALLOWED in scripts/check-conventions.py")
         continue
     for n, line in enumerate(build.read_text().splitlines(), 1):
+        rel = f"{module}/{build.name}"
         if module != "core/data" and "libs.room" in line:
-            errors.append(f"{module}/build.gradle.kts:{n}: Room belongs to core/data; read stored data through its repositories (WidgetInstances, PlaceRepository)")
-        for target in dep.findall(line):
-            target = target.replace(".", "/")
+            errors.append(f"{rel}:{n}: Room belongs to core/data; read stored data through its repositories (WidgetInstances, PlaceRepository)")
+        for accessor, path in dep.findall(line):
+            target = accessor.replace(".", "/") if accessor else path.strip(":").replace(":", "/")
             if target != module and not any(fnmatch.fnmatch(target, a) for a in ALLOWED[key]):
-                errors.append(f"{module}/build.gradle.kts:{n}: {module} must not depend on {target}; features and widgets read weather through core/data, which owns the Sources")
+                errors.append(f"{rel}:{n}: {module} must not depend on {target}; features and widgets read weather through core/data, which owns the Sources")
 for f in root.glob("*/**/src/main/kotlin/**/*.kt"):
     rel = str(f.relative_to(root))
     if "build" in f.parts or rel.startswith("core/data/"):

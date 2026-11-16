@@ -9,8 +9,23 @@
       "enforcedBy": "scripts/check-conventions.py rule 3",
       "check": "python3 scripts/check-conventions.py",
       "canary": {
+        "path": "feature/settings/ratchet-canary.gradle.kts",
+        "content": "dependencies {\n    implementation(project(\":source:google\"))\n}\n",
+        "expect": "must not depend on source/google"
+      },
+      "added": "2026-11-16"
+    },
+    {
+      "id": "room-in-core-data",
+      "kind": "boundary",
+      "message": "Room belongs to core/data; read stored data through its repositories.",
+      "source": "CODING_STANDARDS.md (widget never touches Room)",
+      "enforcedBy": "scripts/check-conventions.py rule 3",
+      "check": "python3 scripts/check-conventions.py",
+      "canary": {
         "path": "widget/src/main/kotlin/dev/antomanc/ameki/widget/RatchetCanary.kt",
-        "content": "package dev.antomanc.ameki.widget\nimport androidx.room.Room\n"
+        "content": "package dev.antomanc.ameki.widget\nimport androidx.room.Room\n",
+        "expect": "Room belongs to core/data"
       },
       "added": "2026-11-16"
     },
@@ -23,7 +38,8 @@
       "check": "python3 scripts/check-conventions.py",
       "canary": {
         "path": "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/RatchetCanary.kt",
-        "content": "package dev.antomanc.ameki.feature.home\nfun ratchetCanary() = java.time.Instant.now()\n"
+        "content": "package dev.antomanc.ameki.feature.home\nfun ratchetCanary() = java.time.Instant.now()\n",
+        "expect": "reads the clock"
       },
       "added": "2026-11-16"
     },
@@ -45,7 +61,8 @@
       },
       "canary": {
         "path": "feature/settings/src/main/kotlin/dev/antomanc/ameki/feature/settings/RatchetCanary.kt",
-        "content": "package dev.antomanc.ameki.feature.settings\nimport androidx.compose.runtime.*\n@Composable fun RatchetCanary() { LaunchedEffect(Unit) {} }\n"
+        "content": "package dev.antomanc.ameki.feature.settings\nimport androidx.compose.runtime.*\n@Composable fun RatchetCanary() { LaunchedEffect(Unit) {} }\n",
+        "expect": "[compose-effects]"
       },
       "added": "2026-11-16",
       "baseline": {
@@ -71,7 +88,8 @@
       },
       "canary": {
         "path": "feature/settings/src/main/kotlin/dev/antomanc/ameki/feature/settings/RatchetCanary.kt",
-        "content": "package dev.antomanc.ameki.feature.settings\nfun ratchetCanary(x: String?) = x!!\n"
+        "content": "package dev.antomanc.ameki.feature.settings\nfun ratchetCanary(x: String?) = x!!\n",
+        "expect": "[kotlin-escape-hatches]"
       },
       "added": "2026-11-16",
       "baseline": {
