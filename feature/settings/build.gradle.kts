@@ -10,7 +10,6 @@ android {
 dependencies {
     implementation(projects.core.data)
     implementation(projects.core.ui)
-    api(projects.source.google)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)

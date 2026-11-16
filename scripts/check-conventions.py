@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Mechanical checks that Gradle and Android lint do not cover. Run from the repo root; exits 1 on a violation."""
+import fnmatch
 import pathlib
 import re
 import sys
@@ -29,6 +30,40 @@ for f in root.glob("*/**/src/main/kotlin/**/*.kt"):
     for n, line in enumerate(f.read_text().splitlines(), 1):
         if extra.search(line):
             errors.append(f"{f.relative_to(root)}:{n}: Intent extra literal; go through AppRequest")
+
+# 3. Module boundaries. Features and widgets get data from core/data, the only module that wires Sources.
+ALLOWED = {
+    "core/model": [],
+    "core/ui": ["core/model"],
+    "core/data": ["core/model", "source/*"],
+    "source/api": ["core/model"],
+    "source/*": ["source/api", "core/model"],
+    "feature/*": ["core/*", "feature/*"],
+    "widget": ["core/*"],
+}
+dep = re.compile(r"\bprojects\.([a-zA-Z.]+)")
+for build in sorted(root.glob("**/build.gradle.kts")):
+    module = str(build.parent.relative_to(root))
+    if module in (".", "app", "build-logic") or "build" in build.parent.parts[:-1]:
+        continue
+    key = module if module in ALLOWED else next((k for k in ALLOWED if fnmatch.fnmatch(module, k)), None)
+    if key is None:
+        errors.append(f"{module}: new module without a boundary; add it to ALLOWED in scripts/check-conventions.py")
+        continue
+    for n, line in enumerate(build.read_text().splitlines(), 1):
+        if module != "core/data" and "libs.room" in line:
+            errors.append(f"{module}/build.gradle.kts:{n}: Room belongs to core/data; read stored data through its repositories (WidgetInstances, PlaceRepository)")
+        for target in dep.findall(line):
+            target = target.replace(".", "/")
+            if target != module and not any(fnmatch.fnmatch(target, a) for a in ALLOWED[key]):
+                errors.append(f"{module}/build.gradle.kts:{n}: {module} must not depend on {target}; features and widgets read weather through core/data, which owns the Sources")
+for f in root.glob("*/**/src/main/kotlin/**/*.kt"):
+    rel = str(f.relative_to(root))
+    if "build" in f.parts or rel.startswith("core/data/"):
+        continue
+    for n, line in enumerate(f.read_text().splitlines(), 1):
+        if line.startswith("import androidx.room"):
+            errors.append(f"{rel}:{n}: Room belongs to core/data; read stored data through its repositories (WidgetInstances, PlaceRepository)")
 
 for e in errors:
     print(e, file=sys.stderr)

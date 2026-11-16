@@ -9,7 +9,7 @@ Judgement rules for review. Mechanical rules live in `scripts/check-conventions.
 - **Retention and freshness** belong to `WeatherSnapshot` (`retainedAt`, `nextChange`, `partIsFresh`) and `RefreshPolicy`. Google caching limits must hold for every hour stored, including on-demand hours.
 - **Navigation requests** are `AppRequest`s. Deciding where a request leads is `nextStep` (pure, tested); screens only apply a `Navigation`.
 - **Widget size thresholds** are in `WidgetLayout`, tested; a widget layout reads them instead of comparing dp values inline.
-- **Widget instances** are owned by `WidgetInstances` in core/data; the widget module renders and never touches Room.
+- **Widget instances** are owned by `WidgetInstances` in core/data.
 
 ## Time
 

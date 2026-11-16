@@ -35,7 +35,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import dev.antomanc.ameki.core.data.sync.SyncError
-import dev.antomanc.ameki.source.google.AndroidAppIdentity
+import dev.antomanc.ameki.core.model.AndroidAppIdentity
 
 /**
  * Step-by-step guide to a Google Weather API key, plus the field and the "Verify" button.
