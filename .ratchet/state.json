@@ -87,20 +87,90 @@
     {
       "id": "timers",
       "reason": "all four are legit: the rememberWeatherTime ticker, a search debounce, a scheduler delay, a settings interval",
-      "date": "2026-11-16"
+      "date": "2026-11-16",
+      "revisitWhen": "a timer appears outside the ticker, the search debounce and the scheduler"
     },
     {
       "id": "comment-ban",
       "reason": "comments here explain domain decisions (6% of lines); the clock and boundary rules replace the ones that defended shortcuts",
-      "date": "2026-11-16"
+      "date": "2026-11-16",
+      "revisitWhen": "comments start defending shortcuts (the justification-comments probe goes above 0)"
     },
     {
       "id": "detekt",
       "reason": "the existing convention script plus ratchet-check carry the current rules; revisit at three or more rules that need a parser",
-      "date": "2026-11-16"
+      "date": "2026-11-16",
+      "revisitWhen": "three or more rules need a parser, or a regex rule misfires"
     }
   ],
   "history": [
+    {
+      "commit": "491a005",
+      "date": "2026-11-15",
+      "phase": "before",
+      "metrics": {
+        "sourceFiles": 89,
+        "sourceLines": 7983,
+        "commentLines": 498,
+        "commentRatio": 0.062,
+        "testFiles": 14,
+        "probes": {
+          "timers": {
+            "total": 4,
+            "top": [
+              "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/WeatherExtras.kt 1",
+              "feature/locations/src/main/kotlin/dev/antomanc/ameki/feature/locations/LocationsViewModel.kt 1",
+              "feature/settings/src/main/kotlin/dev/antomanc/ameki/feature/settings/SettingsScreen.kt 1",
+              "feature/settings/src/main/kotlin/dev/antomanc/ameki/feature/settings/SettingsViewModel.kt 1"
+            ]
+          },
+          "clock-reads": {
+            "total": 12,
+            "top": [
+              "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/WeatherExtras.kt 2",
+              "widget/src/main/kotlin/dev/antomanc/ameki/widget/WidgetModel.kt 2",
+              "core/data/src/main/kotlin/dev/antomanc/ameki/core/data/location/DeviceLocation.kt 1",
+              "core/data/src/main/kotlin/dev/antomanc/ameki/core/data/sync/RefreshScheduler.kt 1",
+              "core/data/src/main/kotlin/dev/antomanc/ameki/core/data/sync/SyncState.kt 1",
+              "core/ui/src/main/kotlin/dev/antomanc/ameki/core/ui/Format.kt 1"
+            ]
+          },
+          "escape-hatches": {
+            "total": 7,
+            "top": [
+              "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/Details.kt 3",
+              "core/data/src/main/kotlin/dev/antomanc/ameki/core/data/WeatherRepository.kt 1",
+              "core/data/src/main/kotlin/dev/antomanc/ameki/core/data/location/DeviceLocation.kt 1",
+              "core/ui/src/main/kotlin/dev/antomanc/ameki/core/ui/ForecastView.kt 1",
+              "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/HomeScreen.kt 1"
+            ]
+          },
+          "effects": {
+            "total": 15,
+            "top": [
+              "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/HomeScreen.kt 6",
+              "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/DayPage.kt 5",
+              "app/src/main/kotlin/dev/antomanc/ameki/MainActivity.kt 1",
+              "core/ui/src/main/kotlin/dev/antomanc/ameki/core/ui/components/Instrument.kt 1",
+              "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/WeatherExtras.kt 1",
+              "feature/settings/src/main/kotlin/dev/antomanc/ameki/feature/settings/SettingsScreen.kt 1"
+            ]
+          },
+          "justification-comments": {
+            "total": 0,
+            "top": []
+          },
+          "todos": {
+            "total": 0,
+            "top": []
+          }
+        },
+        "rules": {
+          "compose-effects": 14,
+          "kotlin-escape-hatches": 7
+        }
+      }
+    },
     {
       "commit": "e32a3b2",
       "date": "2026-11-16",
