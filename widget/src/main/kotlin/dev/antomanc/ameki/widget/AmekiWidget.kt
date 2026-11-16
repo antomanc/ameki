@@ -65,11 +65,12 @@ abstract class AmekiWidget(sizes: Set<DpSize>) : GlanceAppWidget(), KoinComponen
     private fun Render(context: Context, data: WidgetData) {
         val palette = rememberPalette(data.config)
         val fmt = TimeFormatter(context, data.settings.timeFormat)
+        val now = Instant.now()
         WidgetFrame(data, palette, padding = WidgetLayout.padding(LocalSize.current)) {
             val weather = data.weather
             val snapshot = weather?.snapshot
-            if (!WidgetMessage(data, palette, need) && weather != null && snapshot != null) {
-                val w = ReadyWidget(data, weather.place, ForecastView(snapshot, Instant.now(), data.settings.refreshIntervalMinutes))
+            if (!WidgetMessage(data, palette, need, now) && weather != null && snapshot != null) {
+                val w = ReadyWidget(data, weather.place, ForecastView(snapshot, now, data.settings.refreshIntervalMinutes))
                 if (context.resources.configuration.fontScale > 1.3f) LargeFontContent(context, w, palette, fmt)
                 else Content(w, palette, fmt)
             }

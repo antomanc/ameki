@@ -37,7 +37,7 @@ object PreviewData {
                 humidity = 70, uvIndex = 2.0,
             )
         }
-        val today = LocalDate.now(zone)
+        val today = now.atZone(zone).toLocalDate()
         val dailyConds = listOf(WeatherCondition.SHOWERS, WeatherCondition.RAIN, WeatherCondition.CLEAR, WeatherCondition.PARTLY_CLOUDY, WeatherCondition.THUNDERSTORM, WeatherCondition.MOSTLY_CLEAR, WeatherCondition.CLOUDY)
         val daily = (0 until 7).map { i ->
             DailyForecast(

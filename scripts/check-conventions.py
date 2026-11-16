@@ -65,6 +65,21 @@ for f in root.glob("*/**/src/main/kotlin/**/*.kt"):
         if line.startswith("import androidx.room"):
             errors.append(f"{rel}:{n}: Room belongs to core/data; read stored data through its repositories (WidgetInstances, PlaceRepository)")
 
+# 4. Time comes from one place in UI code, so a screen or widget can be tested at any hour.
+clock = re.compile(r"\b(?:Instant|LocalDate|LocalDateTime|ZonedDateTime|OffsetDateTime)\.now\(|System\.currentTimeMillis\(|Clock\.system")
+default_arg = re.compile(r":\s*[\w.?<>]+\s*=\s*(?:java\.time\.)?\w+\.now\(")
+clock_owners = {
+    "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/WeatherExtras.kt",  # rememberWeatherTime()
+    "widget/src/main/kotlin/dev/antomanc/ameki/widget/AmekiWidget.kt",  # Render: one now per widget update
+}
+for f in root.glob("*/**/src/main/kotlin/**/*.kt"):
+    rel = str(f.relative_to(root))
+    if "build" in f.parts or rel in clock_owners or not rel.startswith(("feature/", "widget/", "core/ui/")):
+        continue
+    for n, line in enumerate(f.read_text().splitlines(), 1):
+        if clock.search(line) and not default_arg.search(line):
+            errors.append(f"{rel}:{n}: reads the clock; take now as a parameter, from rememberWeatherTime() in the app or from Render in widgets, so it can be tested at any hour")
+
 for e in errors:
     print(e, file=sys.stderr)
 sys.exit(1 if errors else 0)

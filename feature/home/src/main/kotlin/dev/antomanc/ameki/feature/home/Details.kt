@@ -132,7 +132,7 @@ internal fun DetailGrid(view: ForecastView, units: Units, fmt: TimeFormatter, ca
         if (Capability.UV in caps) (c?.uvIndex ?: today?.uvIndexMax)?.let { uv -> add { m -> UvTile(uv, m) } }
         c?.pressure?.let { p -> add { m -> SimpleTile(stringResource(R.string.pressure), units.pressure(p), null, m) } }
         if (Capability.VISIBILITY in caps) c?.visibility?.let { v -> add { m -> SimpleTile(stringResource(R.string.visibility), units.distance(v), null, m) } }
-        if (Capability.SUN_EVENTS in caps) today?.let { d -> if (d.sunrise != null && d.sunset != null) add { m -> SunTile(d.sunrise!!, d.sunset!!, s, fmt, m) } }
+        if (Capability.SUN_EVENTS in caps) today?.let { d -> val rise = d.sunrise; val set = d.sunset; if (rise != null && set != null) add { m -> SunTile(rise, set, view.now, s, fmt, m) } }
         if (Capability.MOON_PHASE in caps) today?.let { d -> add { m -> MoonTile(d.moonPhase ?: Astronomy.moonPhase(d.date), Astronomy.illumination(d.date), m) } }
     }
     // Two per row, both tiles stretched to the taller one, so rows line up.
@@ -213,10 +213,9 @@ private fun UvTile(uv: Double, modifier: Modifier) = Tile(stringResource(R.strin
 }
 
 @Composable
-private fun SunTile(rise: Instant, set: Instant, s: WeatherSnapshot, fmt: TimeFormatter, modifier: Modifier) = Tile(stringResource(R.string.sun), modifier) {
+private fun SunTile(rise: Instant, set: Instant, now: Instant, s: WeatherSnapshot, fmt: TimeFormatter, modifier: Modifier) = Tile(stringResource(R.string.sun), modifier) {
     val colors = LocalInstrumentColors.current
     val outline = MaterialTheme.colorScheme.outlineVariant
-    val now = Instant.now()
     val f = ((now.epochSecond - rise.epochSecond).toDouble() / (set.epochSecond - rise.epochSecond)).coerceIn(0.0, 1.0)
     Column {
         Canvas(Modifier.fillMaxWidth().height(56.dp)) {

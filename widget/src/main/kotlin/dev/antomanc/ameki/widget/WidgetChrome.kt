@@ -199,8 +199,8 @@ internal fun Freshness(view: ForecastView, palette: WidgetPalette, fmt: TimeForm
 
 /** The non-weather states: no place, a deleted place, first load, a problem only the user can fix. */
 @Composable
-internal fun WidgetMessage(data: WidgetData, palette: WidgetPalette, need: WidgetNeed): Boolean {
-    val state = widgetState(data, need)
+internal fun WidgetMessage(data: WidgetData, palette: WidgetPalette, need: WidgetNeed, now: Instant): Boolean {
+    val state = widgetState(data, need, now)
     if (state == WidgetState.READY) return false
     val context = LocalContext.current
     val text = when (state) {
@@ -226,7 +226,7 @@ internal fun WidgetMessage(data: WidgetData, palette: WidgetPalette, need: Widge
             maxLines = 3,
         )
         data.weather?.snapshot?.let {
-            Freshness(ForecastView(it, Instant.now(), data.settings.refreshIntervalMinutes), palette, TimeFormatter(context, data.settings.timeFormat), compact = true)
+            Freshness(ForecastView(it, now, data.settings.refreshIntervalMinutes), palette, TimeFormatter(context, data.settings.timeFormat), compact = true)
         }
     }
     return true
