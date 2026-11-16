@@ -21,6 +21,46 @@
         "content": "dependencies {\n    implementation(project(\":source:google\"))\n}\n",
         "expect": "must not depend on source/google"
       },
+      "added": "2026-11-16",
+      "allow": {
+        "path": "feature/settings/wellkept-allow.gradle.kts",
+        "content": "dependencies {\n    implementation(projects.core.data)\n    implementation(project(\":core:ui\"))\n}\n"
+      }
+    },
+    {
+      "id": "app-boundaries",
+      "kind": "boundary",
+      "message": "The app module wires features, widgets and core; it reaches weather through core/data like everyone else.",
+      "source": "wellkept re-run: app was skipped by the boundary check",
+      "enforcedBy": "scripts/check-conventions.py rule 3",
+      "check": "python3 scripts/check-conventions.py",
+      "canary": {
+        "path": "app/wellkept-canary.gradle.kts",
+        "content": "dependencies {\n    implementation(project(\":source:google\"))\n}\n",
+        "expect": "app must not depend on source/google"
+      },
+      "allow": {
+        "path": "app/wellkept-allow.gradle.kts",
+        "content": "dependencies {\n    implementation(projects.feature.home)\n    implementation(projects.widget)\n}\n"
+      },
+      "added": "2026-11-16"
+    },
+    {
+      "id": "sources-stay-behind-core-data",
+      "kind": "boundary",
+      "message": "core/data uses concrete Sources with implementation(), so a feature that depends on core/data can't reach source/google or source/openmeteo through it.",
+      "source": "wellkept re-run: core/data is the one module allowed source/*; api() would leak them",
+      "enforcedBy": "scripts/check-conventions.py rule 3",
+      "check": "python3 scripts/check-conventions.py",
+      "canary": {
+        "path": "core/data/wellkept-canary.gradle.kts",
+        "content": "dependencies {\n    api(project(\":source:google\"))\n}\n",
+        "expect": "core/data exposes source/google"
+      },
+      "allow": {
+        "path": "core/data/wellkept-allow.gradle.kts",
+        "content": "dependencies {\n    implementation(projects.source.openmeteo)\n    api(projects.source.api)\n}\n"
+      },
       "added": "2026-11-16"
     },
     {
@@ -28,12 +68,34 @@
       "kind": "boundary",
       "message": "Room belongs to core/data; read stored data through its repositories.",
       "source": "CODING_STANDARDS.md (widget never touches Room)",
-      "enforcedBy": "scripts/check-conventions.py rule 3",
+      "enforcedBy": "scripts/check-conventions.py rule 3 (any androidx.room reference, imported or fully qualified)",
       "check": "python3 scripts/check-conventions.py",
       "canary": {
         "path": "widget/src/main/kotlin/dev/antomanc/ameki/widget/WellkeptCanary.kt",
         "content": "package dev.antomanc.ameki.widget\nimport androidx.room.Room\n",
         "expect": "Room belongs to core/data"
+      },
+      "added": "2026-11-16",
+      "allow": {
+        "path": "widget/src/main/kotlin/dev/antomanc/ameki/widget/WellkeptAllow.kt",
+        "content": "package dev.antomanc.ameki.widget\n\nimport dev.antomanc.ameki.core.data.widget.WidgetInstances\n\ninternal fun wellkeptAllow(instances: WidgetInstances, appWidgetId: Int) = instances.observe(appWidgetId)\n"
+      }
+    },
+    {
+      "id": "room-types-stay-in-core-data",
+      "kind": "boundary",
+      "message": "DAOs and entities stay inside core/data; read stored data through its repositories (WidgetInstances, PlaceRepository).",
+      "source": "wellkept re-run: core/data may use Room, and its DAOs are public Koin singletons",
+      "enforcedBy": "scripts/check-conventions.py rule 3",
+      "check": "python3 scripts/check-conventions.py",
+      "canary": {
+        "path": "widget/src/main/kotlin/dev/antomanc/ameki/widget/WellkeptCanary.kt",
+        "content": "package dev.antomanc.ameki.widget\n\nimport dev.antomanc.ameki.core.data.db.WidgetDao\n\ninternal fun wellkeptCanary(dao: WidgetDao) = dao\n",
+        "expect": "DAOs and entities stay inside core/data"
+      },
+      "allow": {
+        "path": "feature/locations/src/main/kotlin/dev/antomanc/ameki/feature/locations/WellkeptAllow.kt",
+        "content": "package dev.antomanc.ameki.feature.locations\n\nimport dev.antomanc.ameki.core.data.PlaceRepository\n\ninternal fun wellkeptAllow(places: PlaceRepository) = places.places\n"
       },
       "added": "2026-11-16"
     },

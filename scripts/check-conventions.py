@@ -40,12 +40,13 @@ ALLOWED = {
     "source/*": ["source/api", "core/model"],
     "feature/*": ["core/*", "feature/*"],
     "widget": ["core/*"],
+    "app": ["core/*", "feature/*", "widget"],
 }
 # Both declaration forms: the typesafe accessor (projects.source.google) and the string path (project(":source:google")).
 dep = re.compile(r"\bprojects\.([a-zA-Z.]+)|\bproject\(\s*\"(:[\w:-]+)\"\s*\)")
 for build in sorted(root.glob("**/*.gradle.kts")):
     module = str(build.parent.relative_to(root))
-    if build.name == "settings.gradle.kts" or module in (".", "app") or module.startswith("build-logic") or "build" in build.parent.parts or ".gradle" in build.parts:
+    if build.name == "settings.gradle.kts" or module == "." or module.startswith("build-logic") or "build" in build.parent.parts or ".gradle" in build.parts:
         continue
     key = module if module in ALLOWED else next((k for k in ALLOWED if fnmatch.fnmatch(module, k)), None)
     if key is None:
@@ -59,13 +60,18 @@ for build in sorted(root.glob("**/*.gradle.kts")):
             target = accessor.replace(".", "/") if accessor else path.strip(":").replace(":", "/")
             if target != module and not any(fnmatch.fnmatch(target, a) for a in ALLOWED[key]):
                 errors.append(f"{rel}:{n}: {module} must not depend on {target}; features and widgets read weather through core/data, which owns the Sources")
+            # core/data may use every Source, but api() would hand a concrete one to every module that uses core/data.
+            elif module == "core/data" and target.startswith("source/") and target != "source/api" and re.search(r"\bapi\(", line):
+                errors.append(f"{rel}:{n}: core/data exposes {target} with api(); use implementation() so features reach weather only through core/data")
 for f in root.glob("*/**/src/main/kotlin/**/*.kt"):
     rel = str(f.relative_to(root))
     if "build" in f.parts or rel.startswith("core/data/"):
         continue
     for n, line in enumerate(f.read_text().splitlines(), 1):
-        if line.startswith("import androidx.room"):
+        if re.search(r"\bandroidx\.room\.", line):
             errors.append(f"{rel}:{n}: Room belongs to core/data; read stored data through its repositories (WidgetInstances, PlaceRepository)")
+        if re.search(r"\bdev\.antomanc\.ameki\.core\.data\.db\b", line):
+            errors.append(f"{rel}:{n}: DAOs and entities stay inside core/data; read stored data through its repositories (WidgetInstances, PlaceRepository)")
 
 # 4. Time comes from one place in UI code, so a screen or widget can be tested at any hour.
 clock = re.compile(r"\b(?:Instant|LocalDate|LocalDateTime|ZonedDateTime|OffsetDateTime)\.now\(|System\.currentTimeMillis\(|Clock\.system")
