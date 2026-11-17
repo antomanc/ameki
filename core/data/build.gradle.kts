@@ -14,6 +14,10 @@ android {
         // (docs/adr/0002). Personal builds: ./gradlew assembleRelease -Pameki.googleSource=true
         val google = providers.gradleProperty("ameki.googleSource").orNull?.toBoolean() ?: false
         buildConfigField("boolean", "GOOGLE_SOURCE_ENABLED", google.toString())
+        // GitHub release notify-only (#14). F-Droid / store builds can turn this off later:
+        // ./gradlew assembleRelease -Pameki.updateChecks=false
+        val updateChecks = providers.gradleProperty("ameki.updateChecks").orNull?.toBoolean() ?: true
+        buildConfigField("boolean", "UPDATE_CHECKS_ENABLED", updateChecks.toString())
     }
 }
 

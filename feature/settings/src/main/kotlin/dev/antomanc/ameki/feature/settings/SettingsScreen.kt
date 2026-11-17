@@ -51,6 +51,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.antomanc.ameki.core.data.update.ReleaseUpdateChecker
 import dev.antomanc.ameki.core.model.DistanceUnit
 import dev.antomanc.ameki.core.model.PrecipitationUnit
 import dev.antomanc.ameki.core.model.PressureUnit
@@ -68,6 +69,7 @@ import java.text.NumberFormat
 fun SettingsRoute(onBack: () -> Unit, viewModel: SettingsViewModel = koinViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val key by viewModel.keyState.collectAsStateWithLifecycle()
+    val update by viewModel.updateState.collectAsStateWithLifecycle()
     val s = state.settings
     var dialog by rememberSaveable { mutableStateOf<String?>(null) }
     val context = LocalContext.current
@@ -133,6 +135,20 @@ fun SettingsRoute(onBack: () -> Unit, viewModel: SettingsViewModel = koinViewMod
                 modifier = Modifier.clickable { dialog = "about" },
             )
             ListItem(
+                headlineContent = { Text(stringResource(R.string.update_check)) },
+                supportingContent = {
+                    Text(
+                        stringResource(
+                            when (update) {
+                                UpdateUi.Checking -> R.string.update_checking
+                                else -> R.string.update_check_hint
+                            },
+                        ),
+                    )
+                },
+                modifier = Modifier.clickable(enabled = update !is UpdateUi.Checking) { viewModel.checkForUpdate() },
+            )
+            ListItem(
                 headlineContent = { Text(stringResource(R.string.data_sources)) },
                 supportingContent = { Text(stringResource(R.string.data_sources_body)) },
             )
@@ -193,6 +209,41 @@ fun SettingsRoute(onBack: () -> Unit, viewModel: SettingsViewModel = koinViewMod
         "theme" -> Choice(R.string.theme, ThemeMode.entries, s.theme, { stringResource(themeName(it)) }, { viewModel.setTheme(it) }) { dialog = null }
         "time" -> Choice(R.string.time_format, TimeFormat.entries, s.timeFormat, { stringResource(timeFormatName(it)) }, { viewModel.setTimeFormat(it) }) { dialog = null }
     }
+
+    when (val u = update) {
+        is UpdateUi.Available -> UpdateAvailableDialog(
+            versionName = u.versionName,
+            onView = {
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ReleaseUpdateChecker.RELEASES_PAGE_URL)))
+                viewModel.clearUpdateUi()
+            },
+            onLater = { viewModel.dismissUpdate(u.versionName) },
+            onDismiss = { viewModel.clearUpdateUi() },
+        )
+        UpdateUi.Failed -> AlertDialog(
+            onDismissRequest = viewModel::clearUpdateUi,
+            title = { Text(stringResource(R.string.update_check)) },
+            text = { Text(stringResource(R.string.update_check_failed)) },
+            confirmButton = { TextButton(onClick = viewModel::clearUpdateUi) { Text(stringResource(R.string.close)) } },
+        )
+        UpdateUi.Idle, UpdateUi.Checking -> Unit
+    }
+}
+
+@Composable
+fun UpdateAvailableDialog(
+    versionName: String,
+    onView: () -> Unit,
+    onLater: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.update_available_title)) },
+        text = { Text(stringResource(R.string.update_available_body, versionName)) },
+        confirmButton = { TextButton(onClick = onView) { Text(stringResource(R.string.update_view)) } },
+        dismissButton = { TextButton(onClick = onLater) { Text(stringResource(R.string.update_later)) } },
+    )
 }
 
 /** Optional "allow all the time" location, so a widget on the current location follows you (ADR 0004). */
