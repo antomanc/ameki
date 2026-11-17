@@ -40,6 +40,16 @@ class BriefWaitTest {
     }
 
     @Test
+    fun settledWithoutLoadingEndsWaitInTheSameFrame() {
+        var waiting: Boolean? = null
+        compose.setContent {
+            waiting = rememberBriefWait(ready = false, loading = false, settled = true, timeoutMs = 60_000)
+        }
+        compose.waitForIdle()
+        assertFalse(checkNotNull(waiting))
+    }
+
+    @Test
     fun firstLoadSettlingEndsTheWaitBeforeTimeout() {
         var ready by mutableStateOf(false)
         var loading by mutableStateOf(true)

@@ -10,14 +10,15 @@ import kotlinx.coroutines.delay
 
 /**
  * True only for the brief post-open wait for first content.
- * Becomes false (and stays false) when [ready] is true, the first [loading] cycle settles,
- * or [timeoutMs] elapses — whichever comes first. [ready] ends the wait immediately in the
- * same frame, so content that is already present never flashes the waiting UI.
+ * Becomes false (and stays false) when [ready] is true, [settled] while not [loading],
+ * the first [loading] cycle settles, or [timeoutMs] elapses — whichever comes first.
+ * [ready] / [settled] end the wait in the same frame so finished loads never flash mute UI.
  */
 @Composable
 fun rememberBriefWait(
     ready: Boolean,
     loading: Boolean,
+    settled: Boolean = false,
     timeoutMs: Long = 2_000L,
 ): Boolean {
     var expired by remember { mutableStateOf(false) }
@@ -33,5 +34,6 @@ fun rememberBriefWait(
             expired = true
         }
     }
-    return !ready && !expired
+    val alreadySettled = settled && !loading
+    return !ready && !expired && !alreadySettled
 }

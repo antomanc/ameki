@@ -19,7 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -76,11 +78,8 @@ fun TemperatureDial(
 
     Box(modifier.clearAndSetSemantics { contentDescription = description }, contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
-            val stroke = strokeWidth.toPx()
-            val diameter = size.minDimension - stroke * 2.2f
-            val topLeft = Offset((size.width - diameter) / 2, (size.height - diameter) / 2)
-            val arcSize = Size(diameter, diameter)
-            drawArc(colors.track, START_ANGLE, SWEEP, false, topLeft, arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
+            val track = dialTrackLayout(strokeWidth.toPx())
+            drawDialTrack(colors.track, track)
 
             val a0 = START_ANGLE + SWEEP * frac(low)
             val a1 = START_ANGLE + SWEEP * frac(high)
@@ -88,28 +87,28 @@ fun TemperatureDial(
             drawArc(
                 brush = Brush.linearGradient(
                     listOf(colors.temperature(low), colors.temperature(high)),
-                    start = point(center, diameter / 2, a0),
-                    end = point(center, diameter / 2, a1),
+                    start = point(center, track.diameter / 2, a0),
+                    end = point(center, track.diameter / 2, a1),
                 ),
                 startAngle = a0,
                 sweepAngle = (a1 - a0).coerceAtLeast(1f),
                 useCenter = false,
-                topLeft = topLeft,
-                size = arcSize,
-                style = Stroke(stroke, cap = StrokeCap.Round),
+                topLeft = track.topLeft,
+                size = track.arcSize,
+                style = Stroke(track.stroke, cap = StrokeCap.Round),
             )
             // Ticks: an engraved scale, only where there is room for it to stay quiet.
-            val ticks = if (diameter > 220.dp.toPx()) 36 else 0
+            val ticks = if (track.diameter > 220.dp.toPx()) 36 else 0
             for (i in 0..ticks) {
                 if (ticks == 0) break
                 val a = START_ANGLE + SWEEP * i / ticks
-                val outer = diameter / 2 - stroke * 1.4f
-                val inner = outer - if (i % 6 == 0) stroke * 0.9f else stroke * 0.45f
-                drawLine(colors.track, point(center, inner, a), point(center, outer, a), strokeWidth = stroke * 0.16f, cap = StrokeCap.Round)
+                val outer = track.diameter / 2 - track.stroke * 1.4f
+                val inner = outer - if (i % 6 == 0) track.stroke * 0.9f else track.stroke * 0.45f
+                drawLine(colors.track, point(center, inner, a), point(center, outer, a), strokeWidth = track.stroke * 0.16f, cap = StrokeCap.Round)
             }
-            val m = point(center, diameter / 2, START_ANGLE + SWEEP * marker.value)
-            drawCircle(color = colors.now, radius = stroke * 0.95f, center = m)
-            drawCircle(color = colors.now.copy(alpha = 0.18f), radius = stroke * 1.6f, center = m)
+            val m = point(center, track.diameter / 2, START_ANGLE + SWEEP * marker.value)
+            drawCircle(color = colors.now, radius = track.stroke * 0.95f, center = m)
+            drawCircle(color = colors.now.copy(alpha = 0.18f), radius = track.stroke * 1.6f, center = m)
         }
         content()
     }
@@ -127,15 +126,25 @@ fun MuteTemperatureDial(
     val colors = LocalInstrumentColors.current
     Box(modifier.clearAndSetSemantics { }, contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
-            val stroke = strokeWidth.toPx()
-            val diameter = size.minDimension - stroke * 2.2f
-            val topLeft = Offset((size.width - diameter) / 2, (size.height - diameter) / 2)
-            drawArc(
-                colors.track, START_ANGLE, SWEEP, false, topLeft, Size(diameter, diameter),
-                style = Stroke(stroke, cap = StrokeCap.Round),
-            )
+            drawDialTrack(colors.track, dialTrackLayout(strokeWidth.toPx()))
         }
     }
+}
+
+/** Shared TemperatureDial / MuteTemperatureDial ring geometry. */
+private data class DialTrackLayout(val topLeft: Offset, val arcSize: Size, val stroke: Float, val diameter: Float)
+
+private fun DrawScope.dialTrackLayout(strokePx: Float): DialTrackLayout {
+    val diameter = size.minDimension - strokePx * 2.2f
+    val topLeft = Offset((size.width - diameter) / 2, (size.height - diameter) / 2)
+    return DialTrackLayout(topLeft, Size(diameter, diameter), strokePx, diameter)
+}
+
+private fun DrawScope.drawDialTrack(color: Color, track: DialTrackLayout) {
+    drawArc(
+        color, START_ANGLE, SWEEP, false, track.topLeft, track.arcSize,
+        style = Stroke(track.stroke, cap = StrokeCap.Round),
+    )
 }
 
 private fun point(c: Offset, r: Float, deg: Float): Offset {

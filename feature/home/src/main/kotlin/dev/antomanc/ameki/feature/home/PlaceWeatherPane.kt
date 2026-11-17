@@ -47,6 +47,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.antomanc.ameki.core.data.sync.PlaceWeather
 import dev.antomanc.ameki.core.data.sync.SyncError
+import dev.antomanc.ameki.core.model.CurrentWeather
+import dev.antomanc.ameki.core.model.DailyForecast
 import dev.antomanc.ameki.core.model.SourceId
 import dev.antomanc.ameki.core.model.Units
 import dev.antomanc.ameki.core.model.WeatherCondition
@@ -87,44 +89,55 @@ internal fun PlaceWeatherPane(
     val units = state.settings.units
     val now = rememberWeatherTime()
 
+    val animatePane = rememberAnimationsEnabled()
+    val hasContent = snapshot != null && pw.hasData
     PullToRefreshBox(isRefreshing = refreshing, onRefresh = onRefresh, modifier = modifier.fillMaxSize()) {
-        if (snapshot == null || !pw.hasData) {
-            NoData(pw, refreshing, onFixProblem, onRefresh)
-            return@PullToRefreshBox
-        }
-        val view = ForecastView(snapshot, now, state.settings.refreshIntervalMinutes)
-        val primary: List<@Composable () -> Unit> = buildList {
-            add { Hero(pw, view, units, fmt, refreshing) {
-                Freshness(pw, snapshot, fmt, now, refreshing, onFixProblem, onRefresh)
-                if (snapshot.nowcast.isNotEmpty() || snapshot.hourly.isNotEmpty()) RainOutlookSummary(view, fmt)
-            } }
-            if (snapshot.alerts.isNotEmpty()) add { AlertsCard(snapshot, fmt) }
-            // Up to 48 hours: as many as the snapshot holds.
-            if (view.hours.isNotEmpty()) add { HourlyCard(view.hours.take(48), view, units, fmt, onOpenDay) }
-            if (view.hours.isNotEmpty()) add { HourlyCharts(view.hours.take(24).map { it.forecast }, snapshot, units, fmt) }
-        }
-        val secondary: List<@Composable () -> Unit> = buildList {
-            if (view.days.isNotEmpty()) add { DailyCard(view, units, fmt) { onOpenDay(DayTarget(it)) } }
-            add { DetailGrid(view, units, fmt, state.capabilities) }
-            add { Attribution(snapshot, fmt) }
-        }
-        if (twoColumns) {
-            Row(Modifier.fillMaxSize().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(primary.size) { primary[it]() }
-                    item { Spacer(Modifier.height(24.dp)) }
+        // Crossfade NoData ↔ content so a dial that appears after first fetch does not hard-cut in.
+        Crossfade(
+            targetState = hasContent,
+            animationSpec = if (animatePane) tween(220) else snap(),
+            label = "place-pane-content",
+            modifier = Modifier.fillMaxSize(),
+        ) { showContent ->
+            if (!showContent) {
+                NoData(pw, refreshing, onFixProblem, onRefresh)
+                return@Crossfade
+            }
+            val data = snapshot ?: return@Crossfade
+            val view = ForecastView(data, now, state.settings.refreshIntervalMinutes)
+            val primary: List<@Composable () -> Unit> = buildList {
+                add { Hero(pw, view, units, fmt, refreshing) {
+                    Freshness(pw, data, fmt, now, refreshing, onFixProblem, onRefresh)
+                    if (data.nowcast.isNotEmpty() || data.hourly.isNotEmpty()) RainOutlookSummary(view, fmt)
+                } }
+                if (data.alerts.isNotEmpty()) add { AlertsCard(data, fmt) }
+                // Up to 48 hours: as many as the snapshot holds.
+                if (view.hours.isNotEmpty()) add { HourlyCard(view.hours.take(48), view, units, fmt, onOpenDay) }
+                if (view.hours.isNotEmpty()) add { HourlyCharts(view.hours.take(24).map { it.forecast }, data, units, fmt) }
+            }
+            val secondary: List<@Composable () -> Unit> = buildList {
+                if (view.days.isNotEmpty()) add { DailyCard(view, units, fmt) { onOpenDay(DayTarget(it)) } }
+                add { DetailGrid(view, units, fmt, state.capabilities) }
+                add { Attribution(data, fmt) }
+            }
+            if (twoColumns) {
+                Row(Modifier.fillMaxSize().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(primary.size) { primary[it]() }
+                        item { Spacer(Modifier.height(24.dp)) }
+                    }
+                    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        item { Spacer(Modifier.height(8.dp)) }
+                        items(secondary.size) { secondary[it]() }
+                        item { Spacer(Modifier.height(24.dp)) }
+                    }
                 }
-                LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    item { Spacer(Modifier.height(8.dp)) }
+            } else {
+                LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(primary.size) { primary[it]() }
                     items(secondary.size) { secondary[it]() }
                     item { Spacer(Modifier.height(24.dp)) }
                 }
-            }
-        } else {
-            LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(primary.size) { primary[it]() }
-                items(secondary.size) { secondary[it]() }
-                item { Spacer(Modifier.height(24.dp)) }
             }
         }
     }
@@ -139,6 +152,9 @@ internal fun Atmosphere(snapshot: WeatherSnapshot?) {
     Box(Modifier.fillMaxWidth().height(520.dp).background(Brush.verticalGradient(listOf(tint, Color.Transparent))))
 }
 
+/** Crossfade discriminant for the Hero dial — stable so temperature ticks do not re-animate. */
+internal enum class HeroDialKind { Mute, Ready, Unavailable }
+
 /** What the Hero temperature instrument shows while current conditions catch up. */
 internal sealed class HeroDialPhase {
     data object Mute : HeroDialPhase()
@@ -149,30 +165,31 @@ internal sealed class HeroDialPhase {
         val condition: WeatherCondition,
         val isDaytime: Boolean,
         val feelsLike: Double?,
-        val conditionText: String?,
     ) : HeroDialPhase()
     data object Unavailable : HeroDialPhase()
+
+    val kind: HeroDialKind
+        get() = when (this) {
+            Mute -> HeroDialKind.Mute
+            is Ready -> HeroDialKind.Ready
+            Unavailable -> HeroDialKind.Unavailable
+        }
 }
 
 internal fun heroDialPhase(
-    temperature: Double?,
-    todayMin: Double?,
-    todayMax: Double?,
-    condition: WeatherCondition?,
-    isDaytime: Boolean,
-    feelsLike: Double?,
-    conditionText: String?,
+    current: CurrentWeather?,
+    today: DailyForecast?,
     briefWait: Boolean,
 ): HeroDialPhase {
-    if (temperature != null && condition != null) {
+    if (current != null) {
+        val temperature = current.temperature
         return HeroDialPhase.Ready(
             temperature = temperature,
-            low = minOf(todayMin ?: temperature, temperature),
-            high = maxOf(todayMax ?: temperature, temperature),
-            condition = condition,
-            isDaytime = isDaytime,
-            feelsLike = feelsLike,
-            conditionText = conditionText,
+            low = minOf(today?.temperatureMin ?: temperature, temperature),
+            high = maxOf(today?.temperatureMax ?: temperature, temperature),
+            condition = current.condition,
+            isDaytime = current.isDaytime,
+            feelsLike = current.feelsLike,
         )
     }
     return if (briefWait) HeroDialPhase.Mute else HeroDialPhase.Unavailable
@@ -191,25 +208,12 @@ private fun Hero(
     val c = s.current
     val today = view.today
     val largeText = LocalDensity.current.fontScale > 1.3f
-    val briefWait = rememberBriefWait(ready = c != null, loading = refreshing)
-    val phase = heroDialPhase(
-        temperature = c?.temperature,
-        todayMin = today?.temperatureMin,
-        todayMax = today?.temperatureMax,
-        condition = c?.condition,
-        isDaytime = c?.isDaytime == true,
-        feelsLike = c?.feelsLike,
-        conditionText = c?.conditionText,
-        briefWait = briefWait,
-    )
-    // Crossfade on kind only so temperature updates do not re-animate the dial.
-    val kind = when (phase) {
-        HeroDialPhase.Mute -> "mute"
-        is HeroDialPhase.Ready -> "ready"
-        HeroDialPhase.Unavailable -> "unavailable"
-    }
+    // A prior fetch/error means the wait already settled — do not mute until the 2s timeout.
+    val settled = view.updatedAt != null || pw.error != null
+    val briefWait = rememberBriefWait(ready = c != null, loading = refreshing, settled = settled)
+    val phase = heroDialPhase(current = c, today = today, briefWait = briefWait)
     val readyReading = phase as? HeroDialPhase.Ready
-    // Keep the last reading for Crossfade's leaving "ready" child after current clears.
+    // Crossfade leave frames still need the last Ready payload after current clears.
     val retainedReady = remember { androidx.compose.runtime.mutableStateOf<HeroDialPhase.Ready?>(null) }
     readyReading?.let { retainedReady.value = it }
     val dialReady = readyReading ?: retainedReady.value
@@ -234,17 +238,17 @@ private fun Hero(
         }
         today?.let { Text(fmt.dateMedium(it.date), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         Crossfade(
-            targetState = kind,
+            targetState = phase.kind,
             animationSpec = if (animate) tween(220) else snap(),
             label = "hero-dial",
             modifier = Modifier.fillMaxWidth(),
         ) { shown ->
             when (shown) {
-                "mute" -> Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+                HeroDialKind.Mute -> Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
                     if (largeText) Spacer(Modifier.height(120.dp).testTag("hero-temperature-dial"))
                     else MuteTemperatureDial(modifier = dialFootprint)
                 }
-                "ready" -> {
+                HeroDialKind.Ready -> {
                     val readingData = dialReady ?: return@Crossfade
                     val reading: @Composable () -> Unit = {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -265,7 +269,7 @@ private fun Hero(
                         )
                     }
                 }
-                else -> Text(
+                HeroDialKind.Unavailable -> Text(
                     stringResource(R.string.current_unavailable),
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(vertical = 16.dp).testTag("hero-temperature-unavailable"),
