@@ -56,19 +56,20 @@ class ReleaseUpdateChecker(
                 }
             }
         } else {
-            settings.updateLastRemoteVersion() ?: return UpdateCheckResult.Throttled
+            settings.lastUpdateRemoteVersion() ?: return UpdateCheckResult.Throttled
         }
         if (!VersionNames.isNewer(remote, installedVersionName())) return UpdateCheckResult.UpToDate
-        if (!force && remote == settings.updateDismissedVersion()) return UpdateCheckResult.Dismissed
+        if (!force && remote == settings.dismissedUpdateVersion()) return UpdateCheckResult.Dismissed
         return UpdateCheckResult.Available(remote)
     }
 
+    /** Mark [versionName] as already offered so cold start will not show it again (About force still can). */
     suspend fun dismiss(versionName: String) {
         settings.setUpdateDismissedVersion(VersionNames.normalize(versionName))
     }
 
     private suspend fun shouldFetch(now: Instant): Boolean {
-        val last = settings.updateLastCheckAt() ?: return true
+        val last = settings.lastUpdateCheckAt() ?: return true
         return Duration.between(last, now) >= THROTTLE
     }
 

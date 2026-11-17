@@ -1,6 +1,7 @@
 package dev.antomanc.ameki.feature.settings
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -214,11 +215,11 @@ fun SettingsRoute(onBack: () -> Unit, viewModel: SettingsViewModel = koinViewMod
         is UpdateUi.Available -> UpdateAvailableDialog(
             versionName = u.versionName,
             onView = {
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ReleaseUpdateChecker.RELEASES_PAGE_URL)))
-                viewModel.clearUpdateUi()
+                context.openAmekiReleases()
+                viewModel.acknowledgeUpdate(u.versionName)
             },
-            onLater = { viewModel.dismissUpdate(u.versionName) },
-            onDismiss = { viewModel.clearUpdateUi() },
+            onLater = { viewModel.acknowledgeUpdate(u.versionName) },
+            onDismiss = { viewModel.acknowledgeUpdate(u.versionName) },
         )
         UpdateUi.Failed -> AlertDialog(
             onDismissRequest = viewModel::clearUpdateUi,
@@ -228,6 +229,10 @@ fun SettingsRoute(onBack: () -> Unit, viewModel: SettingsViewModel = koinViewMod
         )
         UpdateUi.Idle, UpdateUi.Checking -> Unit
     }
+}
+
+fun Context.openAmekiReleases() {
+    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ReleaseUpdateChecker.RELEASES_PAGE_URL)))
 }
 
 @Composable

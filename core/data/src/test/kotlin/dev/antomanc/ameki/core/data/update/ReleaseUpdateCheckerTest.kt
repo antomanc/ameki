@@ -93,11 +93,15 @@ class ReleaseUpdateCheckerTest {
     }
 
     @Test
-    fun `Later suppresses that version until a newer one appears`() = runTest {
+    fun `dismiss suppresses that version until a newer one appears`() = runTest {
         val settings = settings()
         val c = checker(settings)
         assertThat(c.check()).isEqualTo(UpdateCheckResult.Available("0.2.2"))
+        // View / Later / dialog dismiss all call dismiss — once per version on cold start.
         c.dismiss("0.2.2")
+        now = now.plusSeconds(60)
+        assertThat(c.check()).isEqualTo(UpdateCheckResult.Dismissed)
+        assertThat(hits).isEqualTo(1)
         now = now.plus(ReleaseUpdateChecker.THROTTLE).plusSeconds(1)
         assertThat(c.check()).isEqualTo(UpdateCheckResult.Dismissed)
         assertThat(hits).isEqualTo(2)
@@ -120,7 +124,7 @@ class ReleaseUpdateCheckerTest {
         val settings = settings()
         val c = checker(settings, http = client(status = HttpStatusCode.InternalServerError))
         assertThat(c.check()).isEqualTo(UpdateCheckResult.Failed)
-        assertThat(settings.updateLastCheckAt()).isNull()
+        assertThat(settings.lastUpdateCheckAt()).isNull()
         now = now.plusSeconds(60)
         assertThat(checker(settings, http = client(tag = "v0.2.2")).check())
             .isEqualTo(UpdateCheckResult.Available("0.2.2"))

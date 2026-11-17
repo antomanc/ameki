@@ -125,7 +125,8 @@ class SettingsViewModel(
         }
     }
 
-    fun dismissUpdate(versionName: String) = viewModelScope.launch {
+    /** View / Later / dismiss: suppress this version on cold start; About force can still re-open. */
+    fun acknowledgeUpdate(versionName: String) = viewModelScope.launch {
         updates.dismiss(versionName)
         _update.value = UpdateUi.Idle
     }

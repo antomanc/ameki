@@ -1,7 +1,6 @@
 package dev.antomanc.ameki
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -30,6 +29,7 @@ import dev.antomanc.ameki.feature.locations.LocationsRoute
 import dev.antomanc.ameki.feature.onboarding.OnboardingRoute
 import dev.antomanc.ameki.feature.settings.SettingsRoute
 import dev.antomanc.ameki.feature.settings.UpdateAvailableDialog
+import dev.antomanc.ameki.feature.settings.openAmekiReleases
 import dev.antomanc.ameki.widget.WidgetPins
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
@@ -62,12 +62,16 @@ class MainActivity : ComponentActivity() {
                 val nav = rememberNavController()
                 val request = pending.value
                 var updateOffer by rememberSaveable { mutableStateOf<String?>(null) }
-                // Once after onboarding: notify-only GitHub release check (throttled, failures silent).
+                // After onboarding only (avoid nagging the first-run flow); throttled, failures silent.
                 ApplyOnChange(s.onboardingDone.takeIf { it }) {
                     when (val result = updates.check(force = false)) {
                         is UpdateCheckResult.Available -> updateOffer = result.versionName
                         else -> Unit
                     }
+                }
+                fun acknowledgeUpdate(version: String) {
+                    lifecycleScope.launch { updates.dismiss(version) }
+                    updateOffer = null
                 }
                 LaunchedEffect(request?.id, s.onboardingDone) {
                     request ?: return@LaunchedEffect
@@ -121,14 +125,11 @@ class MainActivity : ComponentActivity() {
                     UpdateAvailableDialog(
                         versionName = version,
                         onView = {
-                            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ReleaseUpdateChecker.RELEASES_PAGE_URL)))
-                            updateOffer = null
+                            openAmekiReleases()
+                            acknowledgeUpdate(version)
                         },
-                        onLater = {
-                            lifecycleScope.launch { updates.dismiss(version) }
-                            updateOffer = null
-                        },
-                        onDismiss = { updateOffer = null },
+                        onLater = { acknowledgeUpdate(version) },
+                        onDismiss = { acknowledgeUpdate(version) },
                     )
                 }
             }
