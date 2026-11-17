@@ -20,7 +20,7 @@ Routes live in `app` (`MainActivity.kt`, `NavHost`): onboarding, home, places, s
 
 | Name | Shows | Code (feature/home) |
 | --- | --- | --- |
-| Hero | Current temperature and condition, freshness stamp, **rain outlook** sentence | `PlaceWeatherPane.kt` `Hero`, `Freshness`; `WeatherExtras.kt` `RainOutlookSummary` |
+| Hero | Current temperature and condition, freshness stamp, **rain outlook** sentence; cold-start **mute dial** (`MuteTemperatureDial`) Crossfades into `TemperatureDial` | `PlaceWeatherPane.kt` `Hero`, `Freshness`; `WeatherExtras.kt` `RainOutlookSummary`; core/ui `Instrument.kt` `TemperatureDial`, `MuteTemperatureDial` |
 | Alerts | Weather alerts, only when the source supplies them | `WeatherExtras.kt` `AlertsCard` |
 | Next hours | Up to 48 hours, scrollable | `PlaceWeatherPane.kt` `HourlyCard` |
 | Hourly charts | Rain, Wind, Humidity tabs over 24 hours | `Details.kt` `HourlyCharts` |

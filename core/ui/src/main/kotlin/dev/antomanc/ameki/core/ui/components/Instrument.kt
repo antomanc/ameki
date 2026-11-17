@@ -115,6 +115,29 @@ fun TemperatureDial(
     }
 }
 
+/**
+ * Cold-start placeholder: the same ring footprint as [TemperatureDial], track only — no range,
+ * marker, or reading. Crossfade into the real dial when current conditions arrive.
+ */
+@Composable
+fun MuteTemperatureDial(
+    modifier: Modifier = Modifier,
+    strokeWidth: Dp = 12.dp,
+) {
+    val colors = LocalInstrumentColors.current
+    Box(modifier.clearAndSetSemantics { }, contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            val stroke = strokeWidth.toPx()
+            val diameter = size.minDimension - stroke * 2.2f
+            val topLeft = Offset((size.width - diameter) / 2, (size.height - diameter) / 2)
+            drawArc(
+                colors.track, START_ANGLE, SWEEP, false, topLeft, Size(diameter, diameter),
+                style = Stroke(stroke, cap = StrokeCap.Round),
+            )
+        }
+    }
+}
+
 private fun point(c: Offset, r: Float, deg: Float): Offset {
     val rad = Math.toRadians(deg.toDouble())
     return Offset(c.x + r * cos(rad).toFloat(), c.y + r * sin(rad).toFloat())
