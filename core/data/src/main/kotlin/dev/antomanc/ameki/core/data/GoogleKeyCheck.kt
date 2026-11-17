@@ -2,7 +2,7 @@ package dev.antomanc.ameki.core.data
 
 import dev.antomanc.ameki.core.data.sync.SyncError
 import dev.antomanc.ameki.source.api.SourceException
-import dev.antomanc.ameki.source.google.AndroidAppIdentity
+import dev.antomanc.ameki.core.model.AndroidAppIdentity
 import dev.antomanc.ameki.source.google.GoogleWeatherSource
 import kotlinx.coroutines.CancellationException
 

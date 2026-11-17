@@ -2,6 +2,7 @@ package dev.antomanc.ameki.source.google
 
 import com.google.common.truth.Truth.assertThat
 import dev.antomanc.ameki.core.model.AlertSeverity
+import dev.antomanc.ameki.core.model.AndroidAppIdentity
 import dev.antomanc.ameki.core.model.DataPart
 import dev.antomanc.ameki.core.model.GeoPoint
 import dev.antomanc.ameki.core.model.MoonPhase

@@ -28,7 +28,7 @@ enum class WidgetState {
     PARTIAL,
 }
 
-internal fun WidgetData.hasData(need: WidgetNeed, now: Instant = Instant.now()): Boolean {
+internal fun WidgetData.hasData(need: WidgetNeed, now: Instant): Boolean {
     val s = weather?.snapshot ?: return false
     return when (need) {
         WidgetNeed.CURRENT -> s.current != null
@@ -39,7 +39,7 @@ internal fun WidgetData.hasData(need: WidgetNeed, now: Instant = Instant.now()):
     }
 }
 
-internal fun widgetState(data: WidgetData, need: WidgetNeed, now: Instant = Instant.now()): WidgetState {
+internal fun widgetState(data: WidgetData, need: WidgetNeed, now: Instant): WidgetState {
     if (!data.placeExists) return WidgetState.PLACE_GONE
     val w = data.weather ?: return WidgetState.NO_PLACE
     if (data.hasData(need, now)) return WidgetState.READY

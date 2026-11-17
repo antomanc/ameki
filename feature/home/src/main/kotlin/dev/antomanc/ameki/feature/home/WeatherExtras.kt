@@ -25,17 +25,9 @@ import androidx.compose.ui.unit.dp
 import dev.antomanc.ameki.core.model.*
 import dev.antomanc.ameki.core.ui.ForecastView
 import dev.antomanc.ameki.core.ui.TimeFormatter
+import dev.antomanc.ameki.core.ui.effects.rememberWeatherTime
 import dev.antomanc.ameki.core.ui.theme.LocalInstrumentColors
-import kotlinx.coroutines.delay
 import java.time.Instant
-
-/** Keep time-dependent labels current while the screen remains open. */
-@Composable
-internal fun rememberWeatherTime(): Instant {
-    var now by remember { mutableStateOf(Instant.now()) }
-    LaunchedEffect(Unit) { while (true) { delay(60_000); now = Instant.now() } }
-    return now
-}
 
 @Composable
 internal fun RainOutlookSummary(view: ForecastView, fmt: TimeFormatter) {

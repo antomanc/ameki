@@ -20,14 +20,8 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
-      - name: Convention checks
-        run: python3 scripts/check-conventions.py
-      - name: Unit and screenshot tests
-        run: ./gradlew test --stacktrace
-      - name: Lint
-        run: ./gradlew lintDebug
-      - name: Build debug and release APKs
-        run: ./gradlew assembleDebug assembleRelease
+      - name: Verify (conventions, tests, lint, APKs)
+        run: scripts/verify.sh
       - uses: actions/upload-artifact@v4
         with:
           name: apks

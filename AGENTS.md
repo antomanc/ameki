@@ -36,3 +36,10 @@ Load only what the task needs. Skills live in `.agents/skills/` (linked into `.c
 | "It's a small UI tweak, visual verification isn't needed." | Forbidden. Run agent-device on the simulator/emulator, inspect the snapshot/screenshot, and confirm no runtime errors. |
 | "Unit tests pass, so the feature works." | Insufficient. Unit tests do not verify wiring or rendering. Exercise the feature end to end (integration or smoke run) before marking complete. |
 <!-- aginit:end -->
+
+## Checks
+- `scripts/verify.sh` runs every check. Run it before calling work done; CI runs the same command.
+- A failing check says what to do instead. Fix the cause; an exception names the rule and says why on the same line.
+- A mistake corrected twice becomes a check in the conventions script or the linter, not a new line here.
+- If a test contradicts the task, stop and report the conflict. Never change an expected value, skip a test or regenerate a snapshot just to get a green build.
+- `docs/agents/feature-map.md` names every screen and control with the code behind it; keep it current.

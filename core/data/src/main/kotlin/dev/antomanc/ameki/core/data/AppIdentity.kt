@@ -2,7 +2,7 @@ package dev.antomanc.ameki.core.data
 
 import android.content.Context
 import android.content.pm.PackageManager
-import dev.antomanc.ameki.source.google.AndroidAppIdentity
+import dev.antomanc.ameki.core.model.AndroidAppIdentity
 import java.security.MessageDigest
 
 /**

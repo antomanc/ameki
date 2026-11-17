@@ -29,6 +29,7 @@ import org.koin.core.component.get
 import dev.antomanc.ameki.core.ui.ForecastView
 import dev.antomanc.ameki.core.ui.TimeFormatter
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import dev.antomanc.ameki.core.ui.label
 
 /**
@@ -57,7 +58,7 @@ abstract class AmekiWidget(sizes: Set<DpSize>) : GlanceAppWidget(), KoinComponen
     }
 
     override suspend fun providePreview(context: Context, widgetCategory: Int) {
-        val data = PreviewData.sample()
+        val data = PreviewData.sample(Instant.now().truncatedTo(ChronoUnit.HOURS))
         provideContent { GlanceTheme { Render(context, data) } }
     }
 
@@ -65,11 +66,12 @@ abstract class AmekiWidget(sizes: Set<DpSize>) : GlanceAppWidget(), KoinComponen
     private fun Render(context: Context, data: WidgetData) {
         val palette = rememberPalette(data.config)
         val fmt = TimeFormatter(context, data.settings.timeFormat)
+        val now = Instant.now()
         WidgetFrame(data, palette, padding = WidgetLayout.padding(LocalSize.current)) {
             val weather = data.weather
             val snapshot = weather?.snapshot
-            if (!WidgetMessage(data, palette, need) && weather != null && snapshot != null) {
-                val w = ReadyWidget(data, weather.place, ForecastView(snapshot, Instant.now(), data.settings.refreshIntervalMinutes))
+            if (!WidgetMessage(data, palette, need, now) && weather != null && snapshot != null) {
+                val w = ReadyWidget(data, weather.place, ForecastView(snapshot, now, data.settings.refreshIntervalMinutes))
                 if (context.resources.configuration.fontScale > 1.3f) LargeFontContent(context, w, palette, fmt)
                 else Content(w, palette, fmt)
             }

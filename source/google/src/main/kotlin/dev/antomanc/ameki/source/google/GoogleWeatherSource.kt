@@ -1,5 +1,6 @@
 package dev.antomanc.ameki.source.google
 
+import dev.antomanc.ameki.core.model.AndroidAppIdentity
 import dev.antomanc.ameki.core.model.Capability
 import dev.antomanc.ameki.core.model.CurrentWeather
 import dev.antomanc.ameki.core.model.DailyForecast
@@ -27,12 +28,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
-
-/**
- * Identifies the calling app, so a key restricted to "Android apps" accepts the request.
- * [certSha1] is the signing certificate SHA-1 as hex, colons optional.
- */
-data class AndroidAppIdentity(val packageName: String, val certSha1: String)
 
 /**
  * Google Maps Platform Weather API. Every user brings their own key: none ships with the app.

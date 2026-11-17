@@ -20,4 +20,8 @@ Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents
 
 ### Review
 
-Reviewers apply `CODING_STANDARDS.md`. `scripts/check-conventions.py` (run in CI) enforces the mechanical rules.
+Reviewers apply `CODING_STANDARDS.md`. `scripts/check-conventions.py` (run in CI by `scripts/verify.sh`) enforces the mechanical rules; files that had Compose effects or `!!` before a rule keep at most that many.
+
+### Feature map
+
+`docs/agents/feature-map.md` names every screen and widget and the files behind it. Use its names when talking about the UI.
