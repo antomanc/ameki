@@ -61,6 +61,14 @@
     <string name="key_sha1">Impronta certificato SHA-1</string>
     <string name="app_information">Informazioni app</string>
     <string name="version_licenses">Versione e licenze</string>
+    <string name="update_check">Controlla aggiornamenti</string>
+    <string name="update_check_hint">Cerca una release più recente su GitHub</string>
+    <string name="update_checking">Controllo…</string>
+    <string name="update_check_failed">Impossibile controllare gli aggiornamenti.</string>
+    <string name="update_available_title">Aggiornamento disponibile</string>
+    <string name="update_available_body">La versione %1$s è su GitHub.</string>
+    <string name="update_view">Apri su GitHub</string>
+    <string name="update_later">Più tardi</string>
     <string name="background_location_settings">Nelle impostazioni Android, apri Autorizzazioni, poi Posizione e scegli Consenti sempre. Puoi cambiare questa scelta quando vuoi.</string>
     <string name="open_settings">Apri impostazioni</string>
     <string name="third_party_notices">Licenze di terze parti</string>

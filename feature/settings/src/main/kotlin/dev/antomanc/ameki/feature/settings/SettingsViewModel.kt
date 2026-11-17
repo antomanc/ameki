@@ -9,6 +9,8 @@ import dev.antomanc.ameki.core.data.WeatherRepository
 import dev.antomanc.ameki.core.data.settings.SettingsRepository
 import dev.antomanc.ameki.core.data.sync.RefreshScheduler
 import dev.antomanc.ameki.core.data.sync.SyncError
+import dev.antomanc.ameki.core.data.update.ReleaseUpdateChecker
+import dev.antomanc.ameki.core.data.update.UpdateCheckResult
 import dev.antomanc.ameki.core.model.AppSettings
 import dev.antomanc.ameki.core.model.RefreshPolicy
 import dev.antomanc.ameki.core.model.SourceId
@@ -30,6 +32,13 @@ sealed interface KeyCheck {
     data class Invalid(val error: SyncError) : KeyCheck
 }
 
+sealed interface UpdateUi {
+    data object Idle : UpdateUi
+    data object Checking : UpdateUi
+    data class Available(val versionName: String) : UpdateUi
+    data object Failed : UpdateUi
+}
+
 data class SettingsUiState(
     val settings: AppSettings = AppSettings(),
     val sources: List<SourceId> = listOf(SourceId.OPEN_METEO),
@@ -47,6 +56,7 @@ class SettingsViewModel(
     private val places: PlaceRepository,
     private val scheduler: RefreshScheduler,
     private val keyCheck: GoogleKeyCheck,
+    private val updates: ReleaseUpdateChecker,
 ) : ViewModel() {
     val appIdentity = keyCheck.appIdentity
 
@@ -60,6 +70,9 @@ class SettingsViewModel(
 
     private val _key = MutableStateFlow<KeyCheck>(KeyCheck.Idle)
     val keyState: StateFlow<KeyCheck> = _key.asStateFlow()
+
+    private val _update = MutableStateFlow<UpdateUi>(UpdateUi.Idle)
+    val updateState: StateFlow<UpdateUi> = _update.asStateFlow()
 
     fun setUnits(u: Units) = viewModelScope.launch { repo.setUnits(u) }
     fun setTheme(t: ThemeMode) = viewModelScope.launch { repo.setTheme(t) }
@@ -97,5 +110,28 @@ class SettingsViewModel(
     fun removeKey() = viewModelScope.launch {
         repo.setGoogleApiKey(null)
         _key.value = KeyCheck.Idle
+    }
+
+    /** Settings → About: force a check and re-open the dialog even if that version was dismissed. */
+    fun checkForUpdate() = viewModelScope.launch {
+        _update.value = UpdateUi.Checking
+        _update.value = when (val result = updates.check(force = true)) {
+            is UpdateCheckResult.Available -> UpdateUi.Available(result.versionName)
+            UpdateCheckResult.Failed -> UpdateUi.Failed
+            UpdateCheckResult.Disabled,
+            UpdateCheckResult.Throttled,
+            UpdateCheckResult.UpToDate,
+            UpdateCheckResult.Dismissed -> UpdateUi.Idle
+        }
+    }
+
+    /** View / Later / dismiss: suppress this version on cold start; About force can still re-open. */
+    fun acknowledgeUpdate(versionName: String) = viewModelScope.launch {
+        updates.dismiss(versionName)
+        _update.value = UpdateUi.Idle
+    }
+
+    fun clearUpdateUi() {
+        _update.value = UpdateUi.Idle
     }
 }

@@ -8,6 +8,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
@@ -15,14 +17,19 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import dev.antomanc.ameki.core.data.settings.SettingsRepository
 import dev.antomanc.ameki.core.data.sync.SyncError
+import dev.antomanc.ameki.core.data.update.ReleaseUpdateChecker
+import dev.antomanc.ameki.core.data.update.UpdateCheckResult
 import dev.antomanc.ameki.core.model.AppSettings
 import dev.antomanc.ameki.core.ui.AppRequest
 import dev.antomanc.ameki.core.ui.PendingRequest
+import dev.antomanc.ameki.core.ui.effects.ApplyOnChange
 import dev.antomanc.ameki.core.ui.theme.AmekiTheme
 import dev.antomanc.ameki.feature.home.HomeRoute
 import dev.antomanc.ameki.feature.locations.LocationsRoute
 import dev.antomanc.ameki.feature.onboarding.OnboardingRoute
 import dev.antomanc.ameki.feature.settings.SettingsRoute
+import dev.antomanc.ameki.feature.settings.UpdateAvailableDialog
+import dev.antomanc.ameki.feature.settings.openAmekiReleases
 import dev.antomanc.ameki.widget.WidgetPins
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
@@ -30,6 +37,7 @@ import org.koin.android.ext.android.inject
 
 class MainActivity : ComponentActivity() {
     private val settingsRepo: SettingsRepository by inject()
+    private val updates: ReleaseUpdateChecker by inject()
     /** The request from the launching intent or the places list, until a screen has handled it. */
     private val pending = mutableStateOf<PendingRequest?>(null)
     private var nextRequestId = 0L
@@ -53,6 +61,18 @@ class MainActivity : ComponentActivity() {
             AmekiTheme(themeMode = s.theme, dynamicColor = s.dynamicColor) {
                 val nav = rememberNavController()
                 val request = pending.value
+                var updateOffer by rememberSaveable { mutableStateOf<String?>(null) }
+                // After onboarding only (avoid nagging the first-run flow); throttled, failures silent.
+                ApplyOnChange(s.onboardingDone.takeIf { it }) {
+                    when (val result = updates.check(force = false)) {
+                        is UpdateCheckResult.Available -> updateOffer = result.versionName
+                        else -> Unit
+                    }
+                }
+                fun acknowledgeUpdate(version: String) {
+                    lifecycleScope.launch { updates.dismiss(version) }
+                    updateOffer = null
+                }
                 LaunchedEffect(request?.id, s.onboardingDone) {
                     request ?: return@LaunchedEffect
                     if (!s.onboardingDone) return@LaunchedEffect handled(request.id)
@@ -100,6 +120,17 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable(SETTINGS) { SettingsRoute(onBack = { nav.popBackStack() }) }
+                }
+                updateOffer?.let { version ->
+                    UpdateAvailableDialog(
+                        versionName = version,
+                        onView = {
+                            openAmekiReleases()
+                            acknowledgeUpdate(version)
+                        },
+                        onLater = { acknowledgeUpdate(version) },
+                        onDismiss = { acknowledgeUpdate(version) },
+                    )
                 }
             }
         }

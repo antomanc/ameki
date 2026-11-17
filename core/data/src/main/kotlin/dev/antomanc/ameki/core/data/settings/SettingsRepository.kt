@@ -19,10 +19,14 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flowOn
+import java.time.Instant
 
 /**
- * The single typed entry point for settings. To add a setting: a field in [AppSettings],
- * a key below, one line in [read], one setter.
+ * The single typed entry point for settings. To add a user-facing setting: a field in
+ * [AppSettings], a key below, one line in [read], one setter.
+ *
+ * Internal notify-only update-check cache (`lastUpdateCheckAt`, remote/dismissed versions)
+ * stays on this store but is not part of [AppSettings] — use the dedicated getters/setters.
  */
 class SettingsRepository(
     private val store: DataStore<Preferences>,
@@ -46,6 +50,10 @@ class SettingsRepository(
         val dynamicColor = booleanPreferencesKey("dynamic_color")
         val onboardingDone = booleanPreferencesKey("onboarding_done")
         val selectedPlace = longPreferencesKey("selected_place")
+        // GitHub release notify-only (#14); not user-facing AppSettings fields.
+        val updateLastCheckAt = longPreferencesKey("update_last_check_at")
+        val updateLastRemoteVersion = stringPreferencesKey("update_last_remote_version")
+        val updateDismissedVersion = stringPreferencesKey("update_dismissed_version")
     }
 
     val settings: Flow<AppSettings> = store.data.map(::read).flowOn(kotlinx.coroutines.Dispatchers.Default).distinctUntilChanged()
@@ -118,6 +126,19 @@ class SettingsRepository(
     suspend fun setDynamicColor(enabled: Boolean) = edit { this[Keys.dynamicColor] = enabled }
     suspend fun setOnboardingDone(done: Boolean) = edit { this[Keys.onboardingDone] = done }
     suspend fun setSelectedPlace(id: Long?) = edit { if (id == null) remove(Keys.selectedPlace) else this[Keys.selectedPlace] = id }
+
+    suspend fun lastUpdateCheckAt(): Instant? =
+        store.data.first()[Keys.updateLastCheckAt]?.let(Instant::ofEpochMilli)
+
+    suspend fun setUpdateLastCheckAt(at: Instant) = edit { this[Keys.updateLastCheckAt] = at.toEpochMilli() }
+
+    suspend fun lastUpdateRemoteVersion(): String? = store.data.first()[Keys.updateLastRemoteVersion]
+
+    suspend fun setUpdateLastRemoteVersion(version: String) = edit { this[Keys.updateLastRemoteVersion] = version }
+
+    suspend fun dismissedUpdateVersion(): String? = store.data.first()[Keys.updateDismissedVersion]
+
+    suspend fun setUpdateDismissedVersion(version: String) = edit { this[Keys.updateDismissedVersion] = version }
 
     private suspend fun edit(block: MutablePreferences.() -> Unit) {
         store.edit { it.block() }

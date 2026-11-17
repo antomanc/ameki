@@ -15,6 +15,7 @@ Routes live in `app` (`MainActivity.kt`, `NavHost`): onboarding, home, places, s
 | Places | Search for a city, use my location, reorder, rename, remove with undo | Home top bar | feature/locations `LocationsScreen.kt`, `PlaceSearch.kt` |
 | Settings | Weather data source, update interval, follow me with widgets, units, appearance, about | Home top bar | feature/settings `SettingsScreen.kt` |
 | Google key setup | Guide to get and check a Google key, with package name and SHA-1 to copy | Settings, source Google; error cards' "Fix it" | feature/settings `GoogleKeySetup.kt` |
+| Update available | AlertDialog when a newer GitHub Release exists; View opens Releases/latest; View/Later/dismiss suppress that version on cold start | Cold start after onboarding (throttled) or Settings → About → Check for updates (force) | feature/settings `UpdateAvailableDialog` / `openAmekiReleases`; `ReleaseUpdateChecker` in core/data; cold start in `MainActivity` |
 
 ## Place pane cards, top to bottom
 

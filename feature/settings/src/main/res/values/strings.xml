@@ -62,6 +62,14 @@
     <string name="key_sha1">SHA-1 certificate fingerprint</string>
     <string name="app_information">App information</string>
     <string name="version_licenses">Version and licences</string>
+    <string name="update_check">Check for updates</string>
+    <string name="update_check_hint">Looks for a newer release on GitHub</string>
+    <string name="update_checking">Checking…</string>
+    <string name="update_check_failed">Couldn\'t check for updates.</string>
+    <string name="update_available_title">Update available</string>
+    <string name="update_available_body">Version %1$s is on GitHub.</string>
+    <string name="update_view">View on GitHub</string>
+    <string name="update_later">Later</string>
     <string name="background_location_settings">In Android settings, open Permissions, then Location, and choose Allow all the time. You can change this whenever you want.</string>
     <string name="open_settings">Open settings</string>
     <string name="third_party_notices">Third-party notices</string>

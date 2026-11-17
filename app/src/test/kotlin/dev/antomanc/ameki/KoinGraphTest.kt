@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import dev.antomanc.ameki.core.data.WeatherRepository
 import dev.antomanc.ameki.core.data.sync.WeatherUpdateListener
+import dev.antomanc.ameki.core.data.update.ReleaseUpdateChecker
 import dev.antomanc.ameki.feature.home.HomeViewModel
 import dev.antomanc.ameki.feature.locations.LocationsViewModel
 import dev.antomanc.ameki.feature.settings.SettingsViewModel
@@ -30,6 +31,7 @@ class KoinGraphTest {
         ApplicationProvider.getApplicationContext<Context>()
         val koin = GlobalContext.get()
         koin.get<WeatherRepository>()
+        koin.get<ReleaseUpdateChecker>()
         koin.get<dev.antomanc.ameki.core.data.widget.WidgetInstances>()
         koin.get<HomeViewModel>()
         koin.get<LocationsViewModel>()
