@@ -1,0 +1,12 @@
+Ameki is an open source weather app built around home-screen widgets. Check the temperature and the next few hours without opening the app. Open it for a ten-day forecast, a closer look at a day, or another place.
+
+Features:
+* Current conditions with a temperature dial, feels-like temperature and daily highs and lows
+* Hourly forecast with rain probability, a ten-day outlook and day pages you can swipe between
+* Precipitation, wind and humidity charts, plus UV, pressure, visibility, sunrise, sunset and moon phase
+* Saved places and optional current location
+* Widgets that adapt to their size, each with its own place, colours and background
+* Material You colours, light and dark themes, phones, tablets and foldables
+* Configurable units and 12/24-hour time, in English and Italian
+
+Forecasts come from Open-Meteo, with no account or API key. No ads, no analytics, no Google Play Services.

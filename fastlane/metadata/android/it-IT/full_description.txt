@@ -1,0 +1,12 @@
+Ameki è un'app meteo open source pensata per i widget della schermata Home. Vedi la temperatura e le prossime ore senza aprire l'app. Aprila per le previsioni a dieci giorni, il dettaglio di una giornata o un altro luogo.
+
+Funzioni:
+* Condizioni attuali con quadrante della temperatura, temperatura percepita, minime e massime
+* Previsioni orarie con probabilità di pioggia, dieci giorni e pagine dei giorni da scorrere
+* Grafici di precipitazioni, vento e umidità, più UV, pressione, visibilità, alba, tramonto e fase lunare
+* Luoghi salvati e posizione attuale facoltativa
+* Widget che si adattano alla dimensione, ognuno con il suo luogo, colori e sfondo
+* Colori Material You, tema chiaro e scuro, telefoni, tablet e pieghevoli
+* Unità e formato 12/24 ore configurabili, in italiano e inglese
+
+Le previsioni arrivano da Open-Meteo, senza account né chiave API. Niente pubblicità, niente analytics, niente Google Play Services.
