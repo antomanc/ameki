@@ -132,6 +132,38 @@ for f in sorted(effects.glob("*.kt")):
     if not test.exists():
         errors.append(f"{f.relative_to(root)}: effect helper has no test at {test.relative_to(root)}; a helper that owns an effect needs a test for its keys, cancellation and cleanup")
 
+# 6. Compose effects live in the tested helpers of core/ui/effects. Files listed here had them before the rule
+# and may keep at most that many; lower a number when you remove one, never raise it.
+effect = re.compile(r"\b(LaunchedEffect|DisposableEffect|SideEffect)\s*[({]")
+EFFECTS_BEFORE = {
+    "app/src/main/kotlin/dev/antomanc/ameki/MainActivity.kt": 1,
+    "core/ui/src/main/kotlin/dev/antomanc/ameki/core/ui/components/Instrument.kt": 1,
+    "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/DayPage.kt": 5,
+    "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/HomeScreen.kt": 6,
+    "feature/settings/src/main/kotlin/dev/antomanc/ameki/feature/settings/SettingsScreen.kt": 1,
+}
+# 7. No !! and no @Suppress in production code. Same rule for files that had them before.
+hatch = re.compile(r"!!|@Suppress\(")
+HATCHES_BEFORE = {
+    "core/data/src/main/kotlin/dev/antomanc/ameki/core/data/WeatherRepository.kt": 1,
+    "core/data/src/main/kotlin/dev/antomanc/ameki/core/data/location/DeviceLocation.kt": 1,
+    "core/ui/src/main/kotlin/dev/antomanc/ameki/core/ui/ForecastView.kt": 1,
+    "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/Details.kt": 1,
+    "feature/home/src/main/kotlin/dev/antomanc/ameki/feature/home/HomeScreen.kt": 1,
+}
+for f in sorted(root.glob("*/**/src/main/**/*.kt")):
+    rel = str(f.relative_to(root))
+    if "build" in f.parts:
+        continue
+    lines = f.read_text().splitlines()
+    if not rel.startswith("core/ui/src/main/kotlin/dev/antomanc/ameki/core/ui/effects/"):
+        found = [n for n, line in enumerate(lines, 1) for _ in effect.finditer(line)]
+        if len(found) > EFFECTS_BEFORE.get(rel, 0):
+            errors.append(f"{rel}:{found[-1]}: Compose effect outside core/ui/effects; decide in the ViewModel or a pure tested function (like nextStep) and apply the result with ApplyOnChange or another tested helper in core/ui/effects. Effects written inline in screens are where navigation bugs start.")
+    found = [n for n, line in enumerate(lines, 1) for _ in hatch.finditer(line)]
+    if len(found) > HATCHES_BEFORE.get(rel, 0):
+        errors.append(f"{rel}:{found[-1]}: make the value non-null where it is known (a local val, let, a non-null parameter) instead of !!, and fix the warning instead of suppressing it")
+
 for e in errors:
     print(e, file=sys.stderr)
 sys.exit(1 if errors else 0)

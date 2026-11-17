@@ -3,5 +3,4 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 python3 scripts/check-conventions.py
-node scripts/wellkept-check.mjs --against "${WELLKEPT_BASE:-origin/main}"
 ./gradlew test lintDebug assembleDebug assembleRelease --stacktrace

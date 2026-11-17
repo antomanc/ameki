@@ -20,7 +20,7 @@ Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents
 
 ### Review
 
-Reviewers apply `CODING_STANDARDS.md`. `scripts/check-conventions.py` and `scripts/wellkept-check.mjs` (both run in CI) enforce the mechanical rules; wellkept-check's per-file ratchet caps each file at the effects and `!!` it had, so a file can't gain more.
+Reviewers apply `CODING_STANDARDS.md`. `scripts/check-conventions.py` (run in CI by `scripts/verify.sh`) enforces the mechanical rules; files that had Compose effects or `!!` before a rule keep at most that many.
 
 ### Feature map
 
