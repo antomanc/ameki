@@ -50,6 +50,30 @@ class BriefWaitTest {
     }
 
     @Test
+    fun settledLatchSurvivesALaterRefresh() {
+        var ready by mutableStateOf(false)
+        var loading by mutableStateOf(false)
+        var settled by mutableStateOf(true)
+        var waiting: Boolean? = null
+        compose.setContent {
+            waiting = rememberBriefWait(
+                ready = ready, loading = loading, settled = settled, timeoutMs = 60_000,
+            )
+        }
+        compose.waitForIdle()
+        assertFalse(checkNotNull(waiting))
+
+        loading = true
+        compose.waitForIdle()
+        assertFalse(checkNotNull(waiting))
+
+        ready = true
+        settled = false
+        compose.waitForIdle()
+        assertFalse(checkNotNull(waiting))
+    }
+
+    @Test
     fun firstLoadSettlingEndsTheWaitBeforeTimeout() {
         var ready by mutableStateOf(false)
         var loading by mutableStateOf(true)

@@ -34,6 +34,10 @@ fun rememberBriefWait(
             expired = true
         }
     }
+    LaunchedEffect(settled, loading) {
+        if (settled && !loading) expired = true
+    }
+    // Same-frame exit when already settled; `expired` latches so a later refresh cannot revive mute.
     val alreadySettled = settled && !loading
     return !ready && !expired && !alreadySettled
 }
