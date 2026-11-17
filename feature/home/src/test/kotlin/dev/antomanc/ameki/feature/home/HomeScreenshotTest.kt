@@ -137,6 +137,61 @@ class HomeScreenshotTest {
     }
 
     @Config(qualifiers = "w411dp-h891dp-xxhdpi")
+    @Test fun coldStartMuteDialKeepsTheHeroFootprintUntilCurrentArrives() {
+        val base = sampleState()
+        val place = base.places.first()
+        val snapshot = place.snapshot!!.copy(current = null, fetchedAt = place.snapshot!!.fetchedAt - DataPart.CURRENT)
+        val state = androidx.compose.runtime.mutableStateOf(
+            base.copy(
+                places = listOf(place.copy(snapshot = snapshot)),
+                refreshing = setOf(place.place.id),
+            ),
+        )
+        compose.setContent {
+            AmekiTheme(dynamicColor = false) {
+                HomeScreen(state.value, place.place.id, {}, {}, {}, {}, {})
+            }
+        }
+        compose.mainClock.advanceTimeByFrame()
+        val mute = compose.onNodeWithTag("hero-temperature-dial").fetchSemanticsNode().boundsInRoot
+        org.junit.Assert.assertTrue("Mute dial must reserve the hero footprint", mute.height > 200f)
+        compose.onAllNodesWithText("Current conditions are unavailable", substring = true).fetchSemanticsNodes().let {
+            org.junit.Assert.assertEquals(0, it.size)
+        }
+        compose.runOnIdle {
+            state.value = base.copy(places = listOf(place), refreshing = emptySet())
+            androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications()
+        }
+        compose.mainClock.advanceTimeBy(500)
+        val ready = compose.onNodeWithTag("hero-temperature-dial").fetchSemanticsNode().boundsInRoot
+        org.junit.Assert.assertEquals("Dial width must match the mute footprint", mute.width, ready.width, 0.5f)
+        org.junit.Assert.assertEquals("Dial height must match the mute footprint", mute.height, ready.height, 0.5f)
+        org.junit.Assert.assertTrue(
+            "Ready dial must show the current temperature",
+            compose.onAllNodesWithText("15°", substring = true).fetchSemanticsNodes().isNotEmpty(),
+        )
+    }
+
+    @Config(qualifiers = "w411dp-h891dp-xxhdpi")
+    @Test fun coldStartMuteDialFallsThroughToUnavailableAfterTimeout() {
+        val base = sampleState()
+        val place = base.places.first()
+        val snapshot = place.snapshot!!.copy(current = null, fetchedAt = place.snapshot!!.fetchedAt - DataPart.CURRENT)
+        compose.setContent {
+            AmekiTheme(dynamicColor = false) {
+                HomeScreen(
+                    base.copy(places = listOf(place.copy(snapshot = snapshot)), refreshing = setOf(place.place.id)),
+                    place.place.id, {}, {}, {}, {}, {},
+                )
+            }
+        }
+        compose.mainClock.advanceTimeByFrame()
+        compose.onNodeWithTag("hero-temperature-dial").assertIsDisplayed()
+        compose.mainClock.advanceTimeBy(2_100)
+        compose.onNodeWithTag("hero-temperature-unavailable").assertIsDisplayed()
+    }
+
+    @Config(qualifiers = "w411dp-h891dp-xxhdpi")
     @Test fun missingPrecipitationIsUnavailableRatherThanZero() {
         val snapshot = sampleState().places.first().snapshot!!
         compose.setContent {
