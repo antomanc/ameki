@@ -8,8 +8,8 @@ android {
 
     defaultConfig {
         applicationId = "dev.antomanc.ameki"
-        versionCode = 3
-        versionName = "0.2.1"
+        versionCode = 4
+        versionName = "0.2.2"
     }
 
     buildFeatures { buildConfig = true }
