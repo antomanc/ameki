@@ -86,6 +86,7 @@ class HomeScreenshotTest {
             }
         }
         compose.waitUntil { compose.mainClock.advanceTimeByFrame(); applied.isNotEmpty() }
+        compose.mainClock.advanceTimeBy(500)
         compose.onNodeWithText("Milano").assertIsDisplayed()
         compose.onNodeWithContentDescription("Back").assertIsDisplayed()
         compose.runOnIdle {
@@ -168,7 +169,7 @@ class HomeScreenshotTest {
         org.junit.Assert.assertEquals("Dial height must match the mute footprint", mute.height, ready.height, 0.5f)
         org.junit.Assert.assertTrue(
             "Ready dial must show the current temperature",
-            compose.onAllNodesWithText("15°", substring = true).fetchSemanticsNodes().isNotEmpty(),
+            compose.onAllNodesWithText("15°", substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty(),
         )
     }
 

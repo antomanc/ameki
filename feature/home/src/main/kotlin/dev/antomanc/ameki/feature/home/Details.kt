@@ -111,7 +111,7 @@ internal fun HourlyCharts(hours: List<HourlyForecast>, s: WeatherSnapshot, units
             2 -> "${available.average().roundToInt()}%"
             else -> (available.maxOrNull() ?: 0.0).roundToInt().toString()
         }
-        if (available.size != values.size && available.isNotEmpty()) {
+        if (available.size != values.size) {
             Text(stringResource(R.string.chart_coverage, available.size, values.size), style = MaterialTheme.typography.bodySmall, color = onVariant)
         }
         val peakIndex = values.withIndex()
