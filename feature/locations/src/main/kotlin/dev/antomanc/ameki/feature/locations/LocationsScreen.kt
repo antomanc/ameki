@@ -1,62 +1,76 @@
 package dev.antomanc.ameki.feature.locations
 
+import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
-import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material.icons.outlined.MoreVert
-import kotlinx.coroutines.launch
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.antomanc.ameki.core.data.sync.PlaceWeather
+import dev.antomanc.ameki.core.model.Place
+import dev.antomanc.ameki.core.model.TimeFormat
+import dev.antomanc.ameki.core.model.Units
+import dev.antomanc.ameki.core.ui.TimeFormatter
 import dev.antomanc.ameki.core.ui.components.WeatherIcon
+import dev.antomanc.ameki.core.ui.effects.rememberWeatherTime
+import dev.antomanc.ameki.core.ui.label
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+import java.time.Instant
 import dev.antomanc.ameki.core.ui.R as UiR
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,18 +83,21 @@ fun LocationsRoute(onBack: () -> Unit, onOpenPlace: (Long) -> Unit, viewModel: L
     val locationFailed by viewModel.locationFailed.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val fmt = remember(context) { TimeFormatter(context, TimeFormat.SYSTEM) }
+    val now = rememberWeatherTime()
     var permissionDenied by rememberSaveable { mutableStateOf(false) }
     var renameId by rememberSaveable { mutableStateOf<Long?>(null) }
     var renameText by rememberSaveable { mutableStateOf("") }
     val removedMessage = stringResource(R.string.place_removed)
     val undoLabel = stringResource(R.string.undo)
-    val remove: (dev.antomanc.ameki.core.model.Place) -> Unit = { place ->
+    val remove: (Place) -> Unit = { place ->
         scope.launch {
             viewModel.remove(place.id).join()
             if (snackbar.showSnackbar(removedMessage, undoLabel) == SnackbarResult.ActionPerformed) viewModel.restore(place)
         }
     }
-    val rename: (dev.antomanc.ameki.core.model.Place) -> Unit = { place -> renameId = place.id; renameText = place.name }
+    val rename: (Place) -> Unit = { place -> renameId = place.id; renameText = place.name }
     val currentName = stringResource(UiR.string.current_location)
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) { permissionDenied = false; viewModel.useCurrentLocation(currentName, onOpenPlace) }
@@ -100,13 +117,13 @@ fun LocationsRoute(onBack: () -> Unit, onOpenPlace: (Long) -> Unit, viewModel: L
     ) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            item { PlaceSearch(search, viewModel::onQuery, { viewModel.add(it, onOpenPlace) }) }
+            item(key = "search") { PlaceSearch(search, viewModel::onQuery, { viewModel.add(it, onOpenPlace) }) }
             if (search.query.isBlank()) {
-                if (permissionDenied || locationFailed) item { LocationPermissionHelp(locationFailed) }
+                if (permissionDenied || locationFailed) item(key = "perm-help") { LocationPermissionHelp(locationFailed) }
                 if (!hasCurrent) {
-                    item {
+                    item(key = "use-location") {
                         Row(
                             Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.secondaryContainer)
                                 .clickable {
@@ -115,7 +132,7 @@ fun LocationsRoute(onBack: () -> Unit, onOpenPlace: (Long) -> Unit, viewModel: L
                                 }.padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            if (locating) androidx.compose.material3.CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                            if (locating) CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
                             else Icon(Icons.Outlined.LocationOn, null)
                             Spacer(Modifier.width(12.dp))
                             Text(stringResource(if (locating) R.string.locating else R.string.use_my_location), style = MaterialTheme.typography.titleMedium)
@@ -124,24 +141,51 @@ fun LocationsRoute(onBack: () -> Unit, onOpenPlace: (Long) -> Unit, viewModel: L
                 }
                 list.firstOrNull { it.place.isCurrentLocation }?.let { cur ->
                     item(key = cur.place.id) {
-                        PlaceRow(cur.place.name.ifBlank { currentName }, cur, units, onOpen = { onOpenPlace(cur.place.id) }, onRemove = { remove(cur.place) }, current = true)
-                        TextButton(onClick = {
-                            if (viewModel.hasLocationPermission()) viewModel.useCurrentLocation(currentName, onOpenPlace)
-                            else permission.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
-                        }, enabled = !locating) { Text(stringResource(R.string.retry_location)) }
+                        Column(Modifier.animateItem()) {
+                            SwipeablePlaceRow(
+                                name = cur.place.name.ifBlank { currentName },
+                                pw = cur,
+                                units = units,
+                                fmt = fmt,
+                                now = now,
+                                onOpen = { onOpenPlace(cur.place.id) },
+                                onRemove = { remove(cur.place) },
+                                current = true,
+                            )
+                            TextButton(onClick = {
+                                if (viewModel.hasLocationPermission()) viewModel.useCurrentLocation(currentName, onOpenPlace)
+                                else permission.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+                            }, enabled = !locating) { Text(stringResource(R.string.retry_location)) }
+                        }
                     }
                 }
                 itemsIndexed(saved, key = { _, it -> it.place.id }) { i, pw ->
-                    PlaceRow(
-                        pw.place.name, pw, units,
-                        onOpen = { onOpenPlace(pw.place.id) },
-                        onRemove = { remove(pw.place) },
-                        onRename = { rename(pw.place) },
-                        onUp = if (i > 0) ({ viewModel.move(i, i - 1) }) else null,
-                        onDown = if (i < saved.lastIndex) ({ viewModel.move(i, i + 1) }) else null,
-                    )
+                    Box(Modifier.animateItem()) {
+                        SwipeablePlaceRow(
+                            name = pw.place.name,
+                            pw = pw,
+                            units = units,
+                            fmt = fmt,
+                            now = now,
+                            onOpen = { onOpenPlace(pw.place.id) },
+                            onRemove = { remove(pw.place) },
+                            onRename = { rename(pw.place) },
+                            onUp = if (i > 0) ({ viewModel.move(i, i - 1) }) else null,
+                            onDown = if (i < saved.lastIndex) ({ viewModel.move(i, i + 1) }) else null,
+                        )
+                    }
                 }
-                item { Spacer(Modifier.height(24.dp)) }
+                if (list.isEmpty()) {
+                    item(key = "empty-hint") {
+                        Text(
+                            stringResource(R.string.places_empty_hint),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 12.dp),
+                        )
+                    }
+                }
+                item(key = "bottom-space") { Spacer(Modifier.height(24.dp)) }
             }
         }
     }
@@ -168,11 +212,52 @@ fun LocationPermissionHelp(locationFailed: Boolean = false) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeablePlaceRow(
+    name: String,
+    pw: PlaceWeather,
+    units: Units,
+    fmt: TimeFormatter,
+    now: Instant,
+    onOpen: () -> Unit,
+    onRemove: () -> Unit,
+    onRename: (() -> Unit)? = null,
+    onUp: (() -> Unit)? = null,
+    onDown: (() -> Unit)? = null,
+    current: Boolean = false,
+) {
+    val dismissState = rememberSwipeToDismissBoxState()
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = false,
+        onDismiss = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) onRemove()
+        },
+        backgroundContent = {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .clip(MaterialTheme.shapes.large)
+                    .background(MaterialTheme.colorScheme.errorContainer)
+                    .padding(horizontal = 20.dp),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                Icon(Icons.Outlined.Delete, stringResource(R.string.remove), tint = MaterialTheme.colorScheme.onErrorContainer)
+            }
+        },
+    ) {
+        PlaceRow(name, pw, units, fmt, now, onOpen, onRemove, onRename, onUp, onDown, current)
+    }
+}
+
 @Composable
 private fun PlaceRow(
     name: String,
-    pw: dev.antomanc.ameki.core.data.sync.PlaceWeather,
-    units: dev.antomanc.ameki.core.model.Units,
+    pw: PlaceWeather,
+    units: Units,
+    fmt: TimeFormatter,
+    now: Instant,
     onOpen: () -> Unit,
     onRemove: () -> Unit,
     onRename: (() -> Unit)? = null,
@@ -181,21 +266,45 @@ private fun PlaceRow(
     current: Boolean = false,
 ) {
     var menu by remember { mutableStateOf(false) }
+    val snap = pw.snapshot
+    val cur = snap?.current
+    val today = snap?.daily?.firstOrNull()
+    val conditionText = cur?.let { stringResource(it.condition.label(it.isDaytime)) }
+    val localTime = snap?.let { fmt.time(now, it.timeZone) }
+    val metaLine = listOfNotNull(localTime, conditionText ?: pw.place.subtitle).joinToString(" · ").takeIf { it.isNotEmpty() }
+
     Row(
-        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large).background(MaterialTheme.colorScheme.surfaceContainer).clickable(onClick = onOpen)
-            .padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
+        Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .clickable(onClick = onOpen)
+            .padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (current) { Icon(Icons.Outlined.LocationOn, null, Modifier.padding(end = 8.dp)) }
-        androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
+        if (current) {
+            Icon(Icons.Outlined.LocationOn, null, Modifier.padding(end = 10.dp).size(20.dp), tint = MaterialTheme.colorScheme.primary)
+        }
+        Column(Modifier.weight(1f)) {
             Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            pw.place.subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) }
+            metaLine?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
-        pw.snapshot?.current?.let {
-            WeatherIcon(it.condition, it.isDaytime, size = 30.dp)
-            Text(units.temp(it.temperature), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 8.dp))
+        cur?.let {
+            WeatherIcon(it.condition, it.isDaytime, size = 32.dp)
+            Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(start = 8.dp, end = 4.dp)) {
+                Text(units.temp(it.temperature), style = MaterialTheme.typography.titleLarge)
+                today?.let { d ->
+                    Text(
+                        "${units.temp(d.temperatureMin)} / ${units.temp(d.temperatureMax)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
-        androidx.compose.foundation.layout.Box {
+        Box {
             IconButton(onClick = { menu = true }) { Icon(Icons.Outlined.MoreVert, stringResource(R.string.place_actions, name)) }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 onRename?.let { DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, onClick = { menu = false; it() }) }
@@ -206,3 +315,4 @@ private fun PlaceRow(
         }
     }
 }
+

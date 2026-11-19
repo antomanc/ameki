@@ -8,12 +8,12 @@ Routes live in `app` (`MainActivity.kt`, `NavHost`): onboarding, home, places, s
 
 | Name | What it is | How to reach it | Code |
 | --- | --- | --- | --- |
-| Onboarding | First run: welcome, source choice (Open-Meteo or Google), location or city, add a widget | Fresh install, until finished | feature/onboarding `OnboardingScreen.kt` |
-| Home | A pager of places, one **place pane** each; on an unfolded Fold or tablet the **place list** sits beside the pane | App launch | feature/home `HomeScreen.kt` |
+| Onboarding | First run: step progress bar with back button, welcome dial, source choice (Open-Meteo or Google), location or city, add a widget | Fresh install, until finished | feature/onboarding `OnboardingScreen.kt` |
+| Home | A pager of places with TopAppBar page indicator and interpolated atmosphere, one **place pane** each; on an unfolded Fold or tablet the **place list** sits beside the pane | App launch | feature/home `HomeScreen.kt` |
 | Place pane | Scrolling cards for one place (see below); pull to refresh | Home, swipe between places | feature/home `PlaceWeatherPane.kt` |
-| Day page | One day in detail: day chips, header, temperature chart, hour rows | Tap a day in **10 days** or an hour in **Next hours**; widget taps | feature/home `DayPage.kt` |
-| Places | Search for a city, use my location, reorder, rename, remove with undo | Home top bar | feature/locations `LocationsScreen.kt`, `PlaceSearch.kt` |
-| Settings | Weather data source, update interval, follow me with widgets, units, appearance, about | Home top bar | feature/settings `SettingsScreen.kt` |
+| Day page | One day in detail with predictive-back transition: day chips, header, interactive Bezier temperature chart with now marker, hour rows | Tap a day in **10 days** or an hour in **Next hours**; widget taps | feature/home `DayPage.kt` |
+| Places | Search for a city (with clear button), use my location, swipe-to-delete with undo, reorder, rename, local time & min/max preview | Home top bar | feature/locations `LocationsScreen.kt`, `PlaceSearch.kt` |
+| Settings | Grouped cards with inline segmented controls (temperature, theme, time format), weather source, update interval, follow me with widgets, units, about | Home top bar | feature/settings `SettingsScreen.kt` |
 | Google key setup | Guide to get and check a Google key, with package name and SHA-1 to copy | Settings, source Google; error cards' "Fix it" | feature/settings `GoogleKeySetup.kt` |
 | Update available | AlertDialog when a newer GitHub Release exists; View opens Releases/latest; View/Later/dismiss suppress that version on cold start | Cold start after onboarding (throttled) or Settings → About → Check for updates (force) | feature/settings `UpdateAvailableDialog` / `openAmekiReleases`; `ReleaseUpdateChecker` in core/data; cold start in `MainActivity` |
 
@@ -21,12 +21,12 @@ Routes live in `app` (`MainActivity.kt`, `NavHost`): onboarding, home, places, s
 
 | Name | Shows | Code (feature/home) |
 | --- | --- | --- |
-| Hero | Current temperature and condition, freshness stamp, **rain outlook** sentence; cold-start **mute dial** (`MuteTemperatureDial`) Crossfades into `TemperatureDial`; NoData ↔ content also Crossfades | `PlaceWeatherPane.kt` `Hero`, `Freshness`; `WeatherExtras.kt` `RainOutlookSummary`; core/ui `Instrument.kt` `TemperatureDial`, `MuteTemperatureDial` |
-| Alerts | Weather alerts, only when the source supplies them | `WeatherExtras.kt` `AlertsCard` |
-| Next hours | Up to 48 hours, scrollable | `PlaceWeatherPane.kt` `HourlyCard` |
-| Hourly charts | Rain, Wind, Humidity tabs over 24 hours | `Details.kt` `HourlyCharts` |
-| 10 days | Daily rows with range | `PlaceWeatherPane.kt` `DailyCard` |
-| Detail grid | Tiles: Wind, Humidity, UV index, Pressure, Visibility, Sun, Moon (by source capability) | `Details.kt` `DetailGrid` |
+| Hero | Current temperature on thermal gradient dial with engraved min/max tips, condition, freshness stamp, **rain outlook** sentence; cold-start **mute dial** (`MuteTemperatureDial`) Crossfades into `TemperatureDial`; NoData ↔ content also Crossfades | `PlaceWeatherPane.kt` `Hero`, `Freshness`; `WeatherExtras.kt` `RainOutlookSummary`; core/ui `Instrument.kt` `TemperatureDial`, `MuteTemperatureDial` |
+| Alerts | Severity-accented weather alerts, only when the source supplies them | `WeatherExtras.kt` `AlertsCard` |
+| Next hours | Up to 48 hours with sunrise/sunset markers, scrollable | `PlaceWeatherPane.kt` `HourlyCard` |
+| Hourly charts | Interactive tap/scrub Rain, Wind, Humidity, and UV tabs over 24 hours | `Details.kt` `HourlyCharts` |
+| 10 days | Daily rows with thermal gradient range bar | `PlaceWeatherPane.kt` `DailyCard` |
+| Detail grid | Instrument tiles: Wind compass, Humidity & dew point comfort band, UV spectrum & advice, Aneroid pressure gauge, Visibility meter, Cloud cover bar, Sun daylight arc & duration, Moon phase disc (by source capability) | `Details.kt` `DetailGrid` |
 | Attribution | Data source credit | `PlaceWeatherPane.kt` `Attribution` |
 | No data | Error or empty state with "Fix it" | `PlaceWeatherPane.kt` `NoData` |
 

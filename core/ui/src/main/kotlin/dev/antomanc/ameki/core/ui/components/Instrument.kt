@@ -6,10 +6,16 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -57,6 +63,8 @@ fun TemperatureDial(
     modifier: Modifier = Modifier,
     description: String,
     strokeWidth: Dp = 12.dp,
+    lowLabel: String? = null,
+    highLabel: String? = null,
     content: @Composable () -> Unit,
 ) {
     val colors = LocalInstrumentColors.current
@@ -66,11 +74,11 @@ fun TemperatureDial(
     val scaleMax = high + span * 0.25
     fun frac(t: Double) = ((t - scaleMin) / (scaleMax - scaleMin)).coerceIn(0.0, 1.0).toFloat()
 
-    val marker = remember { Animatable(frac(low)) }
+    val marker = remember { Animatable(frac(current)) }
     val animate = rememberAnimationsEnabled()
     LaunchedEffect(current, low, high) {
         if (animate) {
-            marker.animateTo(frac(current), spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessVeryLow))
+            marker.animateTo(frac(current), spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessLow))
         } else {
             marker.snapTo(frac(current))
         }
@@ -83,10 +91,11 @@ fun TemperatureDial(
 
             val a0 = START_ANGLE + SWEEP * frac(low)
             val a1 = START_ANGLE + SWEEP * frac(high)
+            val midTemp = (low + high) / 2.0
             val center = Offset(size.width / 2, size.height / 2)
             drawArc(
                 brush = Brush.linearGradient(
-                    listOf(colors.temperature(low), colors.temperature(high)),
+                    listOf(colors.temperature(low), colors.temperature(midTemp), colors.temperature(high)),
                     start = point(center, track.diameter / 2, a0),
                     end = point(center, track.diameter / 2, a1),
                 ),
@@ -98,7 +107,7 @@ fun TemperatureDial(
                 style = Stroke(track.stroke, cap = StrokeCap.Round),
             )
             // Ticks: an engraved scale, only where there is room for it to stay quiet.
-            val ticks = if (track.diameter > 220.dp.toPx()) 36 else 0
+            val ticks = if (track.diameter > 200.dp.toPx()) 36 else 0
             for (i in 0..ticks) {
                 if (ticks == 0) break
                 val a = START_ANGLE + SWEEP * i / ticks
@@ -107,10 +116,30 @@ fun TemperatureDial(
                 drawLine(colors.track, point(center, inner, a), point(center, outer, a), strokeWidth = track.stroke * 0.16f, cap = StrokeCap.Round)
             }
             val m = point(center, track.diameter / 2, START_ANGLE + SWEEP * marker.value)
-            drawCircle(color = colors.now, radius = track.stroke * 0.95f, center = m)
-            drawCircle(color = colors.now.copy(alpha = 0.18f), radius = track.stroke * 1.6f, center = m)
+            drawCircle(color = colors.now.copy(alpha = 0.22f), radius = track.stroke * 1.55f, center = m)
+            drawCircle(color = colors.now, radius = track.stroke * 0.92f, center = m)
         }
         content()
+        if (lowLabel != null && highLabel != null) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth(0.56f)
+                    .padding(bottom = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    lowLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    highLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 
@@ -174,12 +203,19 @@ fun RangeBar(low: Double, high: Double, scaleMin: Double, scaleMax: Double, modi
         drawLine(colors.track, Offset(h / 2, h / 2), Offset(size.width - h / 2, h / 2), strokeWidth = h, cap = StrokeCap.Round)
         val x0 = x(low).coerceIn(h / 2, size.width - h / 2)
         val x1 = x(high).coerceIn(h / 2, size.width - h / 2)
+        val mid = (low + high) / 2.0
         drawLine(
-            Brush.horizontalGradient(listOf(colors.temperature(low), colors.temperature(high)), startX = x0, endX = x1),
+            Brush.horizontalGradient(
+                listOf(colors.temperature(low), colors.temperature(mid), colors.temperature(high)),
+                startX = x0,
+                endX = maxOf(x1, x0 + 1f),
+            ),
             Offset(x0, h / 2), Offset(maxOf(x1, x0 + 0.1f), h / 2), strokeWidth = h, cap = StrokeCap.Round,
         )
         if (current != null) {
-            drawCircle(colors.now, radius = h * 0.9f, center = Offset(x(current).coerceIn(h, size.width - h), h / 2))
+            val cx = x(current).coerceIn(h, size.width - h)
+            drawCircle(colors.now.copy(alpha = 0.24f), radius = h * 1.45f, center = Offset(cx, h / 2))
+            drawCircle(colors.now, radius = h * 0.85f, center = Offset(cx, h / 2))
         }
     }
 }
@@ -189,7 +225,7 @@ fun WeatherIcon(condition: WeatherCondition, isDay: Boolean, modifier: Modifier 
     Image(painterResource(WeatherIcons.color(condition, isDay)), contentDescription = null, modifier = modifier.size(size))
 }
 
-/** The animated hero icon. Falls back to the still image when system animations are off. */
+/** The animated hero icon. Falls back to the still image while Lottie loads or when animations are off. */
 @Composable
 fun AnimatedWeatherIcon(condition: WeatherCondition, isDay: Boolean, modifier: Modifier = Modifier, size: Dp = 96.dp) {
     if (!rememberAnimationsEnabled()) {
@@ -197,7 +233,11 @@ fun AnimatedWeatherIcon(condition: WeatherCondition, isDay: Boolean, modifier: M
         return
     }
     val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(WeatherIcons.animated(condition, isDay)))
-    LottieAnimation(composition, iterations = LottieConstants.IterateForever, modifier = modifier.size(size))
+    if (composition == null) {
+        WeatherIcon(condition, isDay, modifier, size)
+    } else {
+        LottieAnimation(composition, iterations = LottieConstants.IterateForever, modifier = modifier.size(size))
+    }
 }
 
 @Composable

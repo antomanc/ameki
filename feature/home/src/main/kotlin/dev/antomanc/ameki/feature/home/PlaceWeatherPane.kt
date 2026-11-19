@@ -39,6 +39,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -217,7 +219,7 @@ private fun Hero(
     readyReading?.let { retainedReady.value = it }
     val dialReady = readyReading ?: retainedReady.value
     val animate = rememberAnimationsEnabled()
-    val dialFootprint = Modifier.fillMaxWidth(0.9f).widthIn(max = 360.dp).aspectRatio(1f).testTag("hero-temperature-dial")
+    val dialFootprint = Modifier.fillMaxWidth(0.84f).widthIn(max = 300.dp).aspectRatio(1f).testTag("hero-temperature-dial")
     Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
@@ -227,7 +229,8 @@ private fun Hero(
             )
             view.updatedAt?.let { updated ->
                 Text(stringResource(if (view.stale) UiR.string.updated_stale else UiR.string.updated_at, fmt.timestamp(updated, s.timeZone, view.now)),
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (view.stale) LocalInstrumentColors.current.now else MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.End, modifier = Modifier.widthIn(max = 140.dp).padding(top = 4.dp))
             }
         }
@@ -243,7 +246,7 @@ private fun Hero(
             modifier = Modifier.fillMaxWidth(),
         ) { shown ->
             when (shown) {
-                HeroDialKind.Mute -> Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+                HeroDialKind.Mute -> Box(Modifier.fillMaxWidth().padding(vertical = 6.dp), contentAlignment = Alignment.Center) {
                     if (largeText) Spacer(Modifier.height(120.dp).testTag("hero-temperature-dial"))
                     else MuteTemperatureDial(modifier = dialFootprint)
                 }
@@ -251,17 +254,23 @@ private fun Hero(
                     val readingData = dialReady ?: return@Crossfade
                     val reading: @Composable () -> Unit = {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            AnimatedWeatherIcon(readingData.condition, readingData.isDaytime, size = if (largeText) 48.dp else 64.dp)
+                            AnimatedWeatherIcon(readingData.condition, readingData.isDaytime, size = if (largeText) 48.dp else 56.dp)
                             Text(units.temp(readingData.temperature), style = if (largeText) MaterialTheme.typography.displayMedium else MaterialTheme.typography.displayLarge)
                             readingData.feelsLike?.let { Text(stringResource(UiR.string.feels_like, units.temp(it)), style = MaterialTheme.typography.bodyMedium) }
-                            Text(stringResource(R.string.temperature_range, units.temp(readingData.low), units.temp(readingData.high)),
-                                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                            if (largeText) {
+                                Text(stringResource(R.string.temperature_range, units.temp(readingData.low), units.temp(readingData.high)),
+                                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                            }
                         }
                     }
-                    Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxWidth().padding(vertical = 6.dp), contentAlignment = Alignment.Center) {
                         if (largeText) reading()
                         else TemperatureDial(
-                            current = readingData.temperature, low = readingData.low, high = readingData.high,
+                            current = readingData.temperature,
+                            low = readingData.low,
+                            high = readingData.high,
+                            lowLabel = units.temp(readingData.low),
+                            highLabel = units.temp(readingData.high),
                             description = stringResource(UiR.string.cd_temperature_dial, units.temp(readingData.temperature), units.temp(readingData.low), units.temp(readingData.high), readingData.feelsLike?.let { stringResource(UiR.string.feels_like, units.temp(it)) } ?: ""),
                             modifier = dialFootprint,
                             content = reading,
@@ -279,18 +288,16 @@ private fun Hero(
     }
 }
 
-/** Update status is always visible, including retained data and the last failed attempt. */
+/** Update status is always visible for errors and retries without shifting layout during pull-to-refresh. */
 @Composable
 private fun Freshness(pw: PlaceWeather, s: WeatherSnapshot, fmt: TimeFormatter, now: Instant,
     refreshing: Boolean, onFixProblem: (SyncError) -> Unit, onRefresh: () -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        pw.lastAttemptAt?.takeIf { pw.error != null }?.let { Text(stringResource(R.string.last_attempt, fmt.timestamp(it, s.timeZone, now)), style = MaterialTheme.typography.bodySmall) }
-        pw.error?.let { Text(stringResource(errorText(it)), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error) }
-        if (refreshing) Text(stringResource(R.string.loading_weather), style = MaterialTheme.typography.bodySmall)
-        pw.error?.let { error ->
-            androidx.compose.material3.TextButton(onClick = { error.takeIf { it.needsUserAction }?.let(onFixProblem) ?: onRefresh() }, enabled = !refreshing) {
-                Text(stringResource(if (error.needsUserAction) R.string.fix else R.string.retry))
-            }
+    val error = pw.error ?: return
+    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        pw.lastAttemptAt?.let { Text(stringResource(R.string.last_attempt, fmt.timestamp(it, s.timeZone, now)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        Text(stringResource(errorText(error)), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+        androidx.compose.material3.TextButton(onClick = { error.takeIf { it.needsUserAction }?.let(onFixProblem) ?: onRefresh() }, enabled = !refreshing) {
+            Text(stringResource(if (error.needsUserAction) R.string.fix else R.string.retry))
         }
     }
 }
@@ -322,8 +329,16 @@ private fun HourlyCard(hours: List<HourView>, view: ForecastView, units: Units, 
     val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
     val rowState = androidx.compose.foundation.lazy.rememberLazyListState()
     val today = view.todayDate
+    val sunEvents = remember(s.daily) {
+        s.daily.flatMap { d ->
+            listOfNotNull(
+                d.sunrise?.let { it to true },
+                d.sunset?.let { it to false },
+            )
+        }.sortedBy { it.first }
+    }
     // The title names the day under the first visible hour, so you always know where you are.
-    val firstVisible by androidx.compose.runtime.remember {
+    val firstVisible by remember {
         androidx.compose.runtime.derivedStateOf { rowState.firstVisibleItemIndex }
     }
     val visibleDate = hours.getOrNull(firstVisible)?.forecast?.time?.atZone(s.timeZone)?.toLocalDate() ?: today
@@ -339,6 +354,10 @@ private fun HourlyCard(hours: List<HourView>, view: ForecastView, units: Units, 
                 val h = hv.forecast
                 val local = h.time.atZone(s.timeZone)
                 val date = local.toLocalDate()
+                val nextHourTime = hours.getOrNull(i + 1)?.forecast?.time
+                val sunAfter = nextHourTime?.let { nextT ->
+                    sunEvents.firstOrNull { (t, _) -> !t.isBefore(h.time) && t.isBefore(nextT) }
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // Midnight: a thin rule with the new day's name.
                     if (i > 0 && local.hour == 0) {
@@ -352,22 +371,72 @@ private fun HourlyCard(hours: List<HourView>, view: ForecastView, units: Units, 
                             Box(Modifier.padding(top = 4.dp).width(1.dp).weight(1f).background(MaterialTheme.colorScheme.outlineVariant))
                         }
                     }
+                    val isNow = hv.isNow
+                    val timeText = if (isNow) stringResource(UiR.string.now) else fmt.hour(h.time, s.timeZone)
+                    val condText = stringResource(h.condition.label(h.isDaytime))
+                    val tempText = units.temp(hv.temperature)
+                    val precipProb = h.precipitationProbability
+                    val showRain = precipProb != null && precipProb >= 10
+                    val hourCd = if (showRain) {
+                        stringResource(R.string.cd_hourly_item_rain, timeText, condText, tempText, precipProb)
+                    } else {
+                        stringResource(R.string.cd_hourly_item, timeText, condText, tempText)
+                    }
                     Column(
-                        Modifier.width(60.dp * fontScale).heightIn(min = HourItemHeight * fontScale).clip(MaterialTheme.shapes.small).clickable {
-                            if (s.daily.any { it.date == date }) onOpenDay(DayTarget(date, h.time))
-                        },
+                        Modifier
+                            .width(60.dp * fontScale)
+                            .heightIn(min = HourItemHeight * fontScale)
+                            .clip(MaterialTheme.shapes.small)
+                            .clickable {
+                                if (s.daily.any { it.date == date }) onOpenDay(DayTarget(date, h.time))
+                            }
+                            .clearAndSetSemantics {
+                                contentDescription = hourCd
+                            }
+                            .padding(vertical = 4.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        val isNow = hv.isNow
                         Text(
-                            if (isNow) stringResource(UiR.string.now) else fmt.hour(h.time, s.timeZone),
+                            timeText,
                             style = MaterialTheme.typography.labelMedium,
                             color = if (isNow) colors.now else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         WeatherIcon(h.condition, h.isDaytime, Modifier.padding(vertical = 4.dp), size = 34.dp)
-                        Text(units.temp(hv.temperature), style = MaterialTheme.typography.titleMedium)
-                        Box(Modifier.height(30.dp), contentAlignment = Alignment.Center) { RainDot(h.precipitationProbability, max = 22.dp) }
-                        Text(h.precipitationProbability?.let { "$it%" } ?: "", style = MaterialTheme.typography.labelMedium, color = colors.rain)
+                        Text(tempText, style = MaterialTheme.typography.titleMedium)
+                        Box(Modifier.height(28.dp), contentAlignment = Alignment.Center) {
+                            if (showRain) RainDot(precipProb, max = 20.dp)
+                        }
+                        Text(
+                            if (showRain) "$precipProb%" else "",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = colors.rain,
+                        )
+                    }
+                    sunAfter?.let { (sunTime, isRise) ->
+                        val sunTitle = stringResource(if (isRise) R.string.sunrise_short else R.string.sunset_short)
+                        val sunClock = fmt.time(sunTime, s.timeZone)
+                        Column(
+                            Modifier
+                                .width(64.dp * fontScale)
+                                .heightIn(min = HourItemHeight * fontScale)
+                                .padding(horizontal = 2.dp, vertical = 4.dp)
+                                .clearAndSetSemantics {
+                                    contentDescription = "$sunTitle $sunClock"
+                                },
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            Text(sunClock, style = MaterialTheme.typography.labelMedium, color = colors.warm, maxLines = 1)
+                            Spacer(Modifier.height(6.dp))
+                            Box(
+                                Modifier
+                                    .size(10.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(colors.warm),
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Text(sunTitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                        }
                     }
                 }
             }
@@ -383,37 +452,64 @@ private fun DailyCard(view: ForecastView, units: Units, fmt: TimeFormatter, onDa
     val max = days.maxOf { it.temperatureMax }
     val current = s.current?.temperature
     Card(stringResource(R.string.ten_days)) {
-        days.forEachIndexed { i, d ->
+        days.forEach { d ->
+            val dayLabel = if (view.isToday(d.date)) stringResource(UiR.string.today) else fmt.weekdayShort(d.date)
+            val fullDayLabel = if (view.isToday(d.date)) stringResource(UiR.string.today) else fmt.dateMedium(d.date)
+            val condLabel = stringResource(d.condition.label())
+            val minText = units.temp(d.temperatureMin)
+            val maxText = units.temp(d.temperatureMax)
+            val prob = d.precipitationProbability?.takeIf { it >= 10 }
+            val dayCd = if (prob != null) {
+                stringResource(R.string.cd_daily_item_rain, fullDayLabel, condLabel, prob, minText, maxText)
+            } else {
+                stringResource(R.string.cd_daily_item, fullDayLabel, condLabel, minText, maxText)
+            }
             if (LocalDensity.current.fontScale > 1.3f) {
-                Column(Modifier.fillMaxWidth().clickable { onDay(d.date) }.padding(vertical = 12.dp)) {
-                    Text(if (view.isToday(d.date)) stringResource(UiR.string.today) else fmt.dateMedium(d.date), style = MaterialTheme.typography.titleMedium)
-                    Text(stringResource(d.condition.label()), style = MaterialTheme.typography.bodyMedium)
-                    Text(stringResource(R.string.temperature_range, units.temp(d.temperatureMin), units.temp(d.temperatureMax)))
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { onDay(d.date) }
+                        .clearAndSetSemantics {
+                            contentDescription = dayCd
+                        }
+                        .padding(vertical = 12.dp),
+                ) {
+                    Text(fullDayLabel, style = MaterialTheme.typography.titleMedium)
+                    Text(condLabel, style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.temperature_range, minText, maxText))
                     d.precipitationProbability?.let { Text(stringResource(R.string.day_rain, it, d.precipitation?.let(units::precipitation) ?: "")) }
                 }
             } else Row(
-                Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(MaterialTheme.shapes.small).clickable { onDay(d.date) },
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable { onDay(d.date) }
+                    .clearAndSetSemantics {
+                        contentDescription = dayCd
+                    }
+                    .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    if (view.isToday(d.date)) stringResource(UiR.string.today) else fmt.weekdayShort(d.date),
+                    dayLabel,
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.width(56.dp),
                 )
                 WeatherIcon(d.condition, true, size = 30.dp)
                 Text(
-                    d.precipitationProbability?.takeIf { it >= 10 }?.let { "$it%" } ?: "",
+                    prob?.let { "$it%" } ?: "",
                     style = MaterialTheme.typography.labelMedium,
                     color = LocalInstrumentColors.current.rain,
                     modifier = Modifier.width(40.dp).padding(start = 4.dp),
                 )
-                Text(units.temp(d.temperatureMin), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(36.dp), textAlign = TextAlign.End)
+                Text(minText, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(36.dp), textAlign = TextAlign.End)
                 RangeBar(
                     d.temperatureMin, d.temperatureMax, min, max,
                     modifier = Modifier.weight(1f).padding(horizontal = 10.dp).height(6.dp),
                     current = if (view.isToday(d.date)) current else null,
                 )
-                Text(units.temp(d.temperatureMax), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.width(36.dp))
+                Text(maxText, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.width(36.dp))
             }
         }
     }

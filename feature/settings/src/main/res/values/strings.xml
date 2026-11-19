@@ -25,10 +25,12 @@
     <string name="section_look">Appearance</string>
     <string name="theme">Theme</string>
     <string name="theme_system">Same as the system</string>
+    <string name="theme_system_short">Auto</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
     <string name="time_format">Time format</string>
     <string name="time_system">Same as the system</string>
+    <string name="time_system_short">Auto</string>
     <string name="time_24">24-hour</string>
     <string name="time_12">12-hour</string>
     <string name="dynamic_color">Colours from wallpaper</string>

@@ -1,7 +1,8 @@
 package dev.antomanc.ameki.feature.home
 
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -10,10 +11,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,7 +29,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -35,34 +36,35 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
-import androidx.compose.animation.core.animateFloat
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.antomanc.ameki.core.data.sync.DayHours
-import dev.antomanc.ameki.core.data.sync.SyncError
 import dev.antomanc.ameki.core.data.sync.PlaceWeather
+import dev.antomanc.ameki.core.data.sync.SyncError
 import dev.antomanc.ameki.core.model.DailyForecast
 import dev.antomanc.ameki.core.model.HourlyForecast
 import dev.antomanc.ameki.core.model.Units
@@ -71,13 +73,14 @@ import dev.antomanc.ameki.core.ui.ForecastView
 import dev.antomanc.ameki.core.ui.TimeFormatter
 import dev.antomanc.ameki.core.ui.components.RainDot
 import dev.antomanc.ameki.core.ui.components.WeatherIcon
+import dev.antomanc.ameki.core.ui.effects.rememberWeatherTime
 import dev.antomanc.ameki.core.ui.label
 import dev.antomanc.ameki.core.ui.theme.LocalInstrumentColors
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import java.time.Instant
 import kotlin.math.roundToInt
 import dev.antomanc.ameki.core.ui.R as UiR
-import dev.antomanc.ameki.core.ui.effects.rememberWeatherTime
 
 /**
  * One full page per day, swiped sideways: no sheet to fight with while scrolling the hours.
@@ -94,6 +97,7 @@ internal fun DayPage(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     onFixProblem: (SyncError) -> Unit = {},
+    embedded: Boolean = false,
 ) {
     val s = pw.snapshot ?: return
     val view = ForecastView(s, rememberWeatherTime(), state.settings.refreshIntervalMinutes)
@@ -106,7 +110,18 @@ internal fun DayPage(
     val pager = rememberPagerState(initialPage = targetPage) { days.size }
     val chips = rememberLazyListState()
     val scope = rememberCoroutineScope()
-    BackHandler(onBack = onBack)
+    var backProgress by remember { mutableFloatStateOf(0f) }
+
+    PredictiveBackHandler { progress ->
+        try {
+            progress.collect { event -> backProgress = event.progress }
+            backProgress = 0f
+            onBack()
+        } catch (_: CancellationException) {
+            backProgress = 0f
+        }
+    }
+
     LaunchedEffect(targetPage) {
         if (pager.currentPage != targetPage) pager.scrollToPage(targetPage)
     }
@@ -119,15 +134,22 @@ internal fun DayPage(
     // Scrolling the chip strip must never delay or cancel the network request.
     LaunchedEffect(pager.currentPage) { chips.animateScrollToItem((pager.currentPage - 1).coerceAtLeast(0)) }
 
-
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.graphicsLayer {
+            val scale = 1f - backProgress * 0.06f
+            scaleX = scale
+            scaleY = scale
+            translationX = backProgress * 48.dp.toPx()
+            alpha = 1f - backProgress * 0.25f
+        },
         containerColor = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
+        contentWindowInsets = if (embedded) WindowInsets(0, 0, 0, 0) else ScaffoldDefaults.contentWindowInsets,
         topBar = {
             TopAppBar(
                 title = { Text(pw.place.name) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.back)) } },
+                windowInsets = if (embedded) WindowInsets(0, 0, 0, 0) else TopAppBarDefaults.windowInsets,
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
         },
@@ -169,9 +191,9 @@ private fun DayContent(view: ForecastView, day: DailyForecast, units: Units, fmt
         val i = hours.indexOfFirst { it.time == focusHour }
         if (i >= 0) list.scrollToItem(i + 4)
     }
-    LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 32.dp)) {
+    LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp)) {
         item { DayHeader(day, units, fmt) }
-        item { DayTemperatureChart(day, dayHours, s, units, fmt, loading = loading, failed = failed) }
+        item { DayTemperatureChart(day, dayHours, s, units, fmt, now = if (view.isToday(day.date)) view.now else null, loading = loading, failed = failed) }
         item { HorizontalDivider(Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant) }
         if (hours.isNotEmpty() || loading) {
             item { HourHeaderRow() }
@@ -239,28 +261,30 @@ private fun HourHeaderRow() {
     if (LocalDensity.current.fontScale > 1.3f) return
     val style = MaterialTheme.typography.labelSmall
     val color = MaterialTheme.colorScheme.onSurfaceVariant
-    Row(Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
-        Text(stringResource(R.string.col_hour).uppercase(), style = style, color = color, modifier = Modifier.width(76.dp))
-        Spacer(Modifier.width(40.dp))
+    Row(Modifier.fillMaxWidth().padding(bottom = 6.dp, start = 4.dp, end = 4.dp)) {
+        Text(stringResource(R.string.col_hour).uppercase(), style = style, color = color, modifier = Modifier.width(64.dp))
+        Spacer(Modifier.width(38.dp))
         Text(stringResource(R.string.col_temp).uppercase(), style = style, color = color, modifier = Modifier.weight(1f))
-        Text(stringResource(R.string.col_rain).uppercase(), style = style, color = color, modifier = Modifier.width(76.dp))
-        Text(stringResource(R.string.col_wind).uppercase(), style = style, color = color, modifier = Modifier.width(96.dp), textAlign = TextAlign.End)
+        Text(stringResource(R.string.col_rain).uppercase(), style = style, color = color, modifier = Modifier.width(68.dp))
+        Text(stringResource(R.string.col_wind).uppercase(), style = style, color = color, modifier = Modifier.width(84.dp), textAlign = TextAlign.End)
     }
 }
 
-/** Real and pending hours use one layout, so every column keeps its position. */
+/** Real and pending hours use one layout and fixed minimum height, so every column keeps its position. */
 @Composable
 private fun HourRow(h: HourlyForecast?, time: Instant, s: WeatherSnapshot, units: Units, fmt: TimeFormatter, highlighted: Boolean) {
     val pulse = if (h == null) skeletonColor() else Color.Transparent
     val semantics = if (h == null) Modifier.clearAndSetSemantics { } else Modifier
     val feelsTemplate = stringResource(UiR.string.feels_like, units.temp(18.0))
-    val feels = h?.let { it.feelsLike?.let { value -> stringResource(UiR.string.feels_like, units.temp(value)) } ?: "–" }
+    val feelsText = h?.feelsLike?.let { stringResource(UiR.string.feels_like, units.temp(it)) }
     if (LocalDensity.current.fontScale > 1.3f) {
         Column(Modifier.fillMaxWidth().padding(vertical = 12.dp).then(semantics)) {
             Text(fmt.time(time, s.timeZone), style = MaterialTheme.typography.titleMedium)
             HourText(h?.let { stringResource(it.condition.label(it.isDaytime)) }, stringResource(dev.antomanc.ameki.core.model.WeatherCondition.PARTLY_CLOUDY.label()), MaterialTheme.typography.bodyMedium, pulse)
             HourText(h?.let { units.temp(it.temperature) }, units.temp(18.0), MaterialTheme.typography.headlineSmall, pulse)
-            HourText(feels, feelsTemplate, MaterialTheme.typography.bodyLarge, pulse)
+            if (h == null || feelsText != null) {
+                HourText(feelsText, feelsTemplate, MaterialTheme.typography.bodyLarge, pulse)
+            }
             HourText(h?.let { it.precipitationProbability?.let { value -> stringResource(R.string.day_rain, value, it.precipitation?.let(units::precipitation) ?: "") } ?: "–" }, stringResource(R.string.day_rain, 100, units.precipitation(1.0)), MaterialTheme.typography.bodyLarge, pulse)
             HourText(h?.let { it.windSpeed?.let { value -> stringResource(R.string.day_wind, units.wind(value)) } ?: "–" }, stringResource(R.string.day_wind, units.wind(18.0)), MaterialTheme.typography.bodyLarge, pulse)
         }
@@ -268,27 +292,40 @@ private fun HourRow(h: HourlyForecast?, time: Instant, s: WeatherSnapshot, units
     }
     val colors = LocalInstrumentColors.current
     val bg = if (highlighted) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent
-    Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).androidxBackground(bg).then(semantics), verticalAlignment = Alignment.CenterVertically) {
-        Text(fmt.time(time, s.timeZone), style = MaterialTheme.typography.titleMedium, maxLines = 1, modifier = Modifier.width(76.dp))
-        if (h == null) Box(Modifier.size(32.dp).background(pulse, androidx.compose.foundation.shape.CircleShape))
-        else WeatherIcon(h.condition, h.isDaytime, size = 32.dp)
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 56.dp).androidxBackground(bg).padding(horizontal = 4.dp).then(semantics),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(fmt.time(time, s.timeZone), style = MaterialTheme.typography.titleMedium, maxLines = 1, modifier = Modifier.width(64.dp))
+        if (h == null) Box(Modifier.size(30.dp).background(pulse, androidx.compose.foundation.shape.CircleShape))
+        else WeatherIcon(h.condition, h.isDaytime, size = 30.dp)
         Spacer(Modifier.width(8.dp))
-        Column(Modifier.weight(1f)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
             HourText(h?.let { units.temp(it.temperature) }, units.temp(18.0), MaterialTheme.typography.titleLarge, pulse)
-            HourText(feels, feelsTemplate, MaterialTheme.typography.bodySmall, pulse, textColor = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Row(Modifier.width(76.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.width(24.dp), contentAlignment = Alignment.Center) {
-                if (h == null) Box(Modifier.size(18.dp).background(pulse, androidx.compose.foundation.shape.CircleShape))
-                else RainDot(h.precipitationProbability, max = 18.dp)
+            if (h == null || feelsText != null) {
+                HourText(feelsText, feelsTemplate, MaterialTheme.typography.bodySmall, pulse, textColor = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            HourText(h?.let { it.precipitationProbability?.let { value -> "$value%" } ?: "–" }, "100%", MaterialTheme.typography.bodyMedium, pulse,
-                modifier = Modifier.padding(start = 4.dp), textColor = colors.rain)
         }
-        Row(Modifier.width(96.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.width(68.dp), verticalAlignment = Alignment.CenterVertically) {
+            val prob = h?.precipitationProbability
+            val showRain = prob != null && prob >= 10
+            Box(Modifier.width(22.dp), contentAlignment = Alignment.Center) {
+                if (h == null) Box(Modifier.size(16.dp).background(pulse, androidx.compose.foundation.shape.CircleShape))
+                else if (showRain) RainDot(prob, max = 16.dp)
+            }
+            HourText(
+                h?.let { if (showRain) "$prob%" else "" },
+                "100%",
+                MaterialTheme.typography.bodyMedium,
+                pulse,
+                modifier = Modifier.padding(start = 4.dp),
+                textColor = colors.rain,
+            )
+        }
+        Row(Modifier.width(84.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
             h?.windDirection?.let {
-                Icon(Icons.Outlined.KeyboardArrowUp, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp).rotate(it + 180f))
-                Spacer(Modifier.width(4.dp))
+                Icon(Icons.Outlined.KeyboardArrowUp, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp).rotate(it + 180f))
+                Spacer(Modifier.width(2.dp))
             }
             HourText(h?.let { it.windSpeed?.let(units::wind) ?: "–" }, units.wind(18.0), MaterialTheme.typography.bodyMedium, pulse)
         }
@@ -298,7 +335,7 @@ private fun HourRow(h: HourlyForecast?, time: Instant, s: WeatherSnapshot, units
 @Composable
 private fun HourText(value: String?, template: String, style: androidx.compose.ui.text.TextStyle, pulse: Color, modifier: Modifier = Modifier, textColor: Color = MaterialTheme.colorScheme.onSurface) {
     Box(modifier, contentAlignment = Alignment.CenterStart) {
-        Text(value ?: template, style = style, color = textColor, modifier = Modifier.alpha(if (value == null) 0f else 1f))
+        Text(value ?: template, style = style, color = textColor, maxLines = 1, modifier = Modifier.alpha(if (value == null) 0f else 1f))
         if (value == null) Box(Modifier.fillMaxWidth(.7f).height(12.dp).background(pulse, androidx.compose.foundation.shape.RoundedCornerShape(6.dp)))
     }
 }

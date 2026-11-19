@@ -1,10 +1,20 @@
 package dev.antomanc.ameki
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -20,8 +30,10 @@ import dev.antomanc.ameki.core.data.sync.SyncError
 import dev.antomanc.ameki.core.data.update.ReleaseUpdateChecker
 import dev.antomanc.ameki.core.data.update.UpdateCheckResult
 import dev.antomanc.ameki.core.model.AppSettings
+import dev.antomanc.ameki.core.model.ThemeMode
 import dev.antomanc.ameki.core.ui.AppRequest
 import dev.antomanc.ameki.core.ui.PendingRequest
+import dev.antomanc.ameki.core.ui.components.rememberAnimationsEnabled
 import dev.antomanc.ameki.core.ui.effects.ApplyOnChange
 import dev.antomanc.ameki.core.ui.theme.AmekiTheme
 import dev.antomanc.ameki.feature.home.HomeRoute
@@ -58,6 +70,16 @@ class MainActivity : ComponentActivity() {
             val settings by settingsRepo.settings.collectAsStateWithLifecycle<AppSettings?>(null)
             val s = settings ?: return@setContent
             ready = true
+            val isDark = when (s.theme) {
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+            }
+            ApplyOnChange(isDark) { dark ->
+                val barStyle = if (dark) SystemBarStyle.dark(Color.TRANSPARENT) else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+                enableEdgeToEdge(statusBarStyle = barStyle, navigationBarStyle = barStyle)
+            }
+            val animateNav = rememberAnimationsEnabled()
             AmekiTheme(themeMode = s.theme, dynamicColor = s.dynamicColor) {
                 val nav = rememberNavController()
                 val request = pending.value
@@ -89,7 +111,26 @@ class MainActivity : ComponentActivity() {
                         is AppRequest.Show, AppRequest.Refresh -> nav.popBackStack(HOME, false)
                     }
                 }
-                NavHost(nav, startDestination = if (s.onboardingDone) HOME else ONBOARDING) {
+                NavHost(
+                    navController = nav,
+                    startDestination = if (s.onboardingDone) HOME else ONBOARDING,
+                    enterTransition = {
+                        if (animateNav) slideInHorizontally(tween(260)) { it / 8 } + fadeIn(tween(220))
+                        else EnterTransition.None
+                    },
+                    exitTransition = {
+                        if (animateNav) fadeOut(tween(180))
+                        else ExitTransition.None
+                    },
+                    popEnterTransition = {
+                        if (animateNav) slideInHorizontally(tween(240)) { -it / 10 } + fadeIn(tween(200))
+                        else EnterTransition.None
+                    },
+                    popExitTransition = {
+                        if (animateNav) slideOutHorizontally(tween(220)) { it / 8 } + fadeOut(tween(180))
+                        else ExitTransition.None
+                    },
+                ) {
                     composable(ONBOARDING) {
                         OnboardingRoute(
                             onDone = {

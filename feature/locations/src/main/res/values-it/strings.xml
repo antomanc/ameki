@@ -21,4 +21,7 @@
     <string name="location_failed">Posizione non disponibile. Verifica che sia attiva, poi riprova o cerca una città.</string>
     <string name="open_settings">Apri impostazioni</string>
     <string name="place_actions">Azioni per %1$s</string>
+    <string name="clear_search">Cancella ricerca</string>
+    <string name="reorder_place">Trascina per riordinare %1$s</string>
+    <string name="places_empty_hint">Cerca qui sopra per aggiungere le tue città preferite.</string>
 </resources>

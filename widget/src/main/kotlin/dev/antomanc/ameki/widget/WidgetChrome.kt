@@ -184,13 +184,16 @@ internal fun Freshness(view: ForecastView, palette: WidgetPalette, fmt: TimeForm
     val context = LocalContext.current
     val full = context.getString(if (view.stale) UiR.string.updated_stale else UiR.string.updated_at, time)
     val action = if (compact) GlanceModifier.semantics { contentDescription = full }
-        else GlanceModifier.height(48.dp).clickable(actionRunCallback<RefreshAction>()).semantics { contentDescription = context.getString(R.string.widget_refresh_cd, full) }
+        else GlanceModifier
+            .cornerRadius(8.dp)
+            .clickable(actionRunCallback<RefreshAction>())
+            .semantics { contentDescription = context.getString(R.string.widget_refresh_cd, full) }
     Box(
-        action
-            .padding(vertical = if (compact) 1.dp else 2.dp),
+        action.padding(horizontal = if (compact) 0.dp else 4.dp, vertical = if (compact) 1.dp else 4.dp),
+        contentAlignment = Alignment.Center,
     ) {
         Text(
-            if (compact) time else full,
+            if (compact) time else "$full ↻",
             style = textStyle(if (view.stale) palette.now else palette.onSurfaceVariant, if (compact) 9.sp else 10.sp),
             maxLines = 1,
         )

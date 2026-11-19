@@ -23,4 +23,6 @@
     <string name="ob_finish">Fatto</string>
     <string name="ob_locating">Sto cercando la tua posizione…</string>
     <string name="ob_choose_later">Scegli una città più tardi</string>
+    <string name="ob_back">Indietro</string>
+    <string name="ob_step_of">Passaggio %1$d di %2$d</string>
 </resources>

@@ -21,4 +21,7 @@
     <string name="location_failed">Your location is unavailable. Check that location is on, then try again or search for a city.</string>
     <string name="open_settings">Open settings</string>
     <string name="place_actions">Actions for %1$s</string>
+    <string name="clear_search">Clear search</string>
+    <string name="reorder_place">Drag to reorder %1$s</string>
+    <string name="places_empty_hint">Search above to add your favourite cities.</string>
 </resources>
