@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ob_welcome_body">La météo là où vous regardez le plus : sur votre écran d\'accueil. De beaux widgets, des prévisions fiables, rien à configurer.</string>
+    <string name="ob_start">Commencer</string>
+    <string name="ob_continue">Continuer</string>
+    <string name="ob_source_title">D\'où doivent provenir les prévisions ?</string>
+    <string name="ob_source_body">Vous pouvez modifier ça à tout moment dans les paramètres.</string>
+    <string name="ob_source_om">Open-Meteo</string>
+    <string name="ob_source_om_body">Gratuit, rien à configurer. Prêt immédiatement.</string>
+    <string name="ob_source_google">Google</string>
+    <string name="ob_source_google_body">Les prévisions de Google. Nécessite votre propre clé API gratuite ; nous vous guiderons.</string>
+    <string name="ob_location_title">Où êtes-vous ?</string>
+    <string name="ob_location_body">Utilisez votre position pour la météo locale, ou choisissez une ville.</string>
+    <string name="ob_use_location">Utiliser ma position</string>
+    <string name="ob_location_privacy">Une position approximative suffit. Elle reste sur votre téléphone et n\'est envoyée, arrondie, qu\'à la source météo.</string>
+    <string name="ob_or_search">Ou rechercher une ville</string>
+    <string name="ob_widget_title">Ajoutez-le à votre écran d\'accueil</string>
+    <string name="ob_widget_body">Les widgets sont le meilleur atout d\'Ameki. Ajoutez-en un maintenant ; quatre autres sont disponibles dans la liste des widgets de votre launcher.</string>
+    <string name="ob_widget_place">Votre lieu</string>
+    <string name="ob_add_widget">Ajouter le widget</string>
+    <string name="ob_later">Plus tard</string>
+    <string name="ob_widget_manual">Appuyez longuement sur votre écran d\'accueil, touchez Widgets et recherchez Ameki.</string>
+    <string name="ob_finish">Terminer</string>
+    <string name="ob_locating">Recherche de votre position…</string>
+    <string name="ob_choose_later">Choisir une ville plus tard</string>
+    <string name="ob_back">Retour</string>
+    <string name="ob_step_of">Étape %1$d sur %2$d</string>
+</resources>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="places_title">Lieux</string>
+    <string name="back">Retour</string>
+    <string name="search_city">Rechercher une ville</string>
+    <string name="search_failed">La recherche ne fonctionne pas pour le moment. Vérifiez votre connexion.</string>
+    <string name="search_empty">Aucun lieu trouvé.</string>
+    <string name="use_my_location">Utiliser ma position</string>
+    <string name="move_up">Monter</string>
+    <string name="move_down">Descendre</string>
+    <string name="remove">Supprimer</string>
+    <string name="locating">Recherche de votre position…</string>
+    <string name="place_removed">Lieu supprimé</string>
+    <string name="undo">Annuler</string>
+    <string name="rename">Renommer le lieu</string>
+    <string name="place_label">Nom (par exemple, Maison)</string>
+    <string name="save">Enregistrer</string>
+    <string name="cancel">Annuler</string>
+    <string name="retry_location">Actualiser ma position</string>
+    <string name="location_permission_denied">L\'accès à la position est désactivé. Recherchez une ville ou activez la localisation dans les paramètres Android.</string>
+    <string name="location_failed">Votre position est indisponible. Vérifiez que la localisation est activée, puis réessayez ou recherchez une ville.</string>
+    <string name="open_settings">Ouvrir les paramètres</string>
+    <string name="place_actions">Actions pour %1$s</string>
+    <string name="clear_search">Effacer la recherche</string>
+    <string name="reorder_place">Faites glisser pour réorganiser %1$s</string>
+    <string name="places_empty_hint">Recherchez ci-dessus pour ajouter vos villes favorites.</string>
+</resources>

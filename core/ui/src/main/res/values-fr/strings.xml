@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Ameki</string>
+
+    <!-- Conditions -->
+    <string name="cond_clear">Dégagé</string>
+    <string name="cond_clear_day">Ensoleillé</string>
+    <string name="cond_mostly_clear">Plutôt dégagé</string>
+    <string name="cond_partly_cloudy">Partiellement nuageux</string>
+    <string name="cond_mostly_cloudy">Très nuageux</string>
+    <string name="cond_cloudy">Nuageux</string>
+    <string name="cond_fog">Brouillard</string>
+    <string name="cond_windy">Venteux</string>
+    <string name="cond_drizzle">Bruine</string>
+    <string name="cond_light_rain">Pluie légère</string>
+    <string name="cond_rain">Pluie</string>
+    <string name="cond_heavy_rain">Forte pluie</string>
+    <string name="cond_showers">Averses</string>
+    <string name="cond_freezing_rain">Pluie verglaçante</string>
+    <string name="cond_sleet">Neige fondue</string>
+    <string name="cond_light_snow">Neige légère</string>
+    <string name="cond_snow">Neige</string>
+    <string name="cond_heavy_snow">Forte neige</string>
+    <string name="cond_snow_showers">Chutes de neige</string>
+    <string name="cond_hail">Grêle</string>
+    <string name="cond_thunderstorm">Orage</string>
+    <string name="cond_unknown">Aucune donnée</string>
+
+    <!-- Shared labels -->
+    <string name="now">Actuel</string>
+    <string name="today">Aujourd\'hui</string>
+    <string name="feels_like">Ressenti %1$s</string>
+    <string name="high_low">%1$s / %2$s</string>
+    <string name="updated_at">Mis à jour %1$s</string>
+    <string name="updated_stale">Dernières données %1$s</string>
+    <string name="current_location">Current location</string>
+    <string name="rain_chance">%1$d%% de risque de pluie</string>
+    <string name="cd_temperature_dial">Température %1$s, minimum %2$s, maximum %3$s. %4$s</string>
+    <string name="attribution_open_meteo">Données météo par Open-Meteo.com (CC BY 4.0)</string>
+    <string name="attribution_google">Source: inclut des données météo de Google</string>
+
+    <!-- Rain nowcast -->
+    <string name="rain_none_short">Pas de pluie dans les deux prochaines heures</string>
+    <string name="rain_now_short">Pluie en cours</string>
+    <string name="rain_stops_short">Arrêt de la pluie dans %1$d min</string>
+    <string name="rain_starts_short">Pluie dans %1$d min</string>
+    <string name="rain_likely_short">Pluie vers %1$s</string>
+    <!-- Rain outlook: short for widgets, full sentences for the app (ForecastView.rainText). -->
+    <string name="rain_unavailable_short">Données de pluie indisponibles</string>
+    <string name="rain_none">Aucune pluie prévue dans les deux prochaines heures</string>
+    <string name="rain_now">Il pleut actuellement</string>
+    <string name="rain_starts">La pluie commence dans environ %1$d min</string>
+    <string name="rain_stops">La pluie s\'arrête dans environ %1$d min</string>
+    <string name="rain_likely">Pluie probable vers %1$s</string>
+    <string name="rain_unavailable">Prévisions de pluie à court terme indisponibles</string>
+</resources>

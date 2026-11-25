@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_compact_name">Compact</string>
+    <string name="widget_compact_desc">La température sur le cadran, en un coup d\'œil</string>
+    <string name="widget_hourly_name">Horaire</string>
+    <string name="widget_hourly_desc">Maintenant et les prochaines heures, avec la pluie</string>
+    <string name="widget_daily_name">Quotidien</string>
+    <string name="widget_daily_desc">Les prochains jours avec leurs amplitudes</string>
+    <string name="widget_complete_name">Complet</string>
+    <string name="widget_complete_desc">Maintenant, les prochaines heures et les prochains jours</string>
+    <string name="widget_no_place">Ouvrez Ameki pour choisir un lieu</string>
+    <string name="widget_place_gone">Ce lieu a été supprimé. Appuyez pour en choisir un autre.</string>
+    <string name="widget_loading">Chargement des prévisions…</string>
+    <string name="widget_offline">Hors ligne. Appuyez pour ouvrir Ameki.</string>
+    <string name="widget_key_problem">Vérifiez votre clé Google dans Ameki</string>
+    <string name="widget_access_denied">Google Météo n\'est pas disponible pour cette clé. Appuyez pour ouvrir Ameki.</string>
+    <string name="widget_quota">Limite quotidienne atteinte. Appuyez pour ouvrir Ameki.</string>
+    <string name="widget_unsupported">Aucune prévision pour ce lieu. Appuyez pour ouvrir Ameki.</string>
+    <string name="widget_failed">Impossible de charger les prévisions. Appuyez pour ouvrir Ameki.</string>
+    <string name="widget_partial">Données insuffisantes pour ce widget. Appuyez pour ouvrir Ameki.</string>
+    <string name="widget_no_location">Position indisponible. Appuyez pour corriger.</string>
+    <string name="widget_high_low">↑%1$s ↓%2$s</string>
+    <string name="widget_high_low_cd">High %1$s, low %2$s</string>
+    <string name="widget_hour_cd">%1$s, %2$s. Tap for details.</string>
+    <string name="widget_day_cd">%1$s, high %2$s, low %3$s. Appuyez pour les détails.</string>
+    <string name="widget_refresh_cd">%1$s. Appuyez pour actualiser.</string>
+    <string name="config_title">Widget</string>
+    <string name="config_place">Lieu</string>
+    <string name="config_place_first">Premier lieu dans l\'application</string>
+    <string name="config_add_place">Ajouter un lieu</string>
+    <string name="config_style">Style</string>
+    <string name="style_dynamic">Couleurs du fond d\'écran</string>
+    <string name="style_dark">Sombre</string>
+    <string name="style_transparent">Transparent</string>
+    <string name="config_opacity">Arrière-plan %1$d%%</string>
+    <string name="config_scrim">Voile sombre %1$d%%</string>
+    <string name="config_scrim_hint">Un fond sombre minimal garde le texte lisible.</string>
+    <string name="config_background_hint">Les widgets suivent votre position actuelle uniquement si vous autorisez la localisation en arrière-plan.</string>
+    <string name="config_open_settings">Ouvrir paramètres</string>
+    <string name="config_save">Sauvegarder</string>
+    <string name="config_cancel">Annuler</string>
+    <string name="widget_rain_name">Pluie</string>
+    <string name="widget_rain_desc">Va-t-il pleuvoir dans les deux prochaines heures ?</string>
+    <!-- Illustrative text in the static widget-picker previews. -->
+    <string name="preview_condition">Partiellement nuageux</string>
+    <string name="preview_rain_soon">Pluie dans 30 min</string>
+    <string name="preview_now">Actuel</string>
+    <string name="preview_today">Aujourd\'hui</string>
+    <string name="preview_tomorrow">Demain</string>
+    <string name="preview_later">Prochains jours</string>
+    <string name="preview_hours">Maintenant 15°  12 16°  13 17°  14 17°</string>
+    <string name="preview_today_range">Aujourd\'hui    9°  ——  18°</string>
+    <string name="preview_tomorrow_range">Demain    10°  ——  15°</string>
+</resources>
