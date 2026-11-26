@@ -15,7 +15,7 @@ android {
     buildFeatures { buildConfig = true }
 
     androidResources {
-        localeFilters += listOf("en", "it")
+        localeFilters += listOf("en", "it", "fr")
     }
 
     signingConfigs {

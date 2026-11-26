@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Ameki</string>
+    <string name="shortcut_places">Lieux</string>
+    <string name="shortcut_refresh">Actualiser météo</string>
+    <string name="shortcut_widget">Ajouter un widget compact</string>
+</resources>
